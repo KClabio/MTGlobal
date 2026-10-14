@@ -16,7 +16,8 @@
     "watch": ["server.js", "config", "lib", "locales", "middleware", "models", "routes"],
     "ext": "js,json"
   },
-  "license": "ISC",
+  "license": "UNLICENSED",
+  "private": true,
   "type": "commonjs",
   "dependencies": {
     "adm-zip": "^0.5.16",
