@@ -23,6 +23,14 @@
         <h2 class="profile-name"><%= user.name %></h2>
         <p class="profile-email"><%= user.email %></p>
         <% if (memberSince) { %><p class="profile-meta"><%= t('profile.memberSince') %> <%= memberSince %></p><% } %>
+        <%# Role: view only (changed by an owner in Admin → Người dùng); same badge as that list %>
+        <div class="profile-bio profile-role">
+          <h3><%= t('profile.role') %></h3>
+          <span class="<%= { owner: 'tag role-owner', admin: 'tag role-admin', customer: 'tag' }[user.role] || 'tag' %>">
+            <% if (user.role === 'owner') { %><%- include('admin/partials/icon', { name: 'crown', size: 13 }) %><% } %>
+            <%= t('admin.roles.' + user.role) %>
+          </span>
+        </div>
         <div class="profile-bio">
           <h3><%= t('profile.bio') %></h3>
           <% if (user.bio) { %>

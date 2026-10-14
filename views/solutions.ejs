@@ -1,0 +1,26 @@
+<%- include('partials/header', { title: t('nav.solutions') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.solutions'),
+  heading: t('nav.solutions'),
+  bannerKey: 'solutions'
+}) %>
+
+<%# The six Giải pháp pages (lib/home-domains.js → buildSolutionCards); text = each page's banner line %>
+<section class="section">
+  <div class="container">
+    <div class="card-grid">
+      <% cards.forEach(function (card) { %>
+        <a class="card" href="<%= card.url %>">
+          <div class="card-media<%= card.contain ? ' is-contain' : '' %>"><img src="<%= card.image %>" alt="<%= card.title %>" loading="lazy"></div>
+          <div class="card-body">
+            <h3><%= card.title %></h3>
+            <% if (card.text) { %><p><%= card.text %></p><% } %>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

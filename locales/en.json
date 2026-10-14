@@ -40,21 +40,18 @@
     "address": "Address",
     "phone": "Phone",
     "email": "Email",
-    "allRightsReserved": "All rights reserved"
+    "allRightsReserved": "All rights reserved",
+    "backHome": "Back to home"
   },
   "home": {
     "heroTitle": "Smart Technology Solutions for Life",
     "heroSubtitle": "MTG delivers smart robots, end-to-end STEM Lab solutions, and technology consulting services for schools and businesses.",
     "heroCta": "Request a Consultation",
-    "pillarsTitle": "Three Business Pillars",
-    "pillarProductsTitle": "Products — Smart Robotics",
-    "pillarProductsText": "Practical robots: stair-climbing cargo carts, follow-me cargo carts, lawn-mowing robots, and home-service robots.",
-    "pillarSolutionTitle": "Solutions — STEM Lab",
-    "pillarSolutionText": "Consulting, design, installation, and handover of STEM practice labs for every education level, with equipment and training included.",
-    "pillarServicesTitle": "Services",
-    "pillarServicesText": "Study-abroad consulting, and distribution & commercialization of technology products.",
+    "pillarsTitle": "What We Do",
     "featuredProjectsTitle": "Featured Projects",
-    "partnersTitle": "Our Partners"
+    "partnersTitle": "Our Partners",
+    "domainsPrev": "Previous area",
+    "domainsNext": "Next area"
   },
   "forms": {
     "name": "Full Name",
@@ -112,7 +109,8 @@
     "errPasswordSame": "The new password must be different from the current one.",
     "errBioLength": "Your bio can be at most 500 characters.",
     "errAvatarType": "The profile photo must be a JPG, PNG, WEBP or GIF file.",
-    "errAvatarSize": "The profile photo can be at most 20 MB."
+    "errAvatarSize": "The profile photo can be at most 20 MB.",
+    "role": "Role"
   },
   "footer": {
     "tagline": "Smart Solutions for Life",

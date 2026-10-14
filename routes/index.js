@@ -10,6 +10,7 @@ const QuoteRequest = require('../models/QuoteRequest');
 const { isNonEmpty, isValidEmail, isValidPhone } = require('../lib/validators');
 const { readServiceAnswers } = require('../lib/service-content');
 const { getSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
+const { buildHomeDomains, buildSolutionCards } = require('../lib/home-domains');
 
 const ROBOT_CATEGORIES = [
   'robot-leo-cau-thang',
@@ -19,12 +20,15 @@ const ROBOT_CATEGORIES = [
 ];
 
 router.get('/', async (req, res) => {
-  const [featuredProjects, robots, partners] = await Promise.all([
+  const [featuredProjects, robots, partners, services] = await Promise.all([
     Project.find().sort({ featured: -1, order: 1, createdAt: -1 }).limit(3).lean(),
     Product.find({ category: { $in: ROBOT_CATEGORIES } }).sort({ order: 1, _id: 1 }).lean(),
     Partner.find().sort({ order: 1, _id: 1 }).lean(),
+    Service.find().sort({ order: 1, _id: 1 }).lean(),
   ]);
-  res.render('index', { featuredProjects, robots, partners });
+  const { settings, lang, t } = res.locals;
+  const domains = buildHomeDomains({ settings, lang, t, robots, services });
+  res.render('index', { featuredProjects, robots, partners, domains });
 });
 
 router.get('/ve-mtg', async (req, res) => {
@@ -72,6 +76,13 @@ router.post('/san-pham/:category/yeu-cau', async (req, res) => {
 });
 
 // ---- Giải pháp (STEM Lab solution) ----
+// Giải pháp landing page: one card per solution page (a–f), like the Dịch vụ landing page
+router.get('/giai-phap', async (req, res) => {
+  const projects = await Project.find().sort({ featured: -1, order: 1, createdAt: -1 }).limit(1).lean();
+  const { settings, lang, t } = res.locals;
+  res.render('solutions', { cards: buildSolutionCards({ settings, lang, t, projects }) });
+});
+
 router.get('/giai-phap/du-an', async (req, res) => {
   const projects = await Project.find().sort({ order: 1, createdAt: -1 }).lean();
   res.render('projects', { projects });

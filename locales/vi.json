@@ -40,21 +40,18 @@
     "address": "Địa chỉ",
     "phone": "Điện thoại",
     "email": "Email",
-    "allRightsReserved": "Bảo lưu mọi quyền"
+    "allRightsReserved": "Bảo lưu mọi quyền",
+    "backHome": "Về trang chủ"
   },
   "home": {
     "heroTitle": "Giải pháp công nghệ thông minh cho cuộc sống",
     "heroSubtitle": "MTG mang đến robot thông minh, giải pháp phòng Lab STEM toàn diện và các dịch vụ tư vấn công nghệ cho trường học và doanh nghiệp.",
     "heroCta": "Yêu cầu tư vấn",
-    "pillarsTitle": "Ba lĩnh vực hoạt động",
-    "pillarProductsTitle": "Sản phẩm — Robotics thông minh",
-    "pillarProductsText": "Dòng robot ứng dụng thực tế: xe chở hàng leo cầu thang, xe chở hàng đi theo người, robot cắt cỏ và robot phục vụ gia đình.",
-    "pillarSolutionTitle": "Giải pháp — Phòng Lab STEM",
-    "pillarSolutionText": "Tư vấn, thiết kế, thi công và chuyển giao phòng thực hành STEM cho mọi cấp học, kèm thiết bị và chương trình đào tạo.",
-    "pillarServicesTitle": "Dịch vụ",
-    "pillarServicesText": "Tư vấn du học và phân phối, thương mại hóa sản phẩm công nghệ.",
+    "pillarsTitle": "Lĩnh vực hoạt động",
     "featuredProjectsTitle": "Dự án tiêu biểu",
-    "partnersTitle": "Đối tác đồng hành"
+    "partnersTitle": "Đối tác đồng hành",
+    "domainsPrev": "Lĩnh vực trước",
+    "domainsNext": "Lĩnh vực tiếp theo"
   },
   "forms": {
     "name": "Họ và tên",
@@ -112,7 +109,8 @@
     "errPasswordSame": "Mật khẩu mới phải khác mật khẩu hiện tại.",
     "errBioLength": "Phần giới thiệu tối đa 500 ký tự.",
     "errAvatarType": "Ảnh đại diện phải là file JPG, PNG, WEBP hoặc GIF.",
-    "errAvatarSize": "Ảnh đại diện tối đa 20 MB."
+    "errAvatarSize": "Ảnh đại diện tối đa 20 MB.",
+    "role": "Vai trò"
   },
   "footer": {
     "tagline": "Smart Solutions for Life",

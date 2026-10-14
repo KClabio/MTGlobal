@@ -22,37 +22,42 @@
   </div>
 </section>
 
-<section class="section">
+<%# Business areas (lib/home-domains.js): a horizontal slider — 3½ cards in view, the mouse wheel scrolls it sideways (public/js/main.js).
+    Card links carry ?from=home so the opened page shows "← Về trang chủ" (views/partials/page-banner.ejs). %>
+<section class="section domains-section" id="linh-vuc">
   <div class="container">
-    <div class="section-head">
+    <div class="section-head domains-head">
       <h2 class="section-title"><%= t('home.pillarsTitle') %></h2>
-    </div>
-    <div class="pillar-grid">
-      <div class="pillar-card c-products">
-        <div class="pillar-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 4v16M4 8h16"/></svg>
-        </div>
-        <h3><%= t('home.pillarProductsTitle') %></h3>
-        <p><%= t('home.pillarProductsText') %></p>
-        <a class="pillar-link" href="/san-pham"><%= t('common.learnMore') %> →</a>
-      </div>
-      <div class="pillar-card c-solution">
-        <div class="pillar-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-        </div>
-        <h3><%= t('home.pillarSolutionTitle') %></h3>
-        <p><%= t('home.pillarSolutionText') %></p>
-        <a class="pillar-link" href="/giai-phap/stem-lab"><%= t('common.learnMore') %> →</a>
-      </div>
-      <div class="pillar-card c-services">
-        <div class="pillar-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4Z"/></svg>
-        </div>
-        <h3><%= t('home.pillarServicesTitle') %></h3>
-        <p><%= t('home.pillarServicesText') %></p>
-        <a class="pillar-link" href="/dich-vu"><%= t('common.learnMore') %> →</a>
+      <div class="domain-arrows">
+        <button type="button" class="domain-arrow" data-domain-prev aria-label="<%= t('home.domainsPrev') %>" title="<%= t('home.domainsPrev') %>" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button type="button" class="domain-arrow" data-domain-next aria-label="<%= t('home.domainsNext') %>" title="<%= t('home.domainsNext') %>">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
       </div>
     </div>
+    <ul class="domain-track" data-domain-slider tabindex="0" role="region" aria-label="<%= t('home.pillarsTitle') %>">
+      <% domains.forEach(function (d) { %>
+        <li class="domain-item">
+          <a class="domain-card accent-<%= d.accent %>" href="<%= d.url %>?from=home">
+            <div class="domain-media<%= d.contain ? ' is-contain' : '' %><%= d.image ? '' : ' is-art' %>">
+              <% if (d.image) { %>
+                <img src="<%= d.image %>" alt="" loading="lazy" draggable="false">
+              <% } else { %>
+                <%- include('admin/partials/icon', { name: d.icon, size: 64 }) %>
+              <% } %>
+            </div>
+            <div class="domain-body">
+              <span class="domain-icon"><%- include('admin/partials/icon', { name: d.icon, size: 20 }) %></span>
+              <h3><%= d.title %></h3>
+              <% if (d.text) { %><p><%= d.text %></p><% } %>
+              <span class="domain-link"><%= t('common.learnMore') %> →</span>
+            </div>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
   </div>
 </section>
 

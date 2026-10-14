@@ -7,7 +7,10 @@
   const pbSub = typeof subheading !== 'undefined' ? subheading : pbBanner.subtitle;
 %><section class="page-hero<%= pbBanner.image ? ' has-image' : '' %>"<% if (pbBanner.image) { %> style="--hero-image: url('<%= encodeURI(pbBanner.image) %>');"<% } %>>
   <div class="container">
-    <% if (typeof backHref !== 'undefined' && backHref) { %>
+    <% if (typeof fromHome !== 'undefined' && fromHome) { %>
+      <%# Opened from a home page area card (?from=home): straight back to that slider, not through the history trail %>
+      <div class="hero-back-row"><a href="/#linh-vuc" class="hero-back" data-back-home>&larr; <%= t('common.backHome') %></a></div>
+    <% } else if (typeof backHref !== 'undefined' && backHref) { %>
       <div class="hero-back-row"><a href="<%= backHref %>" class="hero-back" data-back>&larr; <%= t('common.back') %></a></div>
     <% } %>
     <% if (typeof pill !== 'undefined' && pill) { %><span class="hero-pill"><%= pill %></span><% } %>

@@ -71,6 +71,11 @@ app.use(session({
 app.use(loadUser);
 app.use(loadLanguage);
 app.use(loadSiteSettings);
+// Opened from a card in the home page "Lĩnh vực hoạt động" slider: the page banner shows "← Về trang chủ"
+app.use((req, res, next) => {
+  res.locals.fromHome = req.method === 'GET' && req.query.from === 'home';
+  next();
+});
 
 app.use('/', indexRoutes);
 app.use('/', authRoutes);
