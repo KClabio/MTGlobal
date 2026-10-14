@@ -41,7 +41,9 @@
     "phone": "Phone",
     "email": "Email",
     "allRightsReserved": "All rights reserved",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "home": {
     "heroTitle": "Smart Technology Solutions for Life",

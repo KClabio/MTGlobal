@@ -12,7 +12,7 @@
         </div>
         <div class="form-group">
           <label><%= t('forms.email') %> *</label>
-          <input class="form-control" type="email" name="email" value="<%= values.email || '' %>" required>
+          <input class="form-control" type="email" name="email" value="<%= values.email || '' %>" required autocomplete="username">
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -26,12 +26,12 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label><%= t('forms.password') %> *</label>
-            <input class="form-control" type="password" name="password" required>
+            <label for="regPassword"><%= t('forms.password') %> *</label>
+            <%- include('partials/password-input', { id: 'regPassword', name: 'password', autocomplete: 'new-password' }) %>
           </div>
           <div class="form-group">
-            <label><%= t('forms.confirmPassword') %> *</label>
-            <input class="form-control" type="password" name="confirmPassword" required>
+            <label for="regConfirm"><%= t('forms.confirmPassword') %> *</label>
+            <%- include('partials/password-input', { id: 'regConfirm', name: 'confirmPassword', autocomplete: 'new-password' }) %>
           </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block"><%= t('forms.registerTitle') %></button>

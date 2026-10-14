@@ -99,18 +99,20 @@
           <% if (pwState.success) { %><div class="form-alert success"><%= t('profile.passwordChanged') %></div><% } %>
           <% if (pwState.error) { %><div class="form-alert error"><%= pwState.error %></div><% } %>
           <form method="POST" action="/ho-so/mat-khau">
+            <%# Not sent (no name): tells the browser whose saved password to offer for "Mật khẩu hiện tại". The real password is never stored readably, so the site itself cannot fill it. %>
+            <input type="email" class="sr-only" autocomplete="username" value="<%= user.email %>" tabindex="-1" aria-hidden="true" readonly>
             <div class="form-group">
-              <label><%= t('profile.currentPassword') %></label>
-              <input class="form-control" type="password" name="currentPassword" required autocomplete="current-password">
+              <label for="currentPassword"><%= t('profile.currentPassword') %></label>
+              <%- include('partials/password-input', { id: 'currentPassword', name: 'currentPassword', autocomplete: 'current-password' }) %>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label><%= t('profile.newPassword') %></label>
-                <input class="form-control" type="password" name="newPassword" required minlength="6" autocomplete="new-password">
+                <label for="newPassword"><%= t('profile.newPassword') %></label>
+                <%- include('partials/password-input', { id: 'newPassword', name: 'newPassword', autocomplete: 'new-password', minlength: 6 }) %>
               </div>
               <div class="form-group">
-                <label><%= t('profile.confirmNewPassword') %></label>
-                <input class="form-control" type="password" name="confirmPassword" required minlength="6" autocomplete="new-password">
+                <label for="confirmNewPassword"><%= t('profile.confirmNewPassword') %></label>
+                <%- include('partials/password-input', { id: 'confirmNewPassword', name: 'confirmPassword', autocomplete: 'new-password', minlength: 6 }) %>
               </div>
             </div>
             <p class="form-hint" style="margin:-8px 0 18px;"><%= t('profile.passwordHint') %></p>

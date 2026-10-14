@@ -222,6 +222,44 @@
   });
 })();
 
+// Password boxes: the eye button shows / hides what was typed (partials/password-input.ejs). Every box goes back to
+// hidden when its form is sent (so the browser saves it as a password) and when the page comes back from history.
+(function () {
+  function setShown(btn, shown) {
+    var input = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!input) return;
+    input.type = shown ? 'text' : 'password';
+    btn.setAttribute('aria-pressed', String(shown));
+    var label = btn.getAttribute(shown ? 'data-label-hide' : 'data-label-show');
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
+    // (SVG elements have no .hidden property: switch the attribute itself)
+    btn.querySelector('.icon-eye').toggleAttribute('hidden', shown);
+    btn.querySelector('.icon-eye-off').toggleAttribute('hidden', !shown);
+  }
+  function hideAll(scope) {
+    scope.querySelectorAll('[data-password-toggle]').forEach(function (btn) { setShown(btn, false); });
+  }
+  document.querySelectorAll('[data-password-toggle]').forEach(function (btn) {
+    // Keep the cursor in the box: the button does not take focus on a mouse press
+    btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('aria-controls'));
+      if (!input) return;
+      var start = input.selectionStart;
+      var end = input.selectionEnd;
+      setShown(btn, input.type === 'password');
+      if (document.activeElement === input && start !== null) {
+        try { input.setSelectionRange(start, end); } catch (err) { /* type without selection */ }
+      }
+    });
+    if (btn.form || btn.closest('form')) {
+      (btn.form || btn.closest('form')).addEventListener('submit', function (e) { hideAll(e.target); });
+    }
+  });
+  window.addEventListener('pageshow', function () { hideAll(document); });
+})();
+
 // Service packages: "Choose this package" picks it in the request form and moves to the form
 (function () {
   document.querySelectorAll('[data-choose-package]').forEach(function (link) {

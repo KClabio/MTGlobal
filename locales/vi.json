@@ -41,7 +41,9 @@
     "phone": "Điện thoại",
     "email": "Email",
     "allRightsReserved": "Bảo lưu mọi quyền",
-    "backHome": "Về trang chủ"
+    "backHome": "Về trang chủ",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu"
   },
   "home": {
     "heroTitle": "Giải pháp công nghệ thông minh cho cuộc sống",

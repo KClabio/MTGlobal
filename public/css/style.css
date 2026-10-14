@@ -210,6 +210,20 @@ ul { padding-left: 1.2em; }
 .form-control:focus { outline: none; border-color: var(--mtg-blue); }
 .form-control, #yeu-cau { scroll-margin-top: 110px; } /* keep focused/invalid fields clear of the sticky header */
 textarea.form-control { resize: vertical; min-height: 110px; }
+
+/* Password box with a show/hide (eye) button inside it, on the right (partials/password-input.ejs + main.js) */
+.password-field { position: relative; }
+.password-field .form-control { padding-right: 48px; }
+.password-field input::-ms-reveal, .password-field input::-ms-clear { display: none; } /* Edge's own eye: avoid two */
+.password-toggle {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  width: 36px; height: 36px; border: none; border-radius: 50%; background: transparent; color: var(--mtg-muted);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .15s, color .15s;
+}
+.password-toggle:hover { background: var(--mtg-bg-alt); color: var(--mtg-heading); }
+.password-toggle:focus-visible { outline: 3px solid var(--mtg-blue); outline-offset: -3px; }
+.password-toggle[aria-pressed="true"] { color: var(--mtg-blue); }
+.password-toggle svg[hidden] { display: none; }
 /* Each group spans 3 shared rows (label / input / error) so side-by-side inputs stay level
    even when only one label wraps or only one field shows an error */
 .form-row { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 0; }
