@@ -1,0 +1,58 @@
+<%- include('partials/header', { title: t('nav.myRequests') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', { pill: t('nav.myAccount'), heading: t('nav.myRequests'), subheading: null }) %>
+
+<section class="section">
+  <div class="container">
+    <% if (requests && requests.length) { %>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th><%= lang === 'en' ? 'Date' : 'Ngày gửi' %></th>
+              <th><%= t('forms.interestedIn') %></th>
+              <th><%= t('forms.message') %></th>
+              <th><%= lang === 'en' ? 'Status' : 'Trạng thái' %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% requests.forEach(function (r) { %>
+              <tr>
+                <td><%= new Date(r.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
+                <td><%= t('forms.interestedIn' + ({
+                  'san-pham-robot': 'Robot',
+                  'giai-phap-stem-lab': 'StemLab',
+                  'tu-van-du-hoc': 'StudyAbroad',
+                  'phan-phoi-san-pham': 'Distribution',
+                  'khac': 'Other'
+                }[r.interestedIn] || 'Other')) %></td>
+                <td>
+                  <%= r.message.slice(0, 80) %><%= r.message.length > 80 ? '…' : '' %>
+                  <% if (r.details && r.details.length) { %>
+                    <dl class="request-details">
+                      <% r.details.forEach(function (d) { %>
+                        <div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div>
+                      <% }) %>
+                    </dl>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="tag status-<%= r.status %>">
+                    <%= r.status === 'moi' ? (lang === 'en' ? 'New' : 'Mới')
+                      : r.status === 'da_lien_he' ? (lang === 'en' ? 'Contacted' : 'Đã liên hệ')
+                      : (lang === 'en' ? 'Completed' : 'Hoàn tất') %>
+                  </span>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="empty-note"><%= lang === 'en' ? "You haven't submitted any requests yet." : 'Bạn chưa gửi yêu cầu nào.' %></p>
+      <div style="text-align:center;"><a class="btn btn-primary" href="/lien-he"><%= t('common.requestQuote') %></a></div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

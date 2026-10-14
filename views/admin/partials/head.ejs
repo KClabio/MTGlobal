@@ -1,0 +1,73 @@
+<%
+  const activeNav = typeof active !== 'undefined' ? active : '';
+  // Same structure and order as the website menu (views/partials/header.ejs)
+  const navGroups = [
+    { items: [
+      { key: 'dashboard', href: '/admin', label: t('admin.nav.dashboard'), icon: 'layout-dashboard' },
+    ] },
+    { label: t('admin.navGroups.products'), items: [
+      { key: 'robot', href: '/admin/robot', label: t('admin.nav.robots'), icon: 'bot' },
+    ] },
+    { label: t('admin.navGroups.solutions'), items: [
+      { key: 'trang-stem-lab', href: '/admin/trang/stem-lab', label: t('admin.nav.pageStemLab'), icon: 'layout-template' },
+      { key: 'thiet-bi', href: '/admin/thiet-bi', label: t('admin.nav.equipment'), icon: 'cpu' },
+      { key: 'trang-workshop', href: '/admin/trang/workshop', label: t('admin.nav.pageWorkshop'), icon: 'wrench' },
+      { key: 'trang-dao-tao', href: '/admin/trang/dao-tao', label: t('admin.nav.pageEducation'), icon: 'graduation-cap' },
+      { key: 'du-an', href: '/admin/du-an', label: t('admin.nav.projects'), icon: 'folder-kanban' },
+      { key: 'trang-tap-huan', href: '/admin/trang/tap-huan', label: t('admin.nav.pageTraining'), icon: 'presentation' },
+    ] },
+    { label: t('admin.navGroups.services'), items: [
+      { key: 'dich-vu', href: '/admin/dich-vu', label: t('admin.nav.services'), icon: 'briefcase' },
+    ] },
+    { label: t('admin.navGroups.news'), items: [
+      { key: 'tin-tuc', href: '/admin/tin-tuc', label: t('admin.nav.news'), icon: 'newspaper' },
+    ] },
+    { label: t('admin.navGroups.about'), items: [
+      { key: 'thong-tin', href: '/admin/thong-tin-cong-ty', label: t('admin.nav.companyInfo'), icon: 'building' },
+      { key: 'doi-tac', href: '/admin/doi-tac', label: t('admin.nav.partners'), icon: 'handshake' },
+    ] },
+    { label: t('admin.navGroups.manage'), items: [
+      { key: 'yeu-cau', href: '/admin/yeu-cau', label: t('admin.nav.requests'), icon: 'inbox' },
+      { key: 'nguoi-dung', href: '/admin/nguoi-dung', label: t('admin.nav.users'), icon: 'users' },
+      { key: 'cai-dat', href: '/admin/cai-dat', label: t('admin.nav.settings'), icon: 'settings' },
+    ] },
+  ];
+%>
+<!doctype html>
+<html lang="<%= lang %>" data-theme="<%= theme %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= t('admin.pageTitle') %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="admin-wrap">
+    <aside class="admin-sidebar">
+      <a href="/admin" class="admin-brand">
+        <img src="/images/mtg-logo-transparent.png" alt="MTG - Smart solutions for Life">
+        <span><%= t('admin.brand') %></span>
+      </a>
+      <nav class="admin-nav">
+        <% navGroups.forEach(function (group) { %>
+          <% if (group.label) { %><span class="admin-nav-group"><%= group.label %></span><% } %>
+          <% group.items.forEach(function (item) { %>
+            <a href="<%= item.href %>" class="<%= activeNav === item.key ? 'active' : '' %>"<%- activeNav === item.key ? ' aria-current="page"' : '' %>>
+              <%- include('icon', { name: item.icon }) %><span><%= item.label %></span>
+            </a>
+          <% }) %>
+        <% }) %>
+        <a href="/" class="admin-nav-home"><%- include('icon', { name: 'arrow-left' }) %><span><%= t('admin.nav.backHome') %></span></a>
+      </nav>
+      <div class="admin-lang" role="group" aria-label="<%= t('admin.language') %>">
+        <%- include('icon', { name: 'globe', size: 16 }) %>
+        <a href="<%= adminLangUrl('vi') %>" class="<%= lang === 'vi' ? 'active' : '' %>" hreflang="vi"<%- lang === 'vi' ? ' aria-current="true"' : '' %>>VI</a>
+        <a href="<%= adminLangUrl('en') %>" class="<%= lang === 'en' ? 'active' : '' %>" hreflang="en"<%- lang === 'en' ? ' aria-current="true"' : '' %>>EN</a>
+        <%- include('../../partials/theme-toggle', { label: t('admin.theme.dark'), compact: true }) %>
+      </div>
+    </aside>
+    <main class="admin-main">

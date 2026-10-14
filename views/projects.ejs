@@ -1,0 +1,23 @@
+<%- include('partials/header', { title: t('nav.solutionProjects') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.solutions'),
+  heading: t('nav.solutionProjects'),
+  bannerKey: 'du-an'
+}) %>
+
+<section class="section">
+  <div class="container">
+    <% if (projects && projects.length) { %>
+      <div class="card-grid">
+        <% projects.forEach(function (project) { %>
+          <%- include('partials/project-card', { project }) %>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p class="empty-note"><%= lang === 'en' ? 'Reference projects are being updated.' : 'Danh sách dự án đang được cập nhật.' %></p>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

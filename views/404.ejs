@@ -1,0 +1,11 @@
+<%- include('partials/header', { title: '404 - MTG' }) %>
+
+<section class="section" style="text-align:center; padding:120px 0;">
+  <div class="container">
+    <h1>404</h1>
+    <p><%= lang === 'en' ? 'Page not found.' : 'Không tìm thấy trang bạn yêu cầu.' %></p>
+    <a class="btn btn-primary" href="/"><%= t('nav.home') %></a>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

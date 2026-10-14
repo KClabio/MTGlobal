@@ -1,0 +1,105 @@
+<%
+  const qfAction = typeof actionUrl !== 'undefined' ? actionUrl : '/lien-he';
+  const qfPrefill = typeof prefillInterestedIn !== 'undefined' ? prefillInterestedIn : null;
+  const qfCompact = typeof compact !== 'undefined' && compact;
+  const qfErrors = typeof errors !== 'undefined' && errors ? errors : {};
+  const qfValues = typeof values !== 'undefined' && values ? values : {};
+  const qfInterest = qfValues.interestedIn || qfPrefill;
+  // When the page already determines the category (robot pages), the server sets it and no dropdown is shown
+  const qfFixedInterest = typeof fixedInterest !== 'undefined' && fixedInterest;
+  // A service page adds its own questions (and a package picker when it lists packages)
+  const qfQuestions = typeof serviceQuestions !== 'undefined' && serviceQuestions ? serviceQuestions : [];
+  const qfPackages = typeof servicePackages !== 'undefined' && servicePackages ? servicePackages : [];
+  const qfLabel = (item, vi, en) => (lang === 'en' && item[en]) || item[vi] || item[en];
+  const qfInvalid = (key) => (qfErrors[key] || ((key === 'phone' || key === 'email') && qfErrors.contact) ? ' is-invalid' : '');
+%>
+<div class="form-card<%= qfCompact ? ' form-card--compact' : '' %>">
+  <% if (typeof sent !== 'undefined' && sent) { %>
+    <div class="form-alert success"><%= t('forms.requestSuccess') %></div>
+  <% } else { %>
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="form-alert error"><%= error %></div>
+    <% } %>
+    <form method="POST" action="<%= qfAction %>" novalidate data-quote-form
+          data-err-name="<%= t('forms.errName') %>"
+          data-err-contact="<%= t('forms.errContact') %>"
+          data-err-phone="<%= t('forms.errPhone') %>"
+          data-err-email="<%= t('forms.errEmail') %>"
+          data-err-message="<%= t('forms.errMessage') %>"
+          data-err-summary="<%= t('forms.errSummary') %>"
+          data-err-answer="<%= t('forms.errAnswerRequired') %>"
+          data-err-number="<%= t('forms.errAnswerNumber') %>">
+      <div class="form-row">
+        <div class="form-group">
+          <label><%= t('forms.name') %> *</label>
+          <input class="form-control<%= qfInvalid('name') %>" type="text" name="name" required autocomplete="name" value="<%= qfValues.name || '' %>">
+          <% if (qfErrors.name) { %><div class="field-error" data-error-for="name"><%= qfErrors.name %></div><% } %>
+        </div>
+        <div class="form-group">
+          <label><%= t('forms.schoolOrCompany') %></label>
+          <input class="form-control" type="text" name="schoolOrCompany" autocomplete="organization" value="<%= qfValues.schoolOrCompany || '' %>">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label><%= t('forms.phone') %> *</label>
+          <input class="form-control<%= qfInvalid('phone') %>" type="tel" name="phone" inputmode="tel" autocomplete="tel" value="<%= qfValues.phone || '' %>">
+          <% if (qfErrors.phone) { %><div class="field-error" data-error-for="phone"><%= qfErrors.phone %></div><% } %>
+        </div>
+        <div class="form-group">
+          <label><%= t('forms.email') %> *</label>
+          <input class="form-control<%= qfInvalid('email') %>" type="email" name="email" autocomplete="email" value="<%= qfValues.email || '' %>">
+          <% if (qfErrors.email) { %><div class="field-error" data-error-for="email"><%= qfErrors.email %></div><% } %>
+        </div>
+      </div>
+      <p class="form-hint contact-hint<%= qfErrors.contact ? ' is-error' : '' %>" data-contact-hint data-hint="<%= t('forms.contactHint') %>">* <%= qfErrors.contact || t('forms.contactHint') %></p>
+      <% if (qfPackages.length) { %>
+        <div class="form-group">
+          <label for="q__package"><%= t('services.packageField') %></label>
+          <select class="form-control<%= qfErrors.q__package ? ' is-invalid' : '' %>" id="q__package" name="q__package">
+            <option value=""><%= t('forms.choosePlaceholder') %></option>
+            <% qfPackages.forEach(function (p, i) { %>
+              <option value="<%= i %>" <%= qfValues.q__package === String(i) ? 'selected' : '' %>><%= qfLabel(p, 'nameVi', 'nameEn') %></option>
+            <% }) %>
+          </select>
+          <% if (qfErrors.q__package) { %><div class="field-error" data-error-for="q__package"><%= qfErrors.q__package %></div><% } %>
+        </div>
+      <% } %>
+      <% qfQuestions.forEach(function (q) { const qName = 'q_' + q.key; const qValue = qfValues[qName] || ''; %>
+        <div class="form-group">
+          <label for="<%= qName %>"><%= qfLabel(q, 'labelVi', 'labelEn') %><%= q.required ? ' *' : '' %></label>
+          <% if (q.type === 'choice') { %>
+            <select class="form-control<%= qfErrors[qName] ? ' is-invalid' : '' %>" id="<%= qName %>" name="<%= qName %>"<%= q.required ? ' data-required-answer' : '' %>>
+              <option value=""><%= t('forms.choosePlaceholder') %></option>
+              <% q.options.forEach(function (o, i) { %>
+                <option value="<%= i %>" <%= qValue === String(i) ? 'selected' : '' %>><%= (lang === 'en' && o.en) || o.vi %></option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <input class="form-control<%= qfErrors[qName] ? ' is-invalid' : '' %>" id="<%= qName %>" name="<%= qName %>" maxlength="200" value="<%= qValue %>"
+                   <%- q.type === 'number' ? 'inputmode="decimal" data-answer-number' : 'type="text"' %><%= q.required ? ' data-required-answer' : '' %>>
+          <% } %>
+          <% if (qfErrors[qName]) { %><div class="field-error" data-error-for="<%= qName %>"><%= qfErrors[qName] %></div><% } %>
+        </div>
+      <% }) %>
+      <% if (!qfFixedInterest) { %>
+      <div class="form-group">
+        <label><%= t('forms.interestedIn') %></label>
+        <select class="form-control" name="interestedIn">
+          <option value="san-pham-robot" <%= qfInterest === 'san-pham-robot' ? 'selected' : '' %>><%= t('forms.interestedInRobot') %></option>
+          <option value="giai-phap-stem-lab" <%= qfInterest === 'giai-phap-stem-lab' ? 'selected' : '' %>><%= t('forms.interestedInStemLab') %></option>
+          <option value="tu-van-du-hoc" <%= qfInterest === 'tu-van-du-hoc' ? 'selected' : '' %>><%= t('forms.interestedInStudyAbroad') %></option>
+          <option value="phan-phoi-san-pham" <%= qfInterest === 'phan-phoi-san-pham' ? 'selected' : '' %>><%= t('forms.interestedInDistribution') %></option>
+          <option value="khac" <%= (!qfInterest || qfInterest === 'khac') ? 'selected' : '' %>><%= t('forms.interestedInOther') %></option>
+        </select>
+      </div>
+      <% } %>
+      <div class="form-group">
+        <label><%= t('forms.message') %> *</label>
+        <textarea class="form-control<%= qfInvalid('message') %>" name="message" required><%= qfValues.message || '' %></textarea>
+        <% if (qfErrors.message) { %><div class="field-error" data-error-for="message"><%= qfErrors.message %></div><% } %>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('forms.submitRequest') %></button>
+    </form>
+  <% } %>
+</div>

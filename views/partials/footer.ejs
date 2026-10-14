@@ -1,0 +1,49 @@
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <div class="logo"><%- include('logo') %></div>
+        <p class="footer-company"><%= lang === 'en' ? 'Mễ Trì Global Technology Co., Ltd' : 'Công ty TNHH Công nghệ Mễ Trì Global' %></p>
+        <p class="footer-about">
+          <%= lang === 'en'
+            ? 'Smart robotics, STEM Lab solutions, and technology consulting services.'
+            : 'Robot thông minh, giải pháp phòng Lab STEM và các dịch vụ tư vấn công nghệ.' %>
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4><%= t('footer.quickLinks') %></h4>
+        <a href="/san-pham"><%= t('nav.products') %></a>
+        <a href="/giai-phap/stem-lab"><%= t('nav.solutions') %></a>
+        <a href="/dich-vu"><%= t('nav.services') %></a>
+        <a href="/tin-tuc"><%= t('nav.news') %></a>
+        <a href="/ve-mtg"><%= t('nav.about') %></a>
+      </div>
+
+      <div class="footer-col">
+        <h4><%= t('footer.contactInfo') %></h4>
+        <% if (settings && settings.contactInfo && settings.contactInfo.address) { %>
+          <p><%= settings.contactInfo.address %></p>
+        <% } %>
+        <% if (settings && settings.contactInfo && settings.contactInfo.phone) { %>
+          <a href="tel:<%= settings.contactInfo.phone %>"><%= settings.contactInfo.phone %></a>
+        <% } %>
+        <% if (settings && settings.contactInfo && settings.contactInfo.email) { %>
+          <a href="mailto:<%= settings.contactInfo.email %>"><%= settings.contactInfo.email %></a>
+        <% } %>
+        <a href="/lien-he"><%= t('common.contactUs') %></a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="container">
+        &copy; <%= new Date().getFullYear() %> MTG — Mễ Trì Global. <%= t('common.allRightsReserved') %>.
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/theme.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

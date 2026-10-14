@@ -1,0 +1,86 @@
+<%
+  // One section card in the solution-page editor. s: saved section ({} for the template of a new one).
+  // Fields carry data-field / data-item-field / data-media-field; public/js/admin.js gives them their
+  // sections[i][…] names in on-screen order just before the form is sent.
+  const sec = s || {};
+  const P = (key, vars) => t('admin.pages.' + key, vars);
+  const kind = sec.kind || 'text';
+  const KINDS = ['text', 'cards', 'steps', 'gallery', 'stats', 'buttons'];
+  const RATIOS = [['16/9', 'ratio_169'], ['4/3', 'ratio_43'], ['3/2', 'ratio_32'], ['1/1', 'ratio_11'], ['3/4', 'ratio_34']];
+  const uidValue = sec.uid || '';
+%>
+<div class="row-card page-section" data-row data-section data-kind="<%= kind %>"
+     data-item-label-text="<%= P('item_text') %>" data-item-label-cards="<%= P('item_cards') %>" data-item-label-steps="<%= P('item_steps') %>" data-item-label-stats="<%= P('item_stats') %>" data-item-label-buttons="<%= P('item_buttons') %>">
+  <input type="hidden" data-field="uid" value="<%= uidValue %>">
+  <div class="row-card-head">
+    <button type="button" class="drag-handle row-drag section-drag" aria-label="<%= P('dragSection') %>" title="<%= P('dragSection') %>"><%- include('icon', { name: 'grip', size: 18 }) %></button>
+    <span class="row-card-title"><%= P('section') %> <span data-row-num></span> · <span data-kind-label><%= P('kind_' + kind) %></span></span>
+    <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label><%= P('kind') %></label>
+      <select class="form-control" data-field="kind" data-section-kind>
+        <% KINDS.forEach(function (k) { %><option value="<%= k %>" <%= kind === k ? 'selected' : '' %>><%= P('kind_' + k) %></option><% }) %>
+      </select>
+    </div>
+    <div class="form-group" data-kinds="cards gallery">
+      <label><%= P('columns') %></label>
+      <select class="form-control" data-field="columns">
+        <option value="2" <%= sec.columns !== 3 ? 'selected' : '' %>><%= P('columns2') %></option>
+        <option value="3" <%= sec.columns === 3 ? 'selected' : '' %>><%= P('columns3') %></option>
+      </select>
+    </div>
+  </div>
+  <span class="checkbox-row page-continued" data-mirror-wrap>
+    <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror <%= sec.continued ? 'checked' : '' %>> <%= P('continued') %></label>
+    <input type="hidden" data-field="continued" value="<%= sec.continued ? '1' : '0' %>">
+  </span>
+
+  <div class="form-row" data-kinds="text cards steps gallery stats">
+    <div class="form-group"><label><%= P('titleVi') %></label><input class="form-control" data-field="titleVi" value="<%= sec.titleVi || '' %>"></div>
+    <div class="form-group"><label><%= P('titleEn') %></label><input class="form-control" data-field="titleEn" value="<%= sec.titleEn || '' %>"></div>
+  </div>
+  <div class="form-row" data-kinds="cards steps gallery stats">
+    <div class="form-group"><label><%= P('subtitleSecVi') %></label><textarea class="form-control" data-field="subtitleVi" rows="2"><%= sec.subtitleVi || '' %></textarea></div>
+    <div class="form-group"><label><%= P('subtitleSecEn') %></label><textarea class="form-control" data-field="subtitleEn" rows="2"><%= sec.subtitleEn || '' %></textarea></div>
+  </div>
+  <div class="form-row" data-kinds="text cards steps gallery">
+    <div class="form-group"><label><%= P('textVi') %></label><textarea class="form-control" data-field="textVi" rows="5"><%= sec.textVi || '' %></textarea></div>
+    <div class="form-group"><label><%= P('textEn') %></label><textarea class="form-control" data-field="textEn" rows="5"><%= sec.textEn || '' %></textarea></div>
+  </div>
+  <div data-kinds="text cards steps gallery"><%- include('plain-text-hint') %></div>
+
+  <!-- Repeatable items: cards / steps / statistics / buttons -->
+  <div class="page-subsection" data-kinds="text cards steps stats buttons">
+    <h4 class="page-subsection-title" data-items-title
+        data-label-text="<%= P('items_text') %>" data-label-cards="<%= P('items_cards') %>" data-label-steps="<%= P('items_steps') %>" data-label-stats="<%= P('items_stats') %>" data-label-buttons="<%= P('items_buttons') %>"><%= P('items_' + (KINDS.includes(kind) && kind !== 'gallery' ? kind : 'cards')) %></h4>
+    <div class="row-list page-items" data-item-list>
+      <% (sec.items || []).forEach(function (it) { %><%- include('page-item', { it }) %><% }) %>
+    </div>
+    <button type="button" class="btn btn-ghost btn-sm" data-add-item
+            data-label-text="+ <%= P('addItem_text') %>" data-label-cards="+ <%= P('addItem_cards') %>" data-label-steps="+ <%= P('addItem_steps') %>" data-label-stats="+ <%= P('addItem_stats') %>" data-label-buttons="+ <%= P('addItem_buttons') %>">+ <%= P('addItem_' + (kind === 'gallery' ? 'cards' : kind)) %></button>
+  </div>
+
+  <!-- Photos & videos (gallery; one picture next to a text section) -->
+  <div class="page-subsection" data-kinds="text gallery">
+    <h4 class="page-subsection-title" data-media-title data-label-text="<%= P('mediaText') %>" data-label-gallery="<%= P('media') %>"><%= kind === 'text' ? P('mediaText') : P('media') %></h4>
+    <div class="form-group" data-kinds="gallery text" style="max-width:260px;">
+      <label><%= P('ratio') %></label>
+      <select class="form-control" data-field="ratio">
+        <% RATIOS.forEach(function (r) { %><option value="<%= r[0] %>" <%= (sec.ratio || '4/3') === r[0] ? 'selected' : '' %>><%= P(r[1]) %></option><% }) %>
+      </select>
+    </div>
+    <div class="page-media-list" data-media-list>
+      <% (sec.media || []).forEach(function (m) { %><%- include('page-media', { m }) %><% }) %>
+    </div>
+    <div class="page-media-add">
+      <label class="btn btn-ghost btn-sm page-media-pick"><%- include('icon', { name: 'image', size: 16 }) %> <%= P('addMedia') %>
+        <input type="file" class="visually-hidden-file" data-media-input multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
+      </label>
+      <p class="form-hint"><%= P('addMediaHint') %></p>
+      <div class="page-media-pending" data-media-pending hidden><strong><%= P('newFiles') %></strong> <span data-media-pending-list></span></div>
+    </div>
+  </div>
+</div>

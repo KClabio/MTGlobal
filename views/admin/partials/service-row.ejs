@@ -1,0 +1,94 @@
+<%
+  // One repeatable item in the service editor. kind: step | package | faq | testimonial | question; item: its saved values ({} for a new row)
+  const it = item || {};
+  const L = (key) => t('admin.services.' + key);
+  const textOptions = (lang) => (it['optionsText' + lang] !== undefined ? it['optionsText' + lang] : (it.options || []).map((o) => o[lang.toLowerCase()]).filter(Boolean).join('\n'));
+  const rowTitle = { step: 'rowStep', package: 'rowPackage', faq: 'rowFaq', testimonial: 'rowTestimonial', question: 'rowQuestion' }[kind];
+%>
+<div class="row-card" data-row>
+  <div class="row-card-head">
+    <button type="button" class="drag-handle row-drag" aria-label="<%= L('dragRow') %>" title="<%= L('dragRow') %>"><%- include('icon', { name: 'grip', size: 18 }) %></button>
+    <span class="row-card-title"><%= L(rowTitle) %> <span data-row-num></span></span>
+    <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
+  </div>
+
+  <% if (kind === 'step') { %>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('stepTitleVi') %></label><input class="form-control" name="stepTitleVi" value="<%= it.titleVi || '' %>"></div>
+      <div class="form-group"><label><%= L('stepTitleEn') %></label><input class="form-control" name="stepTitleEn" value="<%= it.titleEn || '' %>"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('stepTextVi') %></label><textarea class="form-control" name="stepTextVi" rows="3"><%= it.textVi || '' %></textarea></div>
+      <div class="form-group"><label><%= L('stepTextEn') %></label><textarea class="form-control" name="stepTextEn" rows="3"><%= it.textEn || '' %></textarea></div>
+    </div>
+
+  <% } else if (kind === 'package') { %>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('packageNameVi') %></label><input class="form-control" name="packageNameVi" value="<%= it.nameVi || '' %>"></div>
+      <div class="form-group"><label><%= L('packageNameEn') %></label><input class="form-control" name="packageNameEn" value="<%= it.nameEn || '' %>"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('packagePriceVi') %></label><input class="form-control" name="packagePriceVi" placeholder="<%= L('pricePlaceholderVi') %>" value="<%= it.priceVi || '' %>"></div>
+      <div class="form-group"><label><%= L('packagePriceEn') %></label><input class="form-control" name="packagePriceEn" placeholder="<%= L('pricePlaceholderEn') %>" value="<%= it.priceEn || '' %>"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('packageFeaturesVi') %></label><textarea class="form-control" name="packageFeaturesVi" rows="4"><%= (it.featuresVi || []).join('\n') %></textarea></div>
+      <div class="form-group"><label><%= L('packageFeaturesEn') %></label><textarea class="form-control" name="packageFeaturesEn" rows="4"><%= (it.featuresEn || []).join('\n') %></textarea></div>
+    </div>
+    <p class="form-hint" style="margin-top:-10px;"><%= L('onePerLine') %></p>
+    <span class="checkbox-row" data-mirror-wrap>
+      <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror data-exclusive="package" <%= it.highlighted ? 'checked' : '' %>> <%= L('packageHighlighted') %></label>
+      <input type="hidden" name="packageHighlighted" value="<%= it.highlighted ? '1' : '0' %>">
+    </span>
+
+  <% } else if (kind === 'faq') { %>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('faqQuestionVi') %></label><input class="form-control" name="faqQuestionVi" value="<%= it.questionVi || '' %>"></div>
+      <div class="form-group"><label><%= L('faqQuestionEn') %></label><input class="form-control" name="faqQuestionEn" value="<%= it.questionEn || '' %>"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('faqAnswerVi') %></label><textarea class="form-control" name="faqAnswerVi" rows="3"><%= it.answerVi || '' %></textarea></div>
+      <div class="form-group"><label><%= L('faqAnswerEn') %></label><textarea class="form-control" name="faqAnswerEn" rows="3"><%= it.answerEn || '' %></textarea></div>
+    </div>
+
+  <% } else if (kind === 'testimonial') { %>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('testimonialQuoteVi') %></label><textarea class="form-control" name="testimonialQuoteVi" rows="3"><%= it.quoteVi || '' %></textarea></div>
+      <div class="form-group"><label><%= L('testimonialQuoteEn') %></label><textarea class="form-control" name="testimonialQuoteEn" rows="3"><%= it.quoteEn || '' %></textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('testimonialAuthor') %></label><input class="form-control" name="testimonialAuthor" value="<%= it.author || '' %>"></div>
+      <div class="form-group"><label><%= L('testimonialRole') %></label><input class="form-control" name="testimonialRole" placeholder="<%= L('rolePlaceholder') %>" value="<%= it.role || '' %>"></div>
+    </div>
+
+  <% } else if (kind === 'question') { %>
+    <input type="hidden" name="questionKey" value="<%= it.key || '' %>">
+    <div class="form-row">
+      <div class="form-group"><label><%= L('questionLabelVi') %></label><input class="form-control" name="questionLabelVi" value="<%= it.labelVi || '' %>"></div>
+      <div class="form-group"><label><%= L('questionLabelEn') %></label><input class="form-control" name="questionLabelEn" value="<%= it.labelEn || '' %>"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label><%= L('questionType') %></label>
+        <select class="form-control" name="questionType" data-question-type>
+          <% ['text', 'number', 'choice'].forEach(function (type) { %>
+            <option value="<%= type %>" <%= (it.type || 'text') === type ? 'selected' : '' %>><%= L('type_' + type) %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="form-group question-required">
+        <span class="checkbox-row" data-mirror-wrap>
+          <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror <%= it.required ? 'checked' : '' %>> <%= L('questionRequired') %></label>
+          <input type="hidden" name="questionRequired" value="<%= it.required ? '1' : '0' %>">
+        </span>
+      </div>
+    </div>
+    <div data-question-options <%= it.type === 'choice' ? '' : 'hidden' %>>
+      <div class="form-row">
+        <div class="form-group"><label><%= L('optionsVi') %></label><textarea class="form-control" name="questionOptionsVi" rows="4"><%= textOptions('Vi') %></textarea></div>
+        <div class="form-group"><label><%= L('optionsEn') %></label><textarea class="form-control" name="questionOptionsEn" rows="4"><%= textOptions('En') %></textarea></div>
+      </div>
+      <p class="form-hint" style="margin-top:-10px;"><%= L('optionsHint') %></p>
+    </div>
+  <% } %>
+</div>

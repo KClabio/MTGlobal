@@ -1,0 +1,117 @@
+<%- include('partials/header', { title: t('profile.title') + ' - MTG' }) %>
+<%
+  const pState = typeof profileState !== 'undefined' && profileState ? profileState : {};
+  const pwState = typeof passwordState !== 'undefined' && passwordState ? passwordState : {};
+  // After a rejected submit, refill what the user typed; otherwise show the saved profile
+  const v = typeof values !== 'undefined' && values ? values : user;
+  const nameParts = (user.name || '').trim().split(/\s+/).filter(Boolean);
+  const initials = ((nameParts[0] || '?')[0] + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')).toUpperCase();
+  const memberSince = user.createdAt ? new Date(user.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN', { month: 'long', year: 'numeric' }) : '';
+%>
+
+<section class="section">
+  <div class="container profile-page">
+    <h1 class="profile-heading"><%= t('profile.title') %></h1>
+
+    <div class="profile-layout">
+      <aside class="profile-summary">
+        <% if (user.avatar) { %>
+          <img class="avatar-lg" src="<%= user.avatar %>" alt="<%= user.name %>">
+        <% } else { %>
+          <div class="avatar-lg avatar-fallback" aria-hidden="true"><%= initials %></div>
+        <% } %>
+        <h2 class="profile-name"><%= user.name %></h2>
+        <p class="profile-email"><%= user.email %></p>
+        <% if (memberSince) { %><p class="profile-meta"><%= t('profile.memberSince') %> <%= memberSince %></p><% } %>
+        <div class="profile-bio">
+          <h3><%= t('profile.bio') %></h3>
+          <% if (user.bio) { %>
+            <p class="bio-text"><%= user.bio %></p>
+          <% } else { %>
+            <p class="bio-text is-empty"><%= t('profile.bioEmpty') %></p>
+          <% } %>
+        </div>
+      </aside>
+
+      <div class="profile-forms">
+        <div class="form-card">
+          <h2 class="form-card-title"><%= t('profile.infoTitle') %></h2>
+          <% if (pState.success) { %><div class="form-alert success"><%= t('profile.updated') %></div><% } %>
+          <% if (pState.error) { %><div class="form-alert error"><%= pState.error %></div><% } %>
+          <form method="POST" action="/ho-so" enctype="multipart/form-data">
+            <div class="form-group">
+              <label><%= t('profile.avatar') %></label>
+              <div class="avatar-picker">
+                <% if (user.avatar) { %>
+                  <img class="avatar-sm" src="<%= user.avatar %>" alt="" data-avatar-preview>
+                <% } else { %>
+                  <div class="avatar-sm avatar-fallback" data-avatar-preview><%= initials %></div>
+                <% } %>
+                <div>
+                  <label class="btn btn-ghost btn-sm avatar-choose">
+                    <%= t('profile.chooseAvatar') %>
+                    <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" data-avatar-input data-max-bytes="<%= avatarMaxBytes %>" data-size-error="<%= t('profile.errAvatarSize') %>" hidden>
+                  </label>
+                  <p class="form-hint"><%= t('profile.avatarHint') %></p>
+                  <% if (user.avatar) { %>
+                    <label class="checkbox-row form-hint"><input type="checkbox" name="removeAvatar" value="1"> <%= t('profile.removeAvatar') %></label>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label><%= t('forms.name') %> *</label>
+              <input class="form-control" type="text" name="name" value="<%= v.name || '' %>" required autocomplete="name">
+            </div>
+            <div class="form-group">
+              <label><%= t('forms.email') %></label>
+              <input class="form-control" type="email" value="<%= user.email %>" disabled>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label><%= t('forms.phone') %></label>
+                <input class="form-control" type="tel" name="phone" value="<%= v.phone || '' %>" autocomplete="tel">
+              </div>
+              <div class="form-group">
+                <label><%= t('forms.schoolOrCompany') %></label>
+                <input class="form-control" type="text" name="schoolOrCompany" value="<%= v.schoolOrCompany || '' %>" autocomplete="organization">
+              </div>
+            </div>
+            <div class="form-group">
+              <label><%= t('profile.bio') %></label>
+              <textarea class="form-control" name="bio" rows="4" maxlength="500" placeholder="<%= t('profile.bioPlaceholder') %>" data-count="bioCount"><%= v.bio || '' %></textarea>
+              <div class="char-count"><span id="bioCount"><%= (v.bio || '').length %></span>/500</div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block"><%= t('common.update') %></button>
+          </form>
+        </div>
+
+        <div class="form-card">
+          <h2 class="form-card-title"><%= t('profile.passwordTitle') %></h2>
+          <% if (pwState.success) { %><div class="form-alert success"><%= t('profile.passwordChanged') %></div><% } %>
+          <% if (pwState.error) { %><div class="form-alert error"><%= pwState.error %></div><% } %>
+          <form method="POST" action="/ho-so/mat-khau">
+            <div class="form-group">
+              <label><%= t('profile.currentPassword') %></label>
+              <input class="form-control" type="password" name="currentPassword" required autocomplete="current-password">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label><%= t('profile.newPassword') %></label>
+                <input class="form-control" type="password" name="newPassword" required minlength="6" autocomplete="new-password">
+              </div>
+              <div class="form-group">
+                <label><%= t('profile.confirmNewPassword') %></label>
+                <input class="form-control" type="password" name="confirmPassword" required minlength="6" autocomplete="new-password">
+              </div>
+            </div>
+            <p class="form-hint" style="margin:-8px 0 18px;"><%= t('profile.passwordHint') %></p>
+            <button type="submit" class="btn btn-primary btn-block"><%= t('profile.changePassword') %></button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

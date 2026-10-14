@@ -1,0 +1,38 @@
+<%- include('partials/head', { active: 'tin-tuc' }) %>
+
+<div class="admin-topbar">
+  <h1><%= t('admin.articles.title') %></h1>
+  <a class="btn btn-primary" href="/admin/tin-tuc/moi"><%= t('admin.articles.add') %></a>
+</div>
+
+<%- include('partials/sort-hint') %>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.articles.colTitle') %></th><th><%= t('admin.articles.colDate') %></th><th><%= t('admin.articles.colVisible') %></th><th></th></tr></thead>
+  <tbody data-sortable="articles">
+    <% articles.forEach(function (a) { %>
+      <tr data-id="<%= a._id %>">
+        <%- include('partials/drag-handle', { name: a.titleVi }) %>
+        <td><% if (a.coverImage) { %><img class="thumb" src="<%= a.coverImage %>" alt=""><% } %></td>
+        <td><%= a.titleVi %></td>
+        <td><%= new Date(a.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
+        <td><%= a.published ? t('admin.articles.visible') : t('admin.articles.hidden') %></td>
+        <td>
+          <div class="row-actions">
+            <a class="btn btn-ghost btn-sm" href="/admin/tin-tuc/<%= a._id %>/sua"><%= t('admin.common.edit') %></a>
+            <form method="POST" action="/admin/tin-tuc/<%= a._id %>/xoa" data-confirm="<%= t('admin.articles.confirmDelete') %>">
+              <button class="btn btn-danger btn-sm" type="submit"><%= t('admin.common.delete') %></button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+<% if (!articles.length) { %><p class="empty-note"><%= t('admin.common.empty') %></p><% } %>
+
+<%- include('partials/view-page-fab', { href: '/tin-tuc', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>

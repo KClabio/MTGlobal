@@ -1,0 +1,47 @@
+<%- include('partials/header', { title: t('forms.registerTitle') + ' - MTG' }) %>
+
+<section class="section">
+  <div class="container" style="max-width:520px;">
+    <h1 style="text-align:center;"><%= t('forms.registerTitle') %></h1>
+    <div class="form-card">
+      <% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+      <form method="POST" action="/dang-ky">
+        <div class="form-group">
+          <label><%= t('forms.name') %> *</label>
+          <input class="form-control" type="text" name="name" value="<%= values.name || '' %>" required>
+        </div>
+        <div class="form-group">
+          <label><%= t('forms.email') %> *</label>
+          <input class="form-control" type="email" name="email" value="<%= values.email || '' %>" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><%= t('forms.phone') %></label>
+            <input class="form-control" type="text" name="phone" value="<%= values.phone || '' %>">
+          </div>
+          <div class="form-group">
+            <label><%= t('forms.schoolOrCompany') %></label>
+            <input class="form-control" type="text" name="schoolOrCompany" value="<%= values.schoolOrCompany || '' %>">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><%= t('forms.password') %> *</label>
+            <input class="form-control" type="password" name="password" required>
+          </div>
+          <div class="form-group">
+            <label><%= t('forms.confirmPassword') %> *</label>
+            <input class="form-control" type="password" name="confirmPassword" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block"><%= t('forms.registerTitle') %></button>
+      </form>
+      <p style="text-align:center; margin-top:16px;">
+        <%= lang === 'en' ? 'Already have an account?' : 'Đã có tài khoản?' %>
+        <a href="/dang-nhap"><%= t('nav.login') %></a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

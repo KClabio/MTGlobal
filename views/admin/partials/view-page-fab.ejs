@@ -1,0 +1,13 @@
+<%# Round "view on the website" button, bottom-right. Usage: include('partials/view-page-fab', { href, label, disabledReason }) %>
+<% if (typeof disabledReason !== 'undefined' && disabledReason) { %>
+  <span class="view-fab is-disabled" role="link" aria-disabled="true" tabindex="0" aria-label="<%= disabledReason %>" title="<%= disabledReason %>">
+    <%- include('icon', { name: 'external-link', size: 22 }) %>
+    <span class="view-fab-label"><%= disabledReason %></span>
+  </span>
+<% } else { %>
+  <a class="view-fab" href="<%= href %>" target="_blank" rel="noopener" aria-label="<%= label %>">
+    <%- include('icon', { name: 'external-link', size: 22 }) %>
+    <span class="view-fab-label" aria-hidden="true"><%= label %></span>
+  </a>
+<% } %>
+<script>document.body.classList.add('has-view-fab');</script>

@@ -1,0 +1,11 @@
+<a class="card" href="/giai-phap/du-an/<%= project._id %>">
+  <div class="card-media">
+    <% if (project.images && project.images[0]) { %>
+      <img src="<%= project.images[0] %>" alt="<%= pick(project, 'title') %>" loading="lazy">
+    <% } %>
+  </div>
+  <div class="card-body">
+    <h3><%= pick(project, 'title') %></h3>
+    <p><%= project.schoolName %><% if (project.location) { %> — <%= project.location %><% } %></p>
+  </div>
+</a>

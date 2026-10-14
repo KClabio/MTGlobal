@@ -1,0 +1,11 @@
+node_modules/
+.env
+public/uploads/images/*
+public/uploads/videos/*
+public/uploads/documents/*
+!public/uploads/images/.gitkeep
+!public/uploads/videos/.gitkeep
+!public/uploads/documents/.gitkeep
+source-assets/
+*.log
+.DS_Store

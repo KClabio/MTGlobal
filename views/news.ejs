@@ -1,0 +1,25 @@
+<%- include('partials/header', { title: t('nav.news') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', { pill: t('nav.news'), heading: t('nav.news'), bannerKey: 'news' }) %>
+
+<section class="section">
+  <div class="container">
+    <% if (articles && articles.length) { %>
+      <div class="card-grid">
+        <% articles.forEach(function (article) { %>
+          <a class="card" href="/tin-tuc/<%= article._id %>">
+            <% if (article.coverImage) { %><div class="card-media"><img src="<%= article.coverImage %>" alt="<%= article.titleVi %>"></div><% } %>
+            <div class="card-body">
+              <h3><%= article.titleVi %></h3>
+              <p><%= new Date(article.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></p>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <p class="empty-note"><%= lang === 'en' ? 'No articles yet.' : 'Chưa có tin tức nào.' %></p>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

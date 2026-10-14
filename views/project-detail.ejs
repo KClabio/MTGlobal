@@ -1,0 +1,29 @@
+<%- include('partials/header', { title: pick(project, 'title') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.solutionProjects'),
+  heading: pick(project, 'title'),
+  subheading: [project.schoolName, project.location].filter(Boolean).join(' — '),
+  backHref: '/giai-phap/du-an',
+  bannerKey: 'du-an'
+}) %>
+
+<section class="section">
+  <div class="container">
+    <% if (project.images && project.images.length) { %>
+      <div class="card-grid cols-2">
+        <% project.images.forEach(function (img) { %>
+          <div class="card-media" style="border-radius:var(--mtg-radius); aspect-ratio:4/3;"><img src="<%= img %>" alt="<%= pick(project, 'title') %>"></div>
+        <% }) %>
+      </div>
+    <% } %>
+    <% if (pick(project, 'description')) { %>
+      <div class="prose-text prose-text-start" style="margin-top:24px;"><%- formatText(pick(project, 'description')) %></div>
+    <% } %>
+    <div style="margin-top:32px;">
+      <a class="btn btn-primary" href="/lien-he?quan_tam=giai-phap-stem-lab"><%= t('common.requestQuote') %></a>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

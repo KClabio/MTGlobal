@@ -1,0 +1,48 @@
+<%- include('partials/head', { active: 'trang-' + slug }) %>
+<%
+  const P = (key, vars) => t('admin.pages.' + key, vars);
+  const errorList = typeof errors !== 'undefined' && errors ? errors : [];
+  const pageTitle = t(titleKey);
+%>
+
+<div class="admin-topbar">
+  <div>
+    <h1><%= pageTitle %></h1>
+    <p class="admin-subtitle"><%= P('pill') %></p>
+  </div>
+</div>
+
+<% if (errorList.length) { %>
+  <div class="form-alert error">
+    <strong><%= P('errorsTitle') %></strong>
+    <ul class="form-error-list"><% errorList.forEach(function (e) { %><li><%= e %></li><% }) %></ul>
+  </div>
+<% } %>
+
+<form method="POST" action="/admin/trang/<%= slug %>" enctype="multipart/form-data" data-page-form>
+  <p class="admin-hint page-banner-note"><%- include('partials/icon', { name: 'settings', size: 16 }) %>
+    <span><%= P('bannerNote', { title: pageTitle }) %> <a href="/admin/cai-dat?tab=banners#banner-<%= slug %>" data-banner-link><%= P('bannerLink') %> →</a></span>
+  </p>
+
+  <section class="page-sections">
+    <h2 class="admin-panel-title"><%= P('tabSections') %> <span class="admin-tab-count" data-section-count><%= (page.sections || []).length %></span></h2>
+    <p class="admin-hint"><%- include('partials/icon', { name: 'grip', size: 16 }) %><span><%= P('sectionsHint') %></span></p>
+    <div class="row-list" id="sectionRows" data-section-list>
+      <% (page.sections || []).forEach(function (s) { %><%- include('partials/page-section', { s }) %><% }) %>
+    </div>
+    <button type="button" class="btn btn-ghost" data-add-section>+ <%= P('addSection') %></button>
+    <template id="tpl-page-section"><%- include('partials/page-section', { s: {} }) %></template>
+    <template id="tpl-page-item"><%- include('partials/page-item', { it: {} }) %></template>
+  </section>
+
+  <div class="form-actions page-form-actions">
+    <button class="btn btn-primary" type="submit"><%= P('save') %></button>
+  </div>
+</form>
+
+<form method="POST" action="/admin/trang/<%= slug %>/mac-dinh" class="page-reset" data-confirm="<%= P('resetConfirm') %>" data-confirm-title="<%= P('reset') %>">
+  <button class="btn btn-danger-ghost btn-sm" type="submit"><%- include('partials/icon', { name: 'rotate-ccw', size: 15 }) %> <%= P('reset') %></button>
+</form>
+
+<%- include('partials/view-page-fab', { href: '/giai-phap/' + slug, label: t('admin.viewPage.item', { name: pageTitle }) }) %>
+<%- include('partials/foot') %>

@@ -1,0 +1,77 @@
+<%- include('partials/head', { active: 'du-an' }) %>
+
+<div class="admin-topbar"><h1><%= t(project && project._id ? 'admin.projects.formEdit' : 'admin.projects.formNew') %></h1></div>
+
+<% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+
+<form method="POST" action="<%= project && project._id ? '/admin/du-an/' + project._id + '/sua' : '/admin/du-an/moi' %>" enctype="multipart/form-data">
+  <div class="admin-form-grid">
+    <div>
+      <div class="form-row">
+        <div class="form-group">
+          <label><%= t('admin.projects.nameVi') %></label>
+          <input class="form-control" name="titleVi" value="<%= (project && project.titleVi) || '' %>" required>
+        </div>
+        <div class="form-group">
+          <label><%= t('admin.projects.nameEn') %></label>
+          <input class="form-control" name="titleEn" value="<%= (project && project.titleEn) || '' %>">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label><%= t('admin.projects.school') %></label>
+          <input class="form-control" name="schoolName" value="<%= (project && project.schoolName) || '' %>">
+        </div>
+        <div class="form-group">
+          <label><%= t('admin.projects.location') %></label>
+          <input class="form-control" name="location" value="<%= (project && project.location) || '' %>">
+        </div>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.projects.descVi') %></label>
+        <textarea class="form-control" name="descriptionVi" rows="10"><%= (project && project.descriptionVi) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.projects.descEn') %></label>
+        <textarea class="form-control" name="descriptionEn" rows="10"><%= (project && project.descriptionEn) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+
+      <div class="form-group">
+        <label><%= t('admin.common.currentImages') %></label>
+        <div class="media-thumb-list">
+          <% (project && project.images || []).forEach(function (img) { %>
+            <div class="media-thumb">
+              <img src="<%= img %>" alt="">
+              <label><input type="checkbox" name="removeImages" value="<%= img %>"> <%= t('admin.common.remove') %></label>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.common.addImages') %></label>
+        <input class="form-control" type="file" name="images" accept="image/*" multiple>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.projects.video') %></label>
+        <input class="form-control" type="file" name="videos" accept="video/*">
+        <% if (project && project.videoUrl) { %><p class="form-hint"><%= t('admin.projects.videoCurrent') %> <a href="<%= project.videoUrl %>" target="_blank" rel="noopener"><%= t('admin.projects.videoView') %></a> <%= t('admin.projects.videoReplace') %></p><% } %>
+      </div>
+    </div>
+
+    <aside>
+      <div class="checkbox-row form-group">
+        <input type="checkbox" id="featured" name="featured" <%= project && project.featured ? 'checked' : '' %>>
+        <label for="featured" style="margin:0;"><%= t('admin.projects.featured') %></label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('admin.common.save') %></button>
+    </aside>
+  </div>
+</form>
+
+<%- include('partials/view-page-fab', project && project._id
+  ? { href: '/giai-phap/du-an/' + project._id, label: t('admin.viewPage.item', { name: pick(project, 'title') }) }
+  : { href: '/giai-phap/du-an', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>

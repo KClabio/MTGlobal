@@ -1,0 +1,21 @@
+<%- include('partials/header', { title: t('nav.contact') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.contact'),
+  heading: t('common.contactUs'),
+  bannerKey: 'contact'
+}) %>
+
+<section class="section">
+  <div class="container" style="max-width:720px;">
+    <% if (settings && settings.contactInfo && (settings.contactInfo.phone || settings.contactInfo.email)) { %>
+      <div style="text-align:center; margin-bottom:32px;">
+        <% if (settings.contactInfo.phone) { %><p><%= t('common.phone') %>: <%= settings.contactInfo.phone %></p><% } %>
+        <% if (settings.contactInfo.email) { %><p><%= t('common.email') %>: <%= settings.contactInfo.email %></p><% } %>
+      </div>
+    <% } %>
+    <%- include('partials/quote-form', { sent, error, errors, values, prefillInterestedIn }) %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

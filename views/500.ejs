@@ -1,0 +1,11 @@
+<%- include('partials/header', { title: '500 - MTG' }) %>
+
+<section class="section" style="text-align:center; padding:120px 0;">
+  <div class="container">
+    <h1>500</h1>
+    <p><%= lang === 'en' ? 'Something went wrong on our end.' : 'Đã có lỗi xảy ra, vui lòng thử lại sau.' %></p>
+    <a class="btn btn-primary" href="/"><%= t('nav.home') %></a>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

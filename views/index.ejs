@@ -1,0 +1,98 @@
+<%- include('partials/header', { title: 'MTG - Smart Solutions for Life' }) %>
+
+<section class="home-hero">
+  <div class="container home-hero-inner">
+    <div>
+      <span class="hero-pill">MTG — Mễ Trì Global</span>
+      <%
+        // Admin → Cài đặt chung → Trang chủ: optional text overrides (empty = the default text)
+        const hh = (settings && settings.homeHero) || {};
+        const hhTitle = ((lang === 'en' ? hh.titleEn : hh.titleVi) || '').trim();
+        const hhSub = ((lang === 'en' ? hh.subtitleEn : hh.subtitleVi) || '').trim();
+      %>
+      <h1><%= hhTitle || t('home.heroTitle') %></h1>
+      <p><%= hhSub || t('home.heroSubtitle') %></p>
+      <a href="/lien-he" class="btn btn-primary"><%= t('home.heroCta') %></a>
+    </div>
+    <div class="home-hero-art">
+      <% if (settings && settings.heroImages && settings.heroImages.home) { %>
+        <img src="<%= settings.heroImages.home %>" alt="MTG">
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2 class="section-title"><%= t('home.pillarsTitle') %></h2>
+    </div>
+    <div class="pillar-grid">
+      <div class="pillar-card c-products">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 4v16M4 8h16"/></svg>
+        </div>
+        <h3><%= t('home.pillarProductsTitle') %></h3>
+        <p><%= t('home.pillarProductsText') %></p>
+        <a class="pillar-link" href="/san-pham"><%= t('common.learnMore') %> →</a>
+      </div>
+      <div class="pillar-card c-solution">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        </div>
+        <h3><%= t('home.pillarSolutionTitle') %></h3>
+        <p><%= t('home.pillarSolutionText') %></p>
+        <a class="pillar-link" href="/giai-phap/stem-lab"><%= t('common.learnMore') %> →</a>
+      </div>
+      <div class="pillar-card c-services">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4Z"/></svg>
+        </div>
+        <h3><%= t('home.pillarServicesTitle') %></h3>
+        <p><%= t('home.pillarServicesText') %></p>
+        <a class="pillar-link" href="/dich-vu"><%= t('common.learnMore') %> →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<% if (robots && robots.length) { %>
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head"><h2 class="section-title"><%= t('nav.products') %></h2></div>
+    <div class="card-grid cols-4">
+      <% robots.forEach(function (product) { %>
+        <%- include('partials/product-card', { product }) %>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<% if (featuredProjects && featuredProjects.length) { %>
+<section class="section">
+  <div class="container">
+    <div class="section-head"><h2 class="section-title"><%= t('home.featuredProjectsTitle') %></h2></div>
+    <div class="card-grid">
+      <% featuredProjects.forEach(function (project) { %>
+        <%- include('partials/project-card', { project }) %>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head"><h2 class="section-title"><%= t('home.partnersTitle') %></h2></div>
+    <% if (partners && partners.length) { %>
+      <div class="partner-strip">
+        <% partners.forEach(function (partner) { %><%- include('partials/partner-tile', { partner }) %><% }) %>
+      </div>
+    <% } else { %>
+      <p class="empty-note"><%= lang === 'en' ? 'Partner logos coming soon.' : 'Danh sách đối tác đang được cập nhật.' %></p>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

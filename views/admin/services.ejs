@@ -1,0 +1,31 @@
+<%- include('partials/head', { active: 'dich-vu' }) %>
+
+<div class="admin-topbar"><h1><%= t('admin.services.title') %></h1></div>
+
+<%- include('partials/sort-hint') %>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.services.colTitle') %></th><th><%= t('admin.services.colSlug') %></th><th></th></tr></thead>
+  <tbody data-sortable="services">
+    <% services.forEach(function (s) { %>
+      <tr data-id="<%= s._id %>">
+        <%- include('partials/drag-handle', { name: pick(s, 'title') }) %>
+        <td><% if (s.heroImage) { %><img class="thumb" src="<%= s.heroImage %>" alt=""><% } %></td>
+        <td>
+          <%= pick(s, 'title') %>
+          <% const parts = [
+            ['countSteps', (s.steps || []).length], ['countPackages', (s.packages || []).length], ['countFaqs', (s.faqs || []).length],
+            ['countPhotos', (s.gallery || []).length], ['countTestimonials', (s.testimonials || []).length], ['countQuestions', (s.questions || []).length],
+          ]; %>
+          <div class="service-counts"><%= parts.map(function (p) { return t('admin.services.' + p[0], { n: p[1] }); }).join(' · ') %></div>
+        </td>
+        <td><code>/dich-vu/<%= s.slug %></code></td>
+        <td><div class="row-actions"><a class="btn btn-ghost btn-sm" href="/admin/dich-vu/<%= s._id %>/sua"><%= t('admin.common.edit') %></a></div></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,32 @@
+<%
+  // A notification to show on this page: this page's own form error wins over a flash left by an earlier action
+  let toastNow = typeof flash !== 'undefined' && flash ? flash : null;
+  if (typeof error !== 'undefined' && error) toastNow = { type: 'error', text: error };
+%>
+    </main>
+  </div>
+  <div class="admin-toast" id="adminToast" role="status" aria-live="polite" hidden
+       <% if (toastNow) { %>data-type="<%= toastNow.type %>" data-text="<%= toastNow.text %>"<% } %>>
+    <span class="toast-icon" aria-hidden="true"></span>
+    <span class="toast-text"></span>
+    <button type="button" class="toast-close" aria-label="<%= t('admin.common.close') %>">&times;</button>
+  </div>
+  <%# Delete confirmation: opened by any form[data-confirm] (public/js/admin.js) %>
+  <div class="confirm-overlay" id="confirmDialog" hidden>
+    <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmText">
+      <button type="button" class="confirm-x" data-confirm-cancel aria-label="<%= t('admin.common.close') %>" title="<%= t('admin.common.close') %>"><%- include('icon', { name: 'x', size: 18 }) %></button>
+      <span class="confirm-icon" aria-hidden="true"><%- include('icon', { name: 'trash', size: 26 }) %></span>
+      <h2 class="confirm-title" id="confirmTitle"><%= t('admin.confirm.title') %></h2>
+      <p class="confirm-text" id="confirmText"></p>
+      <div class="confirm-actions">
+        <button type="button" class="btn confirm-ok" data-confirm-ok><%= t('admin.confirm.confirm') %></button>
+        <button type="button" class="btn confirm-cancel" data-confirm-cancel><%= t('admin.confirm.cancel') %></button>
+      </div>
+    </div>
+  </div>
+  <script>window.ADMIN_I18N = { orderSaved: <%- JSON.stringify(t('admin.common.orderSaved')) %>, orderError: <%- JSON.stringify(t('admin.common.orderError')) %> };</script>
+  <script src="/js/theme.js"></script>
+  <script src="/vendor/sortable.min.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

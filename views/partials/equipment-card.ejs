@@ -1,0 +1,15 @@
+<%
+  const ecGroup = (lang === 'en' && item.subcategoryEn) ? item.subcategoryEn : item.subcategory;
+  const ecShowGroup = typeof showGroup === 'undefined' || showGroup;
+  const ecIsProductShot = item.images && item.images[0] && item.images[0].indexOf('/assets/giai-phap/robot-stem/') === 0;
+%><a class="card" href="/giai-phap/thiet-bi/<%= item._id %>">
+  <div class="card-media<%= ecIsProductShot ? ' is-contain' : '' %>">
+    <% if (item.images && item.images[0]) { %>
+      <img src="<%= item.images[0] %>" alt="<%= pick(item, 'name') %>" loading="lazy">
+    <% } %>
+  </div>
+  <div class="card-body">
+    <h3><%= pick(item, 'name') %></h3>
+    <% if (ecShowGroup && ecGroup) { %><p><%= ecGroup %></p><% } %>
+  </div>
+</a>

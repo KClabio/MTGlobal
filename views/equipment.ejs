@@ -1,0 +1,45 @@
+<%- include('partials/header', { title: t('nav.solutionEquipment') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.solutions'),
+  heading: t('nav.solutionEquipment'),
+  bannerKey: 'thiet-bi'
+}) %>
+
+<%
+  // Group the catalog by section, in the order the admin arranged the items
+  const groups = [];
+  (equipment || []).forEach(function (item) {
+    const key = item.subcategory || '';
+    let group = groups.find(function (g) { return g.key === key; });
+    if (!group) {
+      group = { key: key, title: (lang === 'en' && item.subcategoryEn) ? item.subcategoryEn : key, items: [] };
+      groups.push(group);
+    }
+    group.items.push(item);
+  });
+%>
+
+<section class="section">
+  <div class="container">
+    <% if (groups.length) { %>
+      <% groups.forEach(function (group) { %>
+        <div class="equipment-group">
+          <% if (group.title) { %><h2 class="equipment-group-title"><%= group.title %></h2><% } %>
+          <% if (/^Phần III/.test(group.key)) { %>
+            <p class="section-subtitle" style="text-align:left; margin:-6px 0 18px;"><%= lang === 'en' ? 'Product information from the official VEX Robotics materials — VEX Robotics is one of MTG\'s partners.' : 'Thông tin sản phẩm theo tài liệu chính thức của VEX Robotics — đối tác đồng hành của MTG.' %></p>
+          <% } %>
+          <div class="card-grid">
+            <% group.items.forEach(function (item) { %>
+              <%- include('partials/equipment-card', { item, showGroup: false }) %>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p class="empty-note"><%= lang === 'en' ? 'Equipment catalog is being updated.' : 'Danh mục thiết bị đang được cập nhật.' %></p>
+    <% } %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

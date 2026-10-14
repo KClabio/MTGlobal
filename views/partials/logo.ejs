@@ -1,0 +1,8 @@
+<% if (typeof settings !== 'undefined' && settings && settings.logo) { %>
+  <img class="logo-img" src="<%= settings.logo %>" alt="MTG - Smart Solutions for Life">
+<% } else { %>
+  <span class="logo-text">
+    <span style="color:var(--mtg-blue)">M</span><span style="color:var(--mtg-green)">T</span><span style="color:var(--mtg-orange)">G</span>
+    <small>Smart Solutions for Life</small>
+  </span>
+<% } %>

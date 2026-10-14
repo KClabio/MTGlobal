@@ -1,0 +1,59 @@
+<%- include('partials/head', { active: 'nguoi-dung' }) %>
+<%
+  const ROLE_TAG = { owner: 'tag role-owner', admin: 'tag role-admin', customer: 'tag' };
+%>
+
+<div class="admin-topbar"><h1><%= t('admin.users.title') %></h1></div>
+
+<p class="admin-hint">
+  <%- include('partials/icon', { name: 'shield', size: 16 }) %>
+  <span><strong><%= t('admin.roles.owner') %></strong> <%= t('admin.users.hintOwner') %>
+  <strong><%= t('admin.roles.admin') %></strong> <%= t('admin.users.hintAdmin') %></span>
+</p>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead><tr><th><%= t('admin.users.colName') %></th><th><%= t('admin.users.colEmail') %></th><th><%= t('admin.users.colOrg') %></th><th><%= t('admin.users.colRole') %></th><th><%= t('admin.users.colJoined') %></th><th></th></tr></thead>
+  <tbody>
+    <% users.forEach(function (u) { %>
+      <% const isMe = String(u._id) === String(user._id); %>
+      <tr>
+        <td><%= u.name %></td>
+        <td><%= u.email %></td>
+        <td><%= u.schoolOrCompany || '' %></td>
+        <td>
+          <span class="<%= ROLE_TAG[u.role] || 'tag' %>">
+            <% if (u.role === 'owner') { %><%- include('partials/icon', { name: 'crown', size: 13 }) %><% } %>
+            <%= t('admin.roles.' + u.role) %>
+          </span>
+        </td>
+        <td><%= new Date(u.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
+        <td>
+          <div class="row-actions">
+            <% if (isMe) { %>
+              <span class="form-hint"><%= t('admin.users.you') %></span>
+            <% } else { %>
+              <% if (canChangeRole(user, u)) { %>
+                <form method="POST" action="/admin/nguoi-dung/<%= u._id %>/vai-tro">
+                  <input type="hidden" name="role" value="<%= u.role === 'admin' ? 'customer' : 'admin' %>">
+                  <button class="btn btn-ghost btn-sm" type="submit"><%= u.role === 'admin' ? t('admin.users.demote') : t('admin.users.promote') %></button>
+                </form>
+              <% } %>
+              <% if (canDeleteUser(user, u)) { %>
+                <form method="POST" action="/admin/nguoi-dung/<%= u._id %>/xoa" data-confirm="<%= t('admin.users.confirmDelete', { name: u.name, email: u.email }) %>">
+                  <button class="btn btn-sm btn-danger-ghost" type="submit"><%- include('partials/icon', { name: 'trash', size: 15 }) %> <%= t('admin.common.delete') %></button>
+                </form>
+              <% } %>
+              <% if (!canChangeRole(user, u) && !canDeleteUser(user, u)) { %>
+                <span class="form-hint"><%= t('admin.users.noPermission') %></span>
+              <% } %>
+            <% } %>
+          </div>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+
+<%- include('partials/foot') %>

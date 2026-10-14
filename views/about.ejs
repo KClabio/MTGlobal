@@ -1,0 +1,68 @@
+<%- include('partials/header', { title: (lang === 'en' ? 'About MTG' : 'Về MTG') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: 'MTG',
+  heading: lang === 'en' ? 'About Mễ Trì Global Technology Co., Ltd' : 'Về Công ty TNHH Công nghệ Mễ Trì Global',
+  bannerKey: 'about'
+}) %>
+
+<section class="section">
+  <div class="container">
+    <% if (settings && settings.contactInfo && settings.contactInfo.address) { %>
+      <p style="text-align:center; max-width:640px; margin:0 auto 2em;">
+        <strong><%= t('common.address') %>:</strong> <%= settings.contactInfo.address %>
+      </p>
+    <% } %>
+    <% const companyProfile = settings && (lang === 'en' && settings.companyProfileEn ? settings.companyProfileEn : settings.companyProfile); %>
+    <% if (companyProfile) { %>
+      <div class="prose-text"><%- formatText(companyProfile) %></div>
+    <% } %>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-head">
+      <h2 class="section-title"><%= lang === 'en' ? 'Three Business Pillars' : 'Ba lĩnh vực hoạt động' %></h2>
+    </div>
+    <div class="pillar-grid">
+      <div class="pillar-card c-products">
+        <h3><%= lang === 'en' ? '1. Products — Smart Robotics' : '1. Sản phẩm – Robotics thông minh' %></h3>
+        <ul>
+          <li><%= lang === 'en' ? 'Stair-climbing cargo robot' : 'Robot xe chở hàng leo cầu thang' %></li>
+          <li><%= lang === 'en' ? 'Follow-me cargo robot' : 'Robot xe chở hàng đi theo người' %></li>
+          <li><%= lang === 'en' ? 'Lawn-mowing robot' : 'Robot cắt cỏ' %></li>
+          <li><%= lang === 'en' ? 'Home-service robot' : 'Robot phục vụ gia đình' %></li>
+        </ul>
+      </div>
+      <div class="pillar-card c-solution">
+        <h3><%= lang === 'en' ? '2. Solution — STEM Lab for every education level' : '2. Giải pháp: Phòng Lab STEM cho mọi cấp học' %></h3>
+        <ul>
+          <li><%= lang === 'en' ? 'Consulting, design and deployment of STEM Labs' : 'Tư vấn, thiết kế và triển khai STEM Lab' %></li>
+          <li><%= lang === 'en' ? 'Supply of STEM equipment/components: robotics, CNC, 3D printing, parts & accessories' : 'Cung cấp thiết bị/linh kiện STEM: Robotics, Máy công cụ CNC, 3D, Bộ phụ kiện, linh kiện/vật tư' %></li>
+          <li><%= lang === 'en' ? 'STEM experience models' : 'Cung cấp các mô hình về trải nghiệm STEM' %></li>
+        </ul>
+      </div>
+      <div class="pillar-card c-services">
+        <h3><%= lang === 'en' ? '3. Services' : '3. Dịch vụ' %></h3>
+        <ul>
+          <li><%= lang === 'en' ? 'Study-abroad consulting' : 'Tư vấn du học' %></li>
+          <li><%= lang === 'en' ? 'Distribution & commercialization of technology products' : 'Phân phối và thương mại hóa sản phẩm công nghệ' %></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<% if (partners && partners.length) { %>
+<section class="section" id="doi-tac">
+  <div class="container">
+    <div class="section-head"><h2 class="section-title"><%= t('home.partnersTitle') %></h2></div>
+    <div class="partner-strip">
+      <% partners.forEach(function (partner) { %><%- include('partials/partner-tile', { partner }) %><% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
+<%- include('partials/footer') %>

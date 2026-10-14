@@ -1,0 +1,38 @@
+<%- include('partials/head', { active: 'du-an' }) %>
+
+<div class="admin-topbar">
+  <h1><%= t('admin.projects.title') %></h1>
+  <a class="btn btn-primary" href="/admin/du-an/moi"><%= t('admin.projects.add') %></a>
+</div>
+
+<%- include('partials/sort-hint') %>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.projects.colName') %></th><th><%= t('admin.projects.colSchool') %></th><th><%= t('admin.projects.colFeatured') %></th><th></th></tr></thead>
+  <tbody data-sortable="projects">
+    <% projects.forEach(function (p) { %>
+      <tr data-id="<%= p._id %>">
+        <%- include('partials/drag-handle', { name: p.titleVi }) %>
+        <td><% if (p.images && p.images[0]) { %><img class="thumb" src="<%= p.images[0] %>" alt=""><% } %></td>
+        <td><%= p.titleVi %></td>
+        <td><%= p.schoolName %></td>
+        <td><%= p.featured ? t('admin.common.yes') : '' %></td>
+        <td>
+          <div class="row-actions">
+            <a class="btn btn-ghost btn-sm" href="/admin/du-an/<%= p._id %>/sua"><%= t('admin.common.edit') %></a>
+            <form method="POST" action="/admin/du-an/<%= p._id %>/xoa" data-confirm="<%= t('admin.projects.confirmDelete') %>">
+              <button class="btn btn-danger btn-sm" type="submit"><%= t('admin.common.delete') %></button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+<% if (!projects.length) { %><p class="empty-note"><%= t('admin.common.empty') %></p><% } %>
+
+<%- include('partials/view-page-fab', { href: '/giai-phap/du-an', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>

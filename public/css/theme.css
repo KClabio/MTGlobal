@@ -1,0 +1,126 @@
+/* Design tokens. Light is the default; <html data-theme="dark"> swaps in the dark set below.
+   Components only use these roles, never raw colours, so one switch re-themes everything. */
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --mtg-blue: #1565c0;          /* links, accents */
+  --mtg-blue-solid: #1565c0;    /* backgrounds behind white text (buttons, active pills) */
+  --mtg-blue-dark: #0d47a1;
+  --mtg-green: #2e9e44;
+  --mtg-orange: #f4821f;
+  --mtg-navy: #1f2a37;          /* navy BACKGROUNDS: page banner, footer, home hero */
+
+  /* Surfaces & text */
+  --mtg-bg: #ffffff;            /* page */
+  --mtg-bg-alt: #f5f7fa;        /* alternate bands, table heads, hover washes */
+  --mtg-surface: #ffffff;       /* cards, panels, inputs, header, sidebar */
+  --mtg-border: #e2e8f0;
+  --mtg-ink: #1a202c;           /* body text */
+  --mtg-heading: #1f2a37;       /* headings, labels, strong numbers */
+  --mtg-muted: #5b6774;
+
+  /* Tints */
+  --mtg-blue-tint: #e8f1fc;
+  --mtg-hover: #f7fbff;
+  --mtg-hover-border: #b9d3f3;
+  --mtg-track-hover: #e4edf8;
+  --mtg-error: #c0392b;
+  --mtg-error-bg: #fdecea;
+  --mtg-error-border: #f5c6cb;
+  --mtg-success: #1e7e34;
+  --mtg-success-bg: #eafaf0;
+  --mtg-success-border: #c3e6cb;
+  --mtg-orange-tint: #fdebe3;
+  --mtg-orange-ink: #b4441a;
+  --mtg-orange-icon: #d1541f;
+  --mtg-green-tint: #e3f5e3;
+  --mtg-green-ink: #0a8a0a;
+  --mtg-violet-tint: #ecebfb;
+  --mtg-violet-ink: #5a48c9;
+  --mtg-gold-tint: #fff4d6;
+  --mtg-gold-ink: #8a5a00;
+  --mtg-info-tint: #d6eaff;
+  --mtg-info-ink: #0d47a1;
+  --mtg-done-tint: #d4f5dd;
+  --mtg-danger-border: #f2c4bf;
+  --mtg-checker: #f1f3f6;       /* logo-preview checkerboard (stays light so logos read in both themes) */
+
+  /* Notifications */
+  --toast-success: #1e7e34;
+  --toast-error: #c0392b;
+
+  /* Charts (validated with the dataviz palette checker) */
+  --chart-bar: #2a78d6;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-text: #898781;
+  --chart-hover: rgba(42, 120, 214, 0.07);
+  --status-new: #eb6834;
+  --status-contacted: #2a78d6;
+  --status-done: #0ca30c;
+
+  --mtg-radius: 12px;
+  --mtg-radius-sm: 8px;
+  --mtg-shadow: 0 2px 10px rgba(31, 42, 55, 0.07);
+  --mtg-shadow-lg: 0 12px 32px rgba(31, 42, 55, 0.14);
+  --mtg-gradient-brand: linear-gradient(90deg, var(--mtg-blue) 0%, var(--mtg-green) 50%, var(--mtg-orange) 100%);
+  --mtg-font: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  --container-width: 1180px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --mtg-blue: #6aaef0;
+  --mtg-blue-solid: #2470c4;
+  --mtg-blue-dark: #1c5ca6;
+  --mtg-navy: #0b1219;
+
+  --mtg-bg: #0f1620;
+  --mtg-bg-alt: #141d28;
+  --mtg-surface: #1a2430;
+  --mtg-border: #2b3746;
+  --mtg-ink: #e6edf3;
+  --mtg-heading: #f2f6fa;
+  --mtg-muted: #9aa8b6;
+
+  --mtg-blue-tint: #1b3350;
+  --mtg-hover: #1f2c3a;
+  --mtg-hover-border: #34557a;
+  --mtg-track-hover: #24364a;
+  --mtg-error: #ff7b6e;
+  --mtg-error-bg: #3a1c1c;
+  --mtg-error-border: #6b2a2a;
+  --mtg-success: #5fd38a;
+  --mtg-success-bg: #15301f;
+  --mtg-success-border: #24573a;
+  --mtg-orange-tint: #3a2418;
+  --mtg-orange-ink: #ffa070;
+  --mtg-orange-icon: #ff8c52;
+  --mtg-green-tint: #16301c;
+  --mtg-green-ink: #5fd36f;
+  --mtg-violet-tint: #26224a;
+  --mtg-violet-ink: #a99cf5;
+  --mtg-gold-tint: #3a3015;
+  --mtg-gold-ink: #f0c75e;
+  --mtg-info-tint: #182c46;
+  --mtg-info-ink: #8fc0ff;
+  --mtg-done-tint: #15301f;
+  --mtg-danger-border: #6b2a2a;
+
+  --toast-success: #1d7a36;
+  --toast-error: #b8352a;
+
+  --chart-bar: #3987e5;
+  --chart-grid: #2c3846;
+  --chart-axis: #3a4756;
+  --chart-text: #9aa8b6;
+  --chart-hover: rgba(57, 135, 229, 0.14);
+  --status-new: #d95926;
+  --status-contacted: #3987e5;
+  --status-done: #199e70; /* teal-green: stays distinct from orange for colour-blind viewers on dark */
+
+  --mtg-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --mtg-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+}

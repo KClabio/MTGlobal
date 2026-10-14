@@ -1,0 +1,129 @@
+<%- include('partials/head', { active: section.nav }) %>
+<% const isEdit = product && product._id; %>
+
+<div class="admin-topbar"><h1><%= t(isEdit ? section.editKey : section.newKey) %></h1></div>
+
+<% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+
+<form method="POST" action="<%= isEdit ? '/admin/san-pham/' + product._id + '/sua' : '/admin/san-pham/moi' %>" enctype="multipart/form-data">
+  <input type="hidden" name="section" value="<%= section.key %>">
+  <div class="admin-form-grid">
+    <div>
+      <div class="form-row">
+        <div class="form-group">
+          <label><%= t('admin.products.nameVi') %></label>
+          <input class="form-control" name="nameVi" value="<%= (product && product.nameVi) || '' %>" required>
+        </div>
+        <div class="form-group">
+          <label><%= t('admin.products.nameEn') %></label>
+          <input class="form-control" name="nameEn" value="<%= (product && product.nameEn) || '' %>">
+        </div>
+      </div>
+      <% if (section.key === 'robot') { %>
+        <div class="form-group">
+          <label><%= t('admin.products.category') %></label>
+          <select class="form-control" name="category" required>
+            <% section.categories.forEach(function (c) { %>
+              <option value="<%= c %>" <%= product && product.category === c ? 'selected' : '' %>><%= t('admin.categories.' + c) %></option>
+            <% }) %>
+          </select>
+        </div>
+      <% } else { %>
+        <input type="hidden" name="category" value="stem-equipment">
+        <div class="form-row" data-group-pairs="<%= JSON.stringify(groups) %>">
+          <div class="form-group">
+            <label for="subcategory"><%= t('admin.products.subcategory') %></label>
+            <input class="form-control" id="subcategory" name="subcategory" list="groupListVi" autocomplete="off" value="<%= (product && product.subcategory) || '' %>">
+          </div>
+          <div class="form-group">
+            <label for="subcategoryEn"><%= t('admin.products.subcategoryEn') %></label>
+            <input class="form-control" id="subcategoryEn" name="subcategoryEn" list="groupListEn" autocomplete="off" value="<%= (product && product.subcategoryEn) || '' %>">
+          </div>
+        </div>
+        <datalist id="groupListVi"><% groups.forEach(function (g) { %><option value="<%= g.vi %>"><% }) %></datalist>
+        <datalist id="groupListEn"><% groups.filter(function (g) { return g.en; }).forEach(function (g) { %><option value="<%= g.en %>"><% }) %></datalist>
+      <% } %>
+      <div class="form-group">
+        <label><%= t('admin.products.descVi') %></label>
+        <textarea class="form-control" name="descriptionVi" rows="10"><%= (product && product.descriptionVi) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.products.descEn') %></label>
+        <textarea class="form-control" name="descriptionEn" rows="10"><%= (product && product.descriptionEn) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+
+      <div class="form-group">
+        <label><%= t('admin.products.specs') %></label>
+        <div id="specRows">
+          <% ((product && product.specs) || []).forEach(function (s) { %>
+            <div class="spec-row">
+              <input class="form-control" name="specKey" placeholder="<%= t('admin.products.specKey') %>" value="<%= s.key %>">
+              <input class="form-control" name="specValue" placeholder="<%= t('admin.products.specValue') %>" value="<%= s.value %>">
+              <button type="button" class="btn btn-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
+            </div>
+          <% }) %>
+        </div>
+        <template id="specRowTemplate">
+          <div class="spec-row">
+            <input class="form-control" name="specKey" placeholder="<%= t('admin.products.specKey') %>">
+            <input class="form-control" name="specValue" placeholder="<%= t('admin.products.specValue') %>">
+            <button type="button" class="btn btn-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
+          </div>
+        </template>
+        <button type="button" class="btn btn-ghost btn-sm" data-add-row="specRowTemplate" data-target="specRows"><%= t('admin.products.addSpec') %></button>
+      </div>
+
+      <div class="form-group">
+        <label><%= t('admin.common.currentImages') %></label>
+        <div class="media-thumb-list">
+          <% ((product && product.images) || []).forEach(function (img) { %>
+            <div class="media-thumb">
+              <img src="<%= img %>" alt="">
+              <label><input type="checkbox" name="removeImages" value="<%= img %>"> <%= t('admin.common.remove') %></label>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.common.addImages') %></label>
+        <input class="form-control" type="file" name="images" accept="image/*" multiple>
+      </div>
+
+      <div class="form-group">
+        <label><%= t('admin.common.currentVideos') %></label>
+        <div class="media-thumb-list">
+          <% ((product && product.videos) || []).forEach(function (v) { %>
+            <div class="media-thumb">
+              <video src="<%= v %>"></video>
+              <label><input type="checkbox" name="removeVideos" value="<%= v %>"> <%= t('admin.common.remove') %></label>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.common.addVideos') %></label>
+        <input class="form-control" type="file" name="videos" accept="video/*" multiple>
+      </div>
+    </div>
+
+    <aside>
+      <div class="checkbox-row form-group">
+        <input type="checkbox" id="featured" name="featured" <%= product && product.featured ? 'checked' : '' %>>
+        <label for="featured" style="margin:0;"><%= t('admin.products.featured') %></label>
+      </div>
+      <div class="checkbox-row form-group">
+        <input type="checkbox" id="comingSoon" name="comingSoon" <%= product && product.comingSoon ? 'checked' : '' %>>
+        <label for="comingSoon" style="margin:0;"><%= t('admin.products.comingSoonCheck') %></label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('admin.common.save') %></button>
+    </aside>
+  </div>
+</form>
+
+<%- include('partials/view-page-fab', product && product._id
+  ? { href: section.key === 'equipment' ? '/giai-phap/thiet-bi/' + product._id : '/san-pham/' + product.category, label: t('admin.viewPage.item', { name: pick(product, 'name') }) }
+  : { href: section.key === 'equipment' ? '/giai-phap/thiet-bi' : '/san-pham', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>

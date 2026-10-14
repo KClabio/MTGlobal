@@ -1,0 +1,45 @@
+<%
+  // One card / step / statistic / button inside a solution-page section. Which inputs show depends on the section type.
+  const item = it || {};
+  const P = (key) => t('admin.pages.' + key);
+%>
+<div class="row-card page-item" data-row data-item>
+  <div class="row-card-head">
+    <button type="button" class="drag-handle item-drag" aria-label="<%= P('dragItem') %>" title="<%= P('dragItem') %>"><%- include('icon', { name: 'grip', size: 16 }) %></button>
+    <span class="row-card-title"><span data-item-label><%= P('item_cards') %></span> <span data-row-num></span></span>
+    <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label data-swap-label data-label-default="<%= P('itemTitleVi') %>" data-label-stats="<%= P('statValueVi') %>" data-label-buttons="<%= P('buttonLabelVi') %>"><%= P('itemTitleVi') %></label>
+      <input class="form-control" data-item-field="titleVi" value="<%= item.titleVi || '' %>">
+    </div>
+    <div class="form-group">
+      <label data-swap-label data-label-default="<%= P('itemTitleEn') %>" data-label-stats="<%= P('statValueEn') %>" data-label-buttons="<%= P('buttonLabelEn') %>"><%= P('itemTitleEn') %></label>
+      <input class="form-control" data-item-field="titleEn" value="<%= item.titleEn || '' %>">
+    </div>
+  </div>
+  <div class="form-row" data-item-kinds="cards steps stats">
+    <div class="form-group">
+      <label data-swap-label data-label-default="<%= P('itemTextVi') %>" data-label-stats="<%= P('statLabelVi') %>"><%= P('itemTextVi') %></label>
+      <textarea class="form-control" data-item-field="textVi" rows="3"><%= item.textVi || '' %></textarea>
+    </div>
+    <div class="form-group">
+      <label data-swap-label data-label-default="<%= P('itemTextEn') %>" data-label-stats="<%= P('statLabelEn') %>"><%= P('itemTextEn') %></label>
+      <textarea class="form-control" data-item-field="textEn" rows="3"><%= item.textEn || '' %></textarea>
+    </div>
+  </div>
+  <div class="form-row" data-item-kinds="text buttons">
+    <div class="form-group">
+      <label><%= P('buttonUrl') %></label>
+      <input class="form-control" data-item-field="url" value="<%= item.url || '' %>" placeholder="/lien-he">
+      <p class="form-hint"><%= P('buttonUrlHint') %></p>
+    </div>
+    <div class="form-group" style="align-self:center;">
+      <span class="checkbox-row" data-mirror-wrap>
+        <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror <%= item.primary ? 'checked' : '' %>> <%= P('buttonPrimary') %></label>
+        <input type="hidden" data-item-field="primary" value="<%= item.primary ? '1' : '0' %>">
+      </span>
+    </div>
+  </div>
+</div>

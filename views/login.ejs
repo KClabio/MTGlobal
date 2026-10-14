@@ -1,0 +1,28 @@
+<%- include('partials/header', { title: t('forms.loginTitle') + ' - MTG' }) %>
+
+<section class="section">
+  <div class="container" style="max-width:480px;">
+    <h1 style="text-align:center;"><%= t('forms.loginTitle') %></h1>
+    <div class="form-card">
+      <% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+      <form method="POST" action="/dang-nhap">
+        <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
+        <div class="form-group">
+          <label><%= t('forms.email') %></label>
+          <input class="form-control" type="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label><%= t('forms.password') %></label>
+          <input class="form-control" type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block"><%= t('forms.loginTitle') %></button>
+      </form>
+      <p style="text-align:center; margin-top:16px;">
+        <%= lang === 'en' ? "Don't have an account?" : 'Chưa có tài khoản?' %>
+        <a href="/dang-ky"><%= t('nav.register') %></a>
+      </p>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

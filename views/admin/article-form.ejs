@@ -1,0 +1,51 @@
+<%- include('partials/head', { active: 'tin-tuc' }) %>
+
+<div class="admin-topbar"><h1><%= t(article && article._id ? 'admin.articles.formEdit' : 'admin.articles.formNew') %></h1></div>
+
+<% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+
+<form method="POST" action="<%= article && article._id ? '/admin/tin-tuc/' + article._id + '/sua' : '/admin/tin-tuc/moi' %>" enctype="multipart/form-data">
+  <div class="admin-form-grid">
+    <div>
+      <div class="form-group">
+        <label><%= t('admin.articles.titleVi') %></label>
+        <input class="form-control" name="titleVi" value="<%= (article && article.titleVi) || '' %>" required>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.articles.titleEn') %></label>
+        <input class="form-control" name="titleEn" value="<%= (article && article.titleEn) || '' %>">
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.articles.bodyVi') %></label>
+        <textarea class="form-control" name="bodyVi" rows="10"><%= (article && article.bodyVi) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.articles.bodyEn') %></label>
+        <textarea class="form-control" name="bodyEn" rows="10"><%= (article && article.bodyEn) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.articles.cover') %></label>
+        <% if (article && article.coverImage) { %><div class="media-thumb" style="margin-bottom:10px;"><img src="<%= article.coverImage %>" alt=""></div><% } %>
+        <input class="form-control" type="file" name="coverImage" accept="image/*">
+      </div>
+    </div>
+    <aside>
+      <div class="checkbox-row form-group">
+        <input type="checkbox" id="published" name="published" <%= !article || article.published ? 'checked' : '' %>>
+        <label for="published" style="margin:0;"><%= t('admin.articles.published') %></label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('admin.common.save') %></button>
+    </aside>
+  </div>
+</form>
+
+<% const articleLive = article && article._id && (article.published === true || article.published === 'on'); %>
+<%- include('partials/view-page-fab', !(article && article._id)
+  ? { href: '/tin-tuc', label: t('admin.viewPage.list') }
+  : articleLive
+    ? { href: '/tin-tuc/' + article._id, label: t('admin.viewPage.item', { name: article.titleVi }) }
+    : { disabledReason: t('admin.viewPage.hiddenArticle') }) %>
+
+<%- include('partials/foot') %>

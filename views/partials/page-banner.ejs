@@ -1,0 +1,17 @@
+<%
+  // bannerKey (lib/banners.js): the line under the title and the background image come from Admin → Cài đặt chung.
+  // A caller that passes its own subheading (detail pages) keeps it and only shares the background image.
+  const pbBanner = typeof bannerKey !== 'undefined' && bannerKey
+    ? bannerFor(typeof settings !== 'undefined' ? settings : null, bannerKey, lang)
+    : { subtitle: '', image: null };
+  const pbSub = typeof subheading !== 'undefined' ? subheading : pbBanner.subtitle;
+%><section class="page-hero<%= pbBanner.image ? ' has-image' : '' %>"<% if (pbBanner.image) { %> style="--hero-image: url('<%= encodeURI(pbBanner.image) %>');"<% } %>>
+  <div class="container">
+    <% if (typeof backHref !== 'undefined' && backHref) { %>
+      <div class="hero-back-row"><a href="<%= backHref %>" class="hero-back" data-back>&larr; <%= t('common.back') %></a></div>
+    <% } %>
+    <% if (typeof pill !== 'undefined' && pill) { %><span class="hero-pill"><%= pill %></span><% } %>
+    <h1><%= heading %></h1>
+    <% if (pbSub) { %><p><%= pbSub %></p><% } %>
+  </div>
+</section>

@@ -1,0 +1,50 @@
+<%- include('partials/head', { active: section.nav }) %>
+
+<div class="admin-topbar">
+  <h1><%= t(section.titleKey) %> <span class="count-badge"><%= products.length %></span></h1>
+  <a class="btn btn-primary" href="<%= section.path %>/moi"><%= t(section.addKey) %></a>
+</div>
+
+<% if (section.searchable) { %><%- include('partials/list-search', { target: section.sortType }) %><% } %>
+
+<%- include('partials/sort-hint') %>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead>
+    <tr>
+      <th class="drag-cell"></th>
+      <th><%= t('admin.common.image') %></th>
+      <th><%= t('admin.products.colName') %></th>
+      <th><%= section.key === 'equipment' ? t('admin.products.colGroup') : t('admin.products.colCategory') %></th>
+      <th><%= t('admin.products.colStatus') %></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody data-sortable="<%= section.sortType %>">
+    <% products.forEach(function (p) { %>
+      <tr data-id="<%= p._id %>" data-search="<%= [p.nameVi, p.nameEn].filter(Boolean).join(' ') %>">
+        <%- include('partials/drag-handle', { name: pick(p, 'name') }) %>
+        <td><% if (p.images && p.images[0]) { %><img class="thumb" src="<%= p.images[0] %>" alt=""><% } %></td>
+        <td data-search-name><%= pick(p, 'name') %></td>
+        <td><span class="tag"><%= section.key === 'equipment' ? ((lang === 'en' && p.subcategoryEn) || p.subcategory || '—') : t('admin.categories.' + p.category) %></span></td>
+        <td><% if (p.comingSoon) { %><span class="tag"><%= t('admin.products.comingSoon') %></span><% } %></td>
+        <td>
+          <div class="row-actions">
+            <a class="btn btn-ghost btn-sm" href="/admin/san-pham/<%= p._id %>/sua"><%= t('admin.common.edit') %></a>
+            <form method="POST" action="/admin/san-pham/<%= p._id %>/xoa" data-confirm="<%= t('admin.products.confirmDelete') %>">
+              <button class="btn btn-danger btn-sm" type="submit"><%= t('admin.common.delete') %></button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+<% if (section.searchable) { %><p class="empty-note list-search-none" data-list-search-none="<%= section.sortType %>" hidden></p><% } %>
+<% if (!products.length) { %><p class="empty-note"><%= t('admin.common.empty') %></p><% } %>
+
+<%- include('partials/view-page-fab', { href: section.key === 'equipment' ? '/giai-phap/thiet-bi' : '/san-pham', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>

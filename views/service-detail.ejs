@@ -1,0 +1,126 @@
+<%- include('partials/header', { title: pick(service, 'title') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.services'),
+  heading: pick(service, 'title'),
+  subheading: pick(service, 'summary'),
+  bannerKey: 'services'
+}) %>
+
+<%
+  // Each extra section only appears once an admin has given it content
+  const steps = service.steps || [];
+  const packages = service.packages || [];
+  const faqs = service.faqs || [];
+  const gallery = service.gallery || [];
+  const testimonials = service.testimonials || [];
+  const features = (p) => (lang === 'en' && p.featuresEn && p.featuresEn.length ? p.featuresEn : p.featuresVi) || [];
+%>
+
+<section class="section">
+  <div class="container admin-form-grid service-layout">
+    <div>
+      <% if (service.heroImage) { %>
+        <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/9;">
+          <img src="<%= service.heroImage %>" alt="<%= pick(service, 'title') %>">
+        </div>
+      <% } %>
+      <div class="prose-text prose-text-start"><%- formatText(pick(service, 'body')) %></div>
+
+      <% if (steps.length) { %>
+        <div class="service-section">
+          <h2><%= t('services.stepsTitle') %></h2>
+          <div class="timeline">
+            <% steps.forEach(function (s, i) { %>
+              <div class="timeline-item">
+                <div class="timeline-num"><%= i + 1 %></div>
+                <div>
+                  <h3><%= pick(s, 'title') %></h3>
+                  <% if (pick(s, 'text')) { %><div class="prose-text prose-text-start"><%- formatText(pick(s, 'text')) %></div><% } %>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (packages.length) { %>
+        <div class="service-section">
+          <h2><%= t('services.packagesTitle') %></h2>
+          <div class="package-grid">
+            <% packages.forEach(function (p, i) { %>
+              <div class="package-card<%= p.highlighted ? ' is-highlighted' : '' %>">
+                <% if (p.highlighted) { %><span class="package-badge"><%= t('services.popular') %></span><% } %>
+                <h3><%= pick(p, 'name') %></h3>
+                <% if (pick(p, 'price')) { %><p class="package-price"><%= pick(p, 'price') %></p><% } %>
+                <% if (features(p).length) { %>
+                  <ul class="package-features">
+                    <% features(p).forEach(function (f) { %><li><%= f %></li><% }) %>
+                  </ul>
+                <% } %>
+                <a class="btn <%= p.highlighted ? 'btn-primary' : 'btn-ghost' %> btn-block" href="#yeu-cau" data-choose-package="<%= i %>"><%= t('services.choosePackage') %></a>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (faqs.length) { %>
+        <div class="service-section">
+          <h2><%= t('services.faqTitle') %></h2>
+          <div class="faq-list">
+            <% faqs.forEach(function (f) { %>
+              <details class="faq-item">
+                <summary><%= pick(f, 'question') %></summary>
+                <div class="prose-text prose-text-start"><%- formatText(pick(f, 'answer')) %></div>
+              </details>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (gallery.length) { %>
+        <div class="service-section">
+          <h2><%= t('services.galleryTitle') %></h2>
+          <div class="service-gallery">
+            <% gallery.forEach(function (img) { %>
+              <a href="<%= img %>" target="_blank" rel="noopener"><img src="<%= img %>" alt="<%= pick(service, 'title') %>" loading="lazy"></a>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (testimonials.length) { %>
+        <div class="service-section">
+          <h2><%= t('services.testimonialsTitle') %></h2>
+          <div class="testimonial-grid">
+            <% testimonials.forEach(function (q) { %>
+              <figure class="testimonial-card">
+                <blockquote><%- formatText(pick(q, 'quote')) %></blockquote>
+                <% if (q.author || q.role) { %>
+                  <figcaption><strong><%= q.author %></strong><% if (q.role) { %><span><%= q.role %></span><% } %></figcaption>
+                <% } %>
+              </figure>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <aside id="yeu-cau" class="service-aside">
+      <%- include('partials/quote-form', {
+        actionUrl: '/dich-vu/' + service.slug + '/yeu-cau',
+        fixedInterest: service.slug,
+        serviceQuestions: service.questions || [],
+        servicePackages: packages,
+        compact: true,
+        sent: typeof sent !== 'undefined' && sent,
+        error: typeof error !== 'undefined' ? error : null,
+        errors: typeof errors !== 'undefined' ? errors : {},
+        values: typeof values !== 'undefined' ? values : {},
+      }) %>
+    </aside>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

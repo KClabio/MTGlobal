@@ -1,0 +1,49 @@
+<%- include('partials/head', { active: 'yeu-cau' }) %>
+
+<div class="admin-topbar">
+  <h1><%= t('admin.requests.title') %></h1>
+  <div class="row-actions">
+    <a class="btn btn-sm <%= statusFilter === '' ? 'btn-primary' : 'btn-ghost' %>" href="/admin/yeu-cau"><%= t('admin.requests.all') %></a>
+    <% statuses.forEach(function (s) { %>
+      <a class="btn btn-sm <%= statusFilter === s ? 'btn-primary' : 'btn-ghost' %>" href="/admin/yeu-cau?status=<%= s %>"><%= t('admin.status.' + s) %></a>
+    <% }) %>
+  </div>
+</div>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead><tr><th><%= t('admin.requests.colDate') %></th><th><%= t('admin.requests.colName') %></th><th><%= t('admin.requests.colContact') %></th><th><%= t('admin.requests.colInterest') %></th><th><%= t('admin.requests.colMessage') %></th><th><%= t('admin.requests.colStatus') %></th></tr></thead>
+  <tbody>
+    <% requests.forEach(function (r) { %>
+      <tr>
+        <td><%= new Date(r.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
+        <td><%= r.name %><% if (r.schoolOrCompany) { %><br><small><%= r.schoolOrCompany %></small><% } %></td>
+        <td><%= r.phone %> <%= r.email ? '· ' + r.email : '' %></td>
+        <td><span class="tag"><%= t('admin.interest.' + r.interestedIn) %></span></td>
+        <td style="max-width:320px;">
+          <%= r.message %>
+          <% if (r.details && r.details.length) { %>
+            <dl class="request-details">
+              <% r.details.forEach(function (d) { %>
+                <div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div>
+              <% }) %>
+            </dl>
+          <% } %>
+        </td>
+        <td>
+          <form method="POST" action="/admin/yeu-cau/<%= r._id %>/trang-thai">
+            <select class="form-control" name="status" data-autosubmit aria-label="<%= t('admin.requests.colStatus') %>">
+              <% statuses.forEach(function (s) { %>
+                <option value="<%= s %>" <%= r.status === s ? 'selected' : '' %>><%= t('admin.status.' + s) %></option>
+              <% }) %>
+            </select>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+<% if (!requests.length) { %><p class="empty-note"><%= t('admin.requests.empty') %></p><% } %>
+
+<%- include('partials/foot') %>

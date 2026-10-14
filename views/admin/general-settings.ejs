@@ -1,0 +1,119 @@
+<%- include('partials/head', { active: 'cai-dat' }) %>
+<%
+  const G = (key, vars) => t('admin.general.' + key, vars);
+  const hero = settings.homeHero || {};
+  const heroImage = settings.heroImages && settings.heroImages.home;
+  // Website menu groups, in menu order, for the banner cards
+  const GROUPS = [
+    { key: 'products', label: t('nav.products') },
+    { key: 'solutions', label: t('nav.solutions') },
+    { key: 'services', label: t('nav.services') },
+    { key: 'news', label: t('nav.news') },
+    { key: 'about', label: t('nav.about') },
+    { key: 'contact', label: t('nav.contact') },
+  ];
+  const TABS = [
+    { key: 'brand', label: G('tabBrand') },
+    { key: 'home', label: G('tabHome') },
+    { key: 'banners', label: G('tabBanners'), count: banners.length },
+  ];
+%>
+
+<div class="admin-topbar">
+  <div>
+    <h1><%= t('admin.nav.settings') %></h1>
+    <p class="admin-subtitle"><%= G('subtitle') %></p>
+  </div>
+</div>
+
+<% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+
+<form method="POST" action="/admin/cai-dat" enctype="multipart/form-data" data-tabbed-form>
+  <input type="hidden" name="tab" value="<%= openTab %>" data-current-tab>
+  <div class="admin-tabs" role="tablist" data-tabs data-open="<%= openTab %>">
+    <% TABS.forEach(function (tab) { %>
+      <button type="button" class="admin-tab" role="tab" data-tab="<%= tab.key %>" id="tab-<%= tab.key %>" aria-controls="panel-<%= tab.key %>">
+        <%= tab.label %><% if (tab.count !== undefined) { %> <span class="admin-tab-count"><%= tab.count %></span><% } %>
+      </button>
+    <% }) %>
+  </div>
+
+  <!-- Brand -->
+  <section class="admin-tab-panel" role="tabpanel" id="panel-brand" data-panel="brand" aria-labelledby="tab-brand"<%= openTab === 'brand' ? '' : ' hidden' %>>
+    <div class="settings-card">
+      <h2 class="admin-panel-title"><%= t('admin.settings.logo') %></h2>
+      <p class="form-hint"><%= G('logoHint') %></p>
+      <% if (settings.logo) { %><div class="logo-preview"><img src="<%= settings.logo %>" alt="MTG"></div><% } %>
+      <input class="form-control" type="file" name="logo" accept="image/*" aria-label="<%= t('admin.settings.logo') %>">
+    </div>
+  </section>
+
+  <!-- Home page hero -->
+  <section class="admin-tab-panel" role="tabpanel" id="panel-home" data-panel="home" aria-labelledby="tab-home"<%= openTab === 'home' ? '' : ' hidden' %>>
+    <div class="settings-card">
+      <h2 class="admin-panel-title"><%= G('heroImage') %></h2>
+      <p class="form-hint"><%= G('heroImageHint') %></p>
+      <% if (heroImage) { %>
+        <div class="banner-preview is-hero"><img src="<%= heroImage %>" alt=""></div>
+        <label class="checkbox-row banner-remove"><input type="checkbox" name="removeHeroHome" value="1"> <%= G('removeImage') %></label>
+      <% } %>
+      <input class="form-control" type="file" name="heroHome" accept="image/*" aria-label="<%= G('heroImage') %>">
+    </div>
+    <div class="settings-card">
+      <h2 class="admin-panel-title"><%= G('heroText') %></h2>
+      <p class="form-hint"><%= G('defaultHint') %></p>
+      <div class="form-row">
+        <div class="form-group"><label for="heroTitleVi"><%= G('heroTitleVi') %></label><input class="form-control" id="heroTitleVi" name="heroTitleVi" value="<%= hero.titleVi || '' %>" placeholder="<%= tVi('home.heroTitle') %>"></div>
+        <div class="form-group"><label for="heroTitleEn"><%= G('heroTitleEn') %></label><input class="form-control" id="heroTitleEn" name="heroTitleEn" value="<%= hero.titleEn || '' %>" placeholder="<%= tEn('home.heroTitle') %>"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label for="heroSubtitleVi"><%= G('heroSubtitleVi') %></label><textarea class="form-control" id="heroSubtitleVi" name="heroSubtitleVi" rows="3" placeholder="<%= tVi('home.heroSubtitle') %>"><%= hero.subtitleVi || '' %></textarea></div>
+        <div class="form-group"><label for="heroSubtitleEn"><%= G('heroSubtitleEn') %></label><textarea class="form-control" id="heroSubtitleEn" name="heroSubtitleEn" rows="3" placeholder="<%= tEn('home.heroSubtitle') %>"><%= hero.subtitleEn || '' %></textarea></div>
+      </div>
+      <a class="btn btn-ghost btn-sm" href="/" target="_blank" rel="noopener"><%= G('viewPage') %> ↗</a>
+    </div>
+  </section>
+
+  <!-- Page banners, grouped like the website menu -->
+  <section class="admin-tab-panel" role="tabpanel" id="panel-banners" data-panel="banners" aria-labelledby="tab-banners"<%= openTab === 'banners' ? '' : ' hidden' %>>
+    <p class="admin-hint"><%- include('partials/icon', { name: 'image', size: 16 }) %><span><%= G('bannersHint') %></span></p>
+    <% GROUPS.forEach(function (group) { %>
+      <% const list = banners.filter(function (b) { return b.group === group.key; }); %>
+      <% if (!list.length) return; %>
+      <h2 class="admin-panel-title banner-group-title"><%= group.label %></h2>
+      <div class="banner-grid">
+        <% list.forEach(function (b) { %>
+          <% const saved = (settings.banners && settings.banners[b.key]) || {}; %>
+          <div class="settings-card banner-card" id="banner-<%= b.key %>">
+            <div class="banner-card-head">
+              <h3><%= t(b.labelKey) %></h3>
+              <a class="btn btn-ghost btn-sm" href="<%= b.url %>" target="_blank" rel="noopener"><%= G('viewPage') %> ↗</a>
+            </div>
+            <div class="form-group">
+              <label for="bannerVi_<%= b.key %>"><%= G('bannerVi') %></label>
+              <textarea class="form-control" id="bannerVi_<%= b.key %>" name="bannerVi_<%= b.key %>" rows="2" placeholder="<%= b.defaultVi || G('noDefault') %>"><%= saved.subtitleVi || '' %></textarea>
+            </div>
+            <div class="form-group">
+              <label for="bannerEn_<%= b.key %>"><%= G('bannerEn') %></label>
+              <textarea class="form-control" id="bannerEn_<%= b.key %>" name="bannerEn_<%= b.key %>" rows="2" placeholder="<%= b.defaultEn || G('noDefault') %>"><%= saved.subtitleEn || '' %></textarea>
+            </div>
+            <div class="form-group">
+              <label for="banner_<%= b.key %>"><%= G('bannerImage') %></label>
+              <% if (saved.image) { %>
+                <div class="banner-preview" style="--hero-image: url('<%= encodeURI(saved.image) %>');"><span><%= t(b.labelKey) %></span></div>
+                <label class="checkbox-row banner-remove"><input type="checkbox" name="removeBanner_<%= b.key %>" value="1"> <%= G('removeImage') %></label>
+              <% } %>
+              <input class="form-control" type="file" id="banner_<%= b.key %>" name="banner_<%= b.key %>" accept="image/*">
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% }) %>
+  </section>
+
+  <div class="form-actions page-form-actions">
+    <button class="btn btn-primary" type="submit"><%= t('admin.settings.save') %></button>
+  </div>
+</form>
+
+<%- include('partials/foot') %>

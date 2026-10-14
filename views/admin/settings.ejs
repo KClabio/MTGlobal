@@ -1,0 +1,54 @@
+<%- include('partials/head', { active: 'thong-tin' }) %>
+<% const contact = settings.contactInfo || {}; %>
+
+<div class="admin-topbar">
+  <div>
+    <h1><%= t('admin.settings.title') %></h1>
+    <p class="admin-subtitle"><%= t('admin.settings.subtitle') %></p>
+  </div>
+</div>
+
+<% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+
+<form method="POST" action="/admin/thong-tin-cong-ty">
+  <div class="admin-form-grid">
+    <div>
+      <div class="form-group">
+        <label for="companyProfile"><%= t('admin.settings.profileVi') %></label>
+        <textarea class="form-control" id="companyProfile" name="companyProfile" rows="10"><%= settings.companyProfile || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+
+      <div class="form-group">
+        <label for="companyProfileEn"><%= t('admin.settings.profileEn') %></label>
+        <textarea class="form-control" id="companyProfileEn" name="companyProfileEn" rows="10"><%= settings.companyProfileEn || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+    </div>
+
+    <aside>
+      <h3><%= t('admin.settings.contactTitle') %></h3>
+      <div class="form-group">
+        <label for="address"><%= t('admin.settings.address') %></label>
+        <input class="form-control" id="address" name="address" value="<%= contact.address || '' %>">
+      </div>
+      <div class="form-group">
+        <label for="phone"><%= t('admin.settings.phone') %></label>
+        <input class="form-control" id="phone" name="phone" value="<%= contact.phone || '' %>">
+      </div>
+      <div class="form-group">
+        <label for="email"><%= t('admin.settings.email') %></label>
+        <input class="form-control" id="email" name="email" value="<%= contact.email || '' %>">
+      </div>
+      <div class="form-group">
+        <label for="mapEmbedUrl"><%= t('admin.settings.map') %></label>
+        <input class="form-control" id="mapEmbedUrl" name="mapEmbedUrl" value="<%= contact.mapEmbedUrl || '' %>">
+      </div>
+      <p class="form-hint"><%= t('admin.settings.brandMoved') %> <a href="/admin/cai-dat"><%= t('admin.nav.settings') %> →</a></p>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('admin.settings.save') %></button>
+    </aside>
+  </div>
+</form>
+
+<%- include('partials/view-page-fab', { href: '/ve-mtg', label: t('admin.viewPage.item', { name: t('nav.about') }) }) %>
+<%- include('partials/foot') %>

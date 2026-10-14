@@ -1,0 +1,19 @@
+<%- include('partials/header', { title: t('nav.products') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: lang === 'en' ? 'Products' : 'Sản phẩm',
+  heading: lang === 'en' ? 'Smart Robotics' : 'Robotics thông minh',
+  bannerKey: 'products'
+}) %>
+
+<section class="section">
+  <div class="container">
+    <div class="card-grid cols-4">
+      <% robots.forEach(function (product) { %>
+        <%- include('partials/product-card', { product }) %>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

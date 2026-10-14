@@ -1,0 +1,77 @@
+<%
+  const pageTitle = typeof title !== 'undefined' ? title : 'MTG - Smart Solutions for Life';
+%>
+<!doctype html>
+<html lang="<%= lang %>" data-theme="<%= theme %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= pageTitle %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="brand-bar"></div>
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a href="/" class="logo"><%- include('logo') %></a>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+
+      <nav class="main-nav" id="mainNav">
+        <a href="/"><%= t('nav.home') %></a>
+
+        <div class="nav-dropdown">
+          <button type="button" class="nav-dropdown-trigger" aria-expanded="false"><%= t('nav.products') %> <span class="nav-caret">▾</span></button>
+          <div class="nav-dropdown-menu">
+            <a href="/san-pham/robot-leo-cau-thang"><%= t('nav.productStairRobot') %></a>
+            <a href="/san-pham/robot-di-theo-nguoi"><%= t('nav.productFollowRobot') %></a>
+            <a href="/san-pham/robot-cat-co"><%= t('nav.productLawnRobot') %></a>
+            <a href="/san-pham/robot-gia-dinh"><%= t('nav.productHomeRobot') %></a>
+          </div>
+        </div>
+
+        <div class="nav-dropdown">
+          <button type="button" class="nav-dropdown-trigger" aria-expanded="false"><%= t('nav.solutions') %> <span class="nav-caret">▾</span></button>
+          <div class="nav-dropdown-menu">
+            <a href="/giai-phap/stem-lab"><%= t('nav.solutionOverview') %></a>
+            <a href="/giai-phap/thiet-bi"><%= t('nav.solutionEquipment') %></a>
+            <a href="/giai-phap/workshop"><%= t('nav.solutionWorkshop') %></a>
+            <a href="/giai-phap/dao-tao"><%= t('nav.solutionEducation') %></a>
+            <a href="/giai-phap/du-an"><%= t('nav.solutionProjects') %></a>
+            <a href="/giai-phap/tap-huan"><%= t('nav.solutionTraining') %></a>
+          </div>
+        </div>
+
+        <div class="nav-dropdown">
+          <button type="button" class="nav-dropdown-trigger" aria-expanded="false"><%= t('nav.services') %> <span class="nav-caret">▾</span></button>
+          <div class="nav-dropdown-menu">
+            <a href="/dich-vu/tu-van-du-hoc"><%= t('nav.serviceStudyAbroad') %></a>
+            <a href="/dich-vu/phan-phoi-san-pham"><%= t('nav.serviceDistribution') %></a>
+          </div>
+        </div>
+
+        <a href="/tin-tuc"><%= t('nav.news') %></a>
+        <a href="/ve-mtg"><%= t('nav.about') %></a>
+        <a href="/lien-he"><%= t('nav.contact') %></a>
+      </nav>
+
+      <div class="header-actions">
+        <div class="lang-switch">
+          <a href="<%= switchLangUrl('vi') %>" class="<%= lang === 'vi' ? 'active' : '' %>">VI</a>
+          <a href="<%= switchLangUrl('en') %>" class="<%= lang === 'en' ? 'active' : '' %>">EN</a>
+        </div>
+        <% if (!user) { %><%- include('theme-toggle', { label: t('theme.dark'), compact: true }) %><% } %>
+        <% if (user) { %>
+          <%- include('user-menu') %>
+        <% } else { %>
+          <a href="/dang-nhap" class="btn btn-ghost btn-sm"><%= t('nav.login') %></a>
+          <a href="/dang-ky" class="btn btn-primary btn-sm"><%= t('nav.register') %></a>
+        <% } %>
+      </div>
+    </div>
+  </header>
+  <main>

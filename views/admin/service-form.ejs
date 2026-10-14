@@ -1,0 +1,142 @@
+<%- include('partials/head', { active: 'dich-vu' }) %>
+<%
+  const L = (key, vars) => t('admin.services.' + key, vars);
+  const errorList = typeof errors !== 'undefined' && errors ? errors : [];
+  const errorTabs = errorList.map((e) => e.tab);
+  const TABS = [
+    { key: 'content', label: L('tabContent') },
+    { key: 'steps', label: L('tabSteps'), count: (service.steps || []).length },
+    { key: 'packages', label: L('tabPackages'), count: (service.packages || []).length },
+    { key: 'faqs', label: L('tabFaqs'), count: (service.faqs || []).length },
+    { key: 'media', label: L('tabMedia'), count: (service.gallery || []).length + (service.testimonials || []).length },
+    { key: 'form', label: L('tabForm'), count: (service.questions || []).length },
+  ];
+  const openTab = errorTabs[0] || 'content';
+  const rowList = (kind, items, id) => ({ kind, items: items || [], id });
+%>
+
+<div class="admin-topbar">
+  <h1><%= L('formEdit', { name: pick(service, 'title') }) %></h1>
+  <a class="btn btn-ghost" href="/dich-vu/<%= service.slug %>" target="_blank" rel="noopener"><%= L('viewPage') %> ↗</a>
+</div>
+
+<% if (errorList.length) { %>
+  <div class="form-alert error">
+    <strong><%= L('errorsTitle') %></strong>
+    <ul class="form-error-list"><% errorList.forEach(function (e) { %><li><%= e.text %></li><% }) %></ul>
+  </div>
+<% } %>
+
+<form method="POST" action="/admin/dich-vu/<%= service._id %>/sua" enctype="multipart/form-data" data-service-form>
+  <div class="admin-form-grid">
+    <div>
+      <div class="admin-tabs" role="tablist" data-tabs data-open="<%= openTab %>">
+        <% TABS.forEach(function (tab) { %>
+          <button type="button" class="admin-tab<%= errorTabs.includes(tab.key) ? ' has-error' : '' %>" role="tab" data-tab="<%= tab.key %>" id="tab-<%= tab.key %>" aria-controls="panel-<%= tab.key %>">
+            <%= tab.label %><% if (tab.count !== undefined) { %> <span class="admin-tab-count" data-tab-count="<%= tab.key %>"><%= tab.count %></span><% } %>
+          </button>
+        <% }) %>
+      </div>
+
+      <%# ---- Main content (the fields that existed before) ---- %>
+      <section class="admin-tab-panel" role="tabpanel" id="panel-content" data-panel="content" aria-labelledby="tab-content">
+        <div class="form-row">
+          <div class="form-group">
+            <label><%= L('titleVi') %></label>
+            <input class="form-control" name="titleVi" value="<%= service.titleVi || '' %>" required>
+          </div>
+          <div class="form-group">
+            <label><%= L('titleEn') %></label>
+            <input class="form-control" name="titleEn" value="<%= service.titleEn || '' %>">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><%= L('summaryVi') %></label>
+            <input class="form-control" name="summaryVi" value="<%= service.summaryVi || '' %>">
+          </div>
+          <div class="form-group">
+            <label><%= L('summaryEn') %></label>
+            <input class="form-control" name="summaryEn" value="<%= service.summaryEn || '' %>">
+          </div>
+        </div>
+        <div class="form-group">
+          <label><%= L('bodyVi') %></label>
+          <textarea class="form-control" name="bodyVi" rows="10"><%= service.bodyVi || '' %></textarea>
+          <%- include('partials/plain-text-hint') %>
+        </div>
+        <div class="form-group">
+          <label><%= L('bodyEn') %></label>
+          <textarea class="form-control" name="bodyEn" rows="10"><%= service.bodyEn || '' %></textarea>
+          <%- include('partials/plain-text-hint') %>
+        </div>
+        <div class="form-group">
+          <label><%= L('heroImage') %></label>
+          <% if (service.heroImage) { %><div class="media-thumb" style="margin-bottom:10px;"><img src="<%= service.heroImage %>" alt=""></div><% } %>
+          <input class="form-control" type="file" name="heroImage" accept="image/*">
+        </div>
+      </section>
+
+      <%# ---- Repeatable sections ---- %>
+      <% [
+        { tab: 'steps', hint: 'hintSteps', list: rowList('step', service.steps, 'stepRows'), add: 'addStep' },
+        { tab: 'packages', hint: 'hintPackages', list: rowList('package', service.packages, 'packageRows'), add: 'addPackage' },
+        { tab: 'faqs', hint: 'hintFaqs', list: rowList('faq', service.faqs, 'faqRows'), add: 'addFaq' },
+      ].forEach(function (panel) { %>
+        <section class="admin-tab-panel" role="tabpanel" id="panel-<%= panel.tab %>" data-panel="<%= panel.tab %>" aria-labelledby="tab-<%= panel.tab %>">
+          <p class="admin-hint"><%- include('partials/icon', { name: 'bell', size: 16 }) %><span><%= L(panel.hint) %></span></p>
+          <div class="row-list" id="<%= panel.list.id %>" data-row-list="<%= panel.tab %>">
+            <% panel.list.items.forEach(function (item) { %><%- include('partials/service-row', { kind: panel.list.kind, item: item }) %><% }) %>
+          </div>
+          <template id="tpl-<%= panel.list.kind %>"><%- include('partials/service-row', { kind: panel.list.kind, item: {} }) %></template>
+          <button type="button" class="btn btn-ghost btn-sm" data-add-row="tpl-<%= panel.list.kind %>" data-target="<%= panel.list.id %>">+ <%= L(panel.add) %></button>
+        </section>
+      <% }) %>
+
+      <%# ---- Photos and testimonials ---- %>
+      <section class="admin-tab-panel" role="tabpanel" id="panel-media" data-panel="media" aria-labelledby="tab-media">
+        <h2 class="admin-panel-title"><%= L('galleryTitle') %></h2>
+        <p class="admin-hint"><%- include('partials/icon', { name: 'bell', size: 16 }) %><span><%= L('hintGallery') %></span></p>
+        <% if ((service.gallery || []).length) { %>
+          <div class="media-thumb-list" style="margin-bottom:12px;">
+            <% service.gallery.forEach(function (img) { %>
+              <div class="media-thumb">
+                <img src="<%= img %>" alt="">
+                <label><input type="checkbox" name="removeGallery" value="<%= img %>"> <%= t('admin.common.remove') %></label>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+        <div class="form-group">
+          <label><%= L('galleryAdd') %></label>
+          <input class="form-control" type="file" name="gallery" accept="image/*" multiple>
+        </div>
+
+        <h2 class="admin-panel-title"><%= L('testimonialsTitle') %></h2>
+        <p class="admin-hint"><%- include('partials/icon', { name: 'bell', size: 16 }) %><span><%= L('hintTestimonials') %></span></p>
+        <div class="row-list" id="testimonialRows" data-row-list="media">
+          <% (service.testimonials || []).forEach(function (item) { %><%- include('partials/service-row', { kind: 'testimonial', item: item }) %><% }) %>
+        </div>
+        <template id="tpl-testimonial"><%- include('partials/service-row', { kind: 'testimonial', item: {} }) %></template>
+        <button type="button" class="btn btn-ghost btn-sm" data-add-row="tpl-testimonial" data-target="testimonialRows">+ <%= L('addTestimonial') %></button>
+      </section>
+
+      <%# ---- Request form questions ---- %>
+      <section class="admin-tab-panel" role="tabpanel" id="panel-form" data-panel="form" aria-labelledby="tab-form">
+        <p class="admin-hint"><%- include('partials/icon', { name: 'bell', size: 16 }) %><span><%= L('hintForm') %></span></p>
+        <div class="row-list" id="questionRows" data-row-list="form">
+          <% (service.questions || []).forEach(function (item) { %><%- include('partials/service-row', { kind: 'question', item: item }) %><% }) %>
+        </div>
+        <template id="tpl-question"><%- include('partials/service-row', { kind: 'question', item: {} }) %></template>
+        <button type="button" class="btn btn-ghost btn-sm" data-add-row="tpl-question" data-target="questionRows">+ <%= L('addQuestion') %></button>
+      </section>
+    </div>
+
+    <aside class="sticky-aside">
+      <button type="submit" class="btn btn-primary btn-block"><%= t('admin.common.save') %></button>
+      <p class="form-hint" style="text-align:center;"><%= L('saveHint') %></p>
+    </aside>
+  </div>
+</form>
+
+<%- include('partials/foot') %>

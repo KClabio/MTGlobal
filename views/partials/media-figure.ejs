@@ -1,0 +1,20 @@
+<%#
+  A captioned photo or video for solution-page galleries.
+  include('partials/media-figure', { src, caption, video: false, poster, ratio: '4/3', contain: false })
+%><%
+  const mfRatio = typeof ratio !== 'undefined' && ratio ? ratio : '4/3';
+  const mfIsVideo = typeof video !== 'undefined' && video;
+  const mfCaption = typeof caption !== 'undefined' ? caption : '';
+  const mfContain = typeof contain !== 'undefined' && contain;
+%><figure class="media-figure<%= mfContain ? ' is-contain' : '' %>">
+  <div class="media-frame" style="aspect-ratio:<%= mfRatio %>;">
+    <% if (mfIsVideo) { %>
+      <video controls preload="metadata" playsinline<% if (typeof poster !== 'undefined' && poster) { %> poster="<%= poster %>"<% } %>>
+        <source src="<%= src %>" type="video/mp4">
+      </video>
+    <% } else { %>
+      <img src="<%= src %>" alt="<%= mfCaption %>" loading="lazy">
+    <% } %>
+  </div>
+  <% if (mfCaption) { %><figcaption><%= mfCaption %></figcaption><% } %>
+</figure>

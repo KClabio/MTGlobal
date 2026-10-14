@@ -1,0 +1,161 @@
+===============================================================
+ MTGlobal Website — Setup & Run Guide
+===============================================================
+
+This is a single Node.js/Express app that serves BOTH the
+front-end (EJS pages, rendered server-side) and the back-end
+(API routes + MongoDB) together. There is no separate front-end
+build step — one server, one `npm run dev` command, and the
+whole site (public pages + admin dashboard) is live.
+
+
+---------------------------------------------------------------
+1) REQUIREMENTS
+---------------------------------------------------------------
+- Node.js 18+ and npm        (check: node -v / npm -v)
+- MongoDB running locally, or a MongoDB Atlas connection string
+    - On this machine, MongoDB is already installed and running
+      as a Windows service called "MongoDB".
+    - To check:  services.msc -> look for "MongoDB Server (MongoDB)"
+    - To start it manually if stopped (PowerShell, as admin):
+        Start-Service MongoDB
+- (Optional) A free Cloudinary account, only needed if you want
+  uploaded images/videos to survive a redeploy to a host with a
+  temporary disk (Render/Railway/Vercel/Heroku). Not required
+  for running locally — local uploads just land in
+  public/uploads/ instead.
+
+
+---------------------------------------------------------------
+2) FIRST-TIME SETUP
+---------------------------------------------------------------
+Open a terminal in the project folder (D:\MTGlobal) and run:
+
+    npm install
+
+Then create your local environment file:
+
+    copy .env.example .env
+
+Open .env and check/edit these values:
+
+    PORT=3000
+    MONGO_URI=mongodb://localhost:27017/mtglobal_db
+    SESSION_SECRET=<replace with any random long string>
+
+    (Leave the three CLOUDINARY_* lines blank for local dev —
+     uploads will just be stored on disk under public/uploads/.)
+
+Load the real MTG content (pulled from the pptx + the 3 product
+videos) into the database:
+
+    node scripts/seed.js
+
+This creates the reference STEM Lab projects, the equipment
+catalog, the stair-climbing robot product (with its 3 real demo
+videos), placeholder entries for the other 3 robots, the 2
+services, and the site settings (logo + company address).
+
+NOTE: running `node scripts/seed.js` again will WIPE AND
+RE-CREATE Projects, Products, and Services from scratch (so it's
+safe to re-run after editing the pptx-derived content in
+scripts/seed.js, but any manual edits you made to those three
+collections via the admin dashboard will be lost). It does NOT
+touch Users, Partners, Articles, or Quote Requests.
+
+
+---------------------------------------------------------------
+3) STARTING THE SERVER (front-end + back-end together)
+---------------------------------------------------------------
+For local development (auto-restarts on file changes):
+
+    npm run dev
+
+For a plain run (no auto-restart):
+
+    npm start
+
+Either way, once you see:
+
+    MongoDB connected.
+    MTGlobal server running at http://localhost:3000
+
+...the whole site is live. Open a browser to:
+
+    http://localhost:3000
+
+That's it — front-end and back-end are the same process, same
+port. There's nothing separate to "start" for the front-end.
+
+To stop the server: press Ctrl+C in that terminal.
+
+
+---------------------------------------------------------------
+4) CREATING AN ADMIN ACCOUNT
+---------------------------------------------------------------
+There is no public "sign up as admin" option on purpose — admin
+rights are granted from the command line so random visitors
+can't make themselves admins. Two steps:
+
+  Step 1 — Create a normal account through the website:
+    1. Go to http://localhost:3000/dang-ky  (or click "Register"
+       in the top-right of the site)
+    2. Fill in your name, email, and password, submit.
+       This account is a normal "customer" account at this point.
+
+  Step 2 — Promote that account to admin from the terminal:
+    In the project folder, run:
+
+        node scripts/make-admin.js your-email@example.com
+
+    You should see:
+
+        Da cap quyen admin cho: <Your Name> <your-email@example.com>
+
+  Step 3 — Log back in (or refresh if already logged in):
+    Go to http://localhost:3000/dang-nhap and log in with that
+    same email/password. You'll now see an "Admin" link in the
+    account menu (top-right), or go straight to:
+
+        http://localhost:3000/admin
+
+From the admin dashboard you can manage:
+    /admin/du-an        Reference projects (STEM Lab installs)
+    /admin/san-pham      Products (the 4 robots + STEM equipment)
+    /admin/dich-vu        Services (study abroad / distribution)
+    /admin/doi-tac         Partners (logos)
+    /admin/tin-tuc          News articles
+    /admin/yeu-cau           Quote/consultation requests from visitors
+    /admin/nguoi-dung         Users (promote/demote admin rights)
+    /admin/cai-dat             Site settings (logo, hero images, contact info)
+
+
+---------------------------------------------------------------
+5) QUICK REFERENCE — COMMON COMMANDS
+---------------------------------------------------------------
+    npm install                        Install dependencies
+    npm run dev                        Start server (auto-restart)
+    npm start                          Start server (no auto-restart)
+    node scripts/seed.js               (Re)load pptx-derived content
+    node scripts/make-admin.js EMAIL   Grant admin rights to an account
+
+
+---------------------------------------------------------------
+6) TROUBLESHOOTING
+---------------------------------------------------------------
+- "MongoDB connection error" on startup:
+    MongoDB isn't running. Start the "MongoDB" Windows service,
+    or update MONGO_URI in .env to point at a running instance
+    (e.g. a MongoDB Atlas connection string).
+
+- Port 3000 already in use:
+    Either stop whatever else is using it, or change PORT in
+    .env to something else (e.g. 3001) and restart.
+
+- Uploaded images/videos disappear after a server restart on a
+  hosting platform (not local dev):
+    That platform has a temporary disk. Fill in the three
+    CLOUDINARY_* values in .env (free account at cloudinary.com)
+    so uploads go to Cloudinary instead of local disk.
+
+===============================================================

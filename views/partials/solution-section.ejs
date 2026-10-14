@@ -1,0 +1,97 @@
+<%#
+  One section of an editable "Giải pháp" page. s: the section; sub: true when it continues the previous section's block
+  (it then gets a smaller heading). Text is plain text rendered by formatText (paragraphs, "- " lists).
+%><%
+  const ssTitle = pick(s, 'title');
+  const ssSubtitle = pick(s, 'subtitle');
+  const ssText = pick(s, 'text');
+  const ssButtons = (s.items || []).filter(function (it) { return it.url && pick(it, 'title'); });
+  // "Label: text" list items get a bold label, as on the original pages
+  const ssFormat = function (text) { return formatText(text).replace(/<li>([^<:]{1,40}):/g, '<li><strong>$1:</strong>'); };
+  const ssMedia = function (m) {
+    return include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: pick(m, 'caption'), ratio: s.ratio, contain: m.contain });
+  };
+  const ssCentered = !sub && s.kind !== 'text';
+%>
+<div class="solution-block<%= sub ? ' is-sub' : '' %>" data-section-kind="<%= s.kind %>">
+  <% if (ssTitle || (ssSubtitle && s.kind !== 'text')) { %>
+    <% if (ssCentered) { %>
+      <div class="section-head">
+        <% if (ssTitle) { %><h2 class="section-title"><%= ssTitle %></h2><% } %>
+        <% if (ssSubtitle) { %><p class="section-subtitle"><%= ssSubtitle %></p><% } %>
+      </div>
+    <% } else if (sub) { %>
+      <% if (ssTitle) { %><h3 class="solution-subtitle"><%= ssTitle %></h3><% } %>
+      <% if (ssSubtitle) { %><p class="solution-subtext"><%= ssSubtitle %></p><% } %>
+    <% } else if (s.kind === 'text' && !(s.media && s.media.length)) { %>
+      <h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2>
+    <% } %>
+  <% } %>
+
+  <% if (s.kind === 'text') { %>
+    <% if (s.media && s.media.length) { %>
+      <div class="card-grid cols-2 solution-split">
+        <div>
+          <% if (ssTitle && !sub) { %><h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2><% } %>
+          <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
+          <% if (ssButtons.length) { %>
+            <div class="section-cta is-start">
+              <% ssButtons.forEach(function (it) { %><a class="btn <%= it.primary ? 'btn-primary' : 'btn-ghost' %>" href="<%= it.url %>"><%= pick(it, 'title') %></a><% }) %>
+            </div>
+          <% } %>
+        </div>
+        <%- ssMedia(s.media[0]) %>
+      </div>
+    <% } else { %>
+      <% if (ssText) { %><div class="<%= ssTitle ? 'section-text' : 'solution-intro' %>"><%- ssFormat(ssText) %></div><% } %>
+      <% if (ssButtons.length) { %>
+        <div class="section-cta<%= ssTitle ? ' is-start' : '' %>">
+          <% ssButtons.forEach(function (it) { %><a class="btn <%= it.primary ? 'btn-primary' : 'btn-ghost' %>" href="<%= it.url %>"><%= pick(it, 'title') %></a><% }) %>
+        </div>
+      <% } %>
+    <% } %>
+
+  <% } else if (s.kind === 'cards') { %>
+    <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
+    <div class="card-grid<%= s.columns === 2 ? ' cols-2' : '' %>">
+      <% (s.items || []).forEach(function (it) { %>
+        <div class="card"><div class="card-body">
+          <% if (pick(it, 'title')) { %><h3><%= pick(it, 'title') %></h3><% } %>
+          <% if (pick(it, 'text')) { %><div class="card-text"><%- ssFormat(pick(it, 'text')) %></div><% } %>
+        </div></div>
+      <% }) %>
+    </div>
+
+  <% } else if (s.kind === 'steps') { %>
+    <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
+    <div class="timeline">
+      <% (s.items || []).forEach(function (it, n) { %>
+        <div class="timeline-item">
+          <div class="timeline-num"><%= n + 1 %></div>
+          <div>
+            <h3><%= pick(it, 'title') %></h3>
+            <% if (pick(it, 'text')) { %><div class="card-text"><%- ssFormat(pick(it, 'text')) %></div><% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+  <% } else if (s.kind === 'gallery') { %>
+    <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
+    <div class="media-grid<%= s.columns === 2 ? ' cols-2' : '' %><%= s.columns === 2 && (s.media || []).length === 1 ? ' is-single' : '' %>">
+      <% (s.media || []).forEach(function (m) { %><%- ssMedia(m) %><% }) %>
+    </div>
+
+  <% } else if (s.kind === 'stats') { %>
+    <div class="stat-grid">
+      <% (s.items || []).forEach(function (it) { %>
+        <div class="stat-card"><div class="num"><%= pick(it, 'title') %></div><div><%= pick(it, 'text') %></div></div>
+      <% }) %>
+    </div>
+
+  <% } else if (s.kind === 'buttons') { %>
+    <div class="section-cta">
+      <% ssButtons.forEach(function (it) { %><a class="btn <%= it.primary ? 'btn-primary' : 'btn-ghost' %>" href="<%= it.url %>"><%= pick(it, 'title') %></a><% }) %>
+    </div>
+  <% } %>
+</div>

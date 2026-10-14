@@ -1,0 +1,14 @@
+<div class="user-menu">
+  <button type="button" class="user-menu-trigger"><%= user.name %> <span class="nav-caret">▾</span></button>
+  <div class="user-menu-dropdown">
+    <div class="user-menu-theme"><%- include('theme-toggle', { label: t('theme.dark') }) %></div>
+    <% if (user.role === 'admin' || user.role === 'owner') { %>
+      <a href="/admin"><%= t('nav.admin') %></a>
+    <% } %>
+    <a href="/tai-khoan"><%= t('nav.myRequests') %></a>
+    <a href="/ho-so"><%= lang === 'en' ? 'Profile' : 'Hồ sơ' %></a>
+    <form action="/dang-xuat" method="POST" style="margin:0;">
+      <button type="submit"><%= t('nav.logout') %></button>
+    </form>
+  </div>
+</div>

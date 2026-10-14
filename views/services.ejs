@@ -1,0 +1,27 @@
+<%- include('partials/header', { title: t('nav.services') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.services'),
+  heading: t('nav.services'),
+  bannerKey: 'services'
+}) %>
+
+<section class="section">
+  <div class="container">
+    <div class="card-grid cols-2">
+      <% services.forEach(function (service) { %>
+        <a class="card" href="/dich-vu/<%= service.slug %>">
+          <% if (service.heroImage) { %>
+            <div class="card-media"><img src="<%= service.heroImage %>" alt="<%= pick(service, 'title') %>"></div>
+          <% } %>
+          <div class="card-body">
+            <h3><%= pick(service, 'title') %></h3>
+            <p><%= pick(service, 'summary') %></p>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,65 @@
+<%- include('partials/header', { title: pick(product, 'name') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.products'),
+  heading: pick(product, 'name'),
+  subheading: product.comingSoon ? t('common.comingSoon') : null,
+  bannerKey: 'products'
+}) %>
+
+<section class="section">
+  <div class="container admin-form-grid">
+    <div>
+      <% if (product.images && product.images.length) { %>
+        <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/10;">
+          <img src="<%= product.images[0] %>" alt="<%= pick(product, 'name') %>">
+        </div>
+      <% } %>
+
+      <% if (product.videos && product.videos.length) { %>
+        <div class="video-stack">
+          <% product.videos.forEach(function (v) { %>
+            <video controls preload="metadata">
+              <source src="<%= v %>" type="video/mp4">
+            </video>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (pick(product, 'description')) { %>
+        <div class="prose-text prose-text-start"><%- formatText(pick(product, 'description')) %></div>
+      <% } %>
+      <% if (!pick(product, 'description') && product.comingSoon) { %>
+        <p>
+          <%= lang === 'en'
+            ? 'Full specifications, photos and demo videos for this product are being finalized and will be published here soon.'
+            : 'Thông tin chi tiết, hình ảnh và video demo của sản phẩm này đang được hoàn thiện và sẽ sớm được cập nhật.' %>
+        </p>
+      <% } %>
+
+      <% if (product.specs && product.specs.length) { %>
+        <table class="data-table" style="margin-top:20px;">
+          <tbody>
+            <% product.specs.forEach(function (s) { %>
+              <tr><th style="width:40%;"><%= s.key %></th><td><%= s.value %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <aside id="yeu-cau">
+      <%- include('partials/quote-form', {
+        actionUrl: '/san-pham/' + product.category + '/yeu-cau',
+        fixedInterest: 'san-pham-robot',
+        compact: true,
+        sent: typeof sent !== 'undefined' && sent,
+        error: typeof error !== 'undefined' ? error : null,
+        errors: typeof errors !== 'undefined' ? errors : {},
+        values: typeof values !== 'undefined' ? values : {}
+      }) %>
+    </aside>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,27 @@
+<%- include('partials/header', { title: t(titleKey) + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.solutions'),
+  heading: t(titleKey),
+  bannerKey: page.slug
+}) %>
+
+<%
+  // Consecutive "continued" sections share one background block; blocks alternate plain / tinted
+  const blocks = [];
+  (page.sections || []).forEach(function (s) {
+    if (s.continued && blocks.length) blocks[blocks.length - 1].push(s);
+    else blocks.push([s]);
+  });
+%>
+<% blocks.forEach(function (block, b) { %>
+  <section class="section<%= b % 2 ? ' section-alt' : '' %>">
+    <div class="container">
+      <% block.forEach(function (s, i) { %>
+        <%- include('partials/solution-section', { s, sub: i > 0 }) %>
+      <% }) %>
+    </div>
+  </section>
+<% }) %>
+
+<%- include('partials/footer') %>

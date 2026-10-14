@@ -1,0 +1,46 @@
+<%- include('partials/header', { title: pick(item, 'name') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.solutionEquipment'),
+  heading: pick(item, 'name'),
+  subheading: ((lang === 'en' && item.subcategoryEn) ? item.subcategoryEn : item.subcategory) || null,
+  backHref: '/giai-phap/thiet-bi',
+  bannerKey: 'thiet-bi'
+}) %>
+<% const edProductShot = item.images && item.images[0] && item.images[0].indexOf('/assets/giai-phap/robot-stem/') === 0; %>
+
+<section class="section">
+  <div class="container admin-form-grid">
+    <div>
+      <% if (item.images && item.images.length) { %>
+        <div class="card-media<%= edProductShot ? ' is-contain' : '' %>" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/10;">
+          <img src="<%= item.images[0] %>" alt="<%= pick(item, 'name') %>">
+        </div>
+        <% if (item.images.length > 1) { %>
+          <div class="detail-thumbs">
+            <% item.images.slice(1).forEach(function (img) { %>
+              <div class="media-frame"><img src="<%= img %>" alt="<%= pick(item, 'name') %>" loading="lazy"></div>
+            <% }) %>
+          </div>
+        <% } %>
+      <% } %>
+      <% if (pick(item, 'description')) { %>
+        <div class="prose-text prose-text-start"><%- formatText(pick(item, 'description')) %></div>
+      <% } %>
+      <% if (item.specs && item.specs.length) { %>
+        <table class="data-table" style="margin-top:20px;">
+          <tbody>
+            <% item.specs.forEach(function (s) { %>
+              <tr><th style="width:40%;"><%= s.key %></th><td><%= s.value %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+    <aside>
+      <%- include('partials/quote-form', { prefillInterestedIn: 'giai-phap-stem-lab' }) %>
+    </aside>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

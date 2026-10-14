@@ -1,0 +1,22 @@
+<%- include('partials/header', { title: article.titleVi + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('nav.news'),
+  heading: article.titleVi,
+  subheading: new Date(article.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN'),
+  backHref: '/tin-tuc',
+  bannerKey: 'news'
+}) %>
+
+<section class="section">
+  <div class="container" style="max-width:760px;">
+    <% if (article.coverImage) { %>
+      <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:24px; aspect-ratio:16/9;">
+        <img src="<%= article.coverImage %>" alt="<%= article.titleVi %>">
+      </div>
+    <% } %>
+    <div class="prose-text"><%- formatText(pick(article, 'body')) %></div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,37 @@
+<%- include('partials/head', { active: 'doi-tac' }) %>
+
+<div class="admin-topbar">
+  <h1><%= t('admin.partners.title') %></h1>
+  <a class="btn btn-primary" href="/admin/doi-tac/moi"><%= t('admin.partners.add') %></a>
+</div>
+
+<%- include('partials/sort-hint') %>
+
+<div style="overflow-x:auto;">
+<table class="data-table">
+  <thead><tr><th class="drag-cell"></th><th><%= t('admin.partners.colLogo') %></th><th><%= t('admin.partners.colName') %></th><th><%= t('admin.partners.colWebsite') %></th><th></th></tr></thead>
+  <tbody data-sortable="partners">
+    <% partners.forEach(function (p) { %>
+      <tr data-id="<%= p._id %>">
+        <%- include('partials/drag-handle', { name: p.name }) %>
+        <td><% if (p.logo) { %><img class="thumb-logo" src="<%= p.logo %>" alt="<%= p.name %>"><% } %></td>
+        <td><%= p.name %></td>
+        <td><%= p.url || '' %></td>
+        <td>
+          <div class="row-actions">
+            <a class="btn btn-ghost btn-sm" href="/admin/doi-tac/<%= p._id %>/sua"><%= t('admin.common.edit') %></a>
+            <form method="POST" action="/admin/doi-tac/<%= p._id %>/xoa" data-confirm="<%= t('admin.partners.confirmDelete') %>">
+              <button class="btn btn-danger btn-sm" type="submit"><%= t('admin.common.delete') %></button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+<% if (!partners.length) { %><p class="empty-note"><%= t('admin.common.empty') %></p><% } %>
+
+<%- include('partials/view-page-fab', { href: '/ve-mtg#doi-tac', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>
