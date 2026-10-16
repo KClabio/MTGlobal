@@ -1,0 +1,89 @@
+/* Home page (views/index.ejs): hero, pillar cards and the "Lĩnh vực hoạt động" slider (public/js/main.js). */
+
+.home-hero { background: linear-gradient(135deg, var(--mtg-navy) 0%, #142334 100%); color: #fff; padding: 80px 0 60px; }
+.home-hero-inner { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+.home-hero h1 { color: #fff; font-size: 2.4rem; }
+.home-hero p { color: rgba(255,255,255,.8); font-size: 1.05rem; }
+.home-hero-art { background: var(--mtg-gradient-brand); border-radius: var(--mtg-radius); min-height: 260px; display: flex; align-items: center; justify-content: center; }
+.home-hero-art img { border-radius: var(--mtg-radius); }
+
+/* ---- Pillar cards (home) ---- */
+.pillar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.pillar-card { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); padding: 28px; box-shadow: var(--mtg-shadow); }
+.pillar-card .pillar-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: #fff; }
+.pillar-card.c-products .pillar-icon { background: var(--mtg-blue-solid); }
+.pillar-card.c-solution .pillar-icon { background: var(--mtg-green); }
+.pillar-card.c-services .pillar-icon { background: var(--mtg-orange); }
+.pillar-card a.pillar-link { font-weight: 700; font-size: .9rem; }
+
+/* ---- Business areas slider (home "Lĩnh vực hoạt động"): 3½ cards in view, scrolls sideways ---- */
+.domains-head { position: relative; }
+.domain-arrows { position: absolute; right: 0; bottom: 2px; display: flex; gap: 8px; }
+.domain-arrow { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--mtg-border); background: var(--mtg-surface); color: var(--mtg-heading); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--mtg-shadow); transition: background .15s, color .15s, opacity .15s; }
+.domain-arrow:hover:not(:disabled) { background: var(--mtg-blue-solid); border-color: var(--mtg-blue-solid); color: #fff; }
+.domain-arrow:disabled { opacity: .4; cursor: default; box-shadow: none; }
+.domain-arrow:focus-visible { outline: 3px solid var(--mtg-blue); outline-offset: 2px; }
+/* The track bleeds into the container padding so card shadows and the cut-off 4th card reach the edge */
+.domain-track {
+  --domain-gap: 24px;
+  list-style: none; margin: 0 -20px; padding: 6px 20px 22px;
+  display: grid; grid-auto-flow: column; gap: var(--domain-gap);
+  grid-auto-columns: calc((100% - 3 * var(--domain-gap)) / 3.5);
+  overflow-x: auto; overscroll-behavior-x: contain; scroll-padding-inline: 20px;
+  scrollbar-width: none; -ms-overflow-style: none;
+  cursor: grab;
+}
+.domain-track::-webkit-scrollbar { display: none; }
+.domain-track.is-dragging { cursor: grabbing; user-select: none; }
+.domain-track.is-dragging .domain-card { pointer-events: none; }
+.domain-track:focus-visible { outline: 3px solid var(--mtg-blue); outline-offset: -3px; border-radius: var(--mtg-radius); }
+.domain-item { display: flex; min-width: 0; }
+.domain-card { flex: 1; display: flex; flex-direction: column; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow); overflow: hidden; color: inherit; transition: transform .2s, box-shadow .2s; }
+.domain-card:hover { transform: translateY(-3px); box-shadow: var(--mtg-shadow-lg); }
+.domain-card:focus-visible { outline: 3px solid var(--mtg-blue); outline-offset: 2px; }
+.domain-media { aspect-ratio: 16/10; background: var(--mtg-bg-alt); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.domain-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+.domain-card:hover .domain-media img { transform: scale(1.04); }
+/* Product shots on a transparent background: shown whole on a light panel (also in dark mode) */
+.domain-media.is-contain { background: #f3f6fa; padding: 14px; }
+.domain-media.is-contain img { object-fit: contain; }
+.domain-media.is-art { color: rgba(255,255,255,.92); }
+.accent-blue .domain-media.is-art { background: linear-gradient(135deg, var(--mtg-blue-solid), var(--mtg-blue-dark)); }
+.accent-green .domain-media.is-art { background: linear-gradient(135deg, var(--mtg-green), #1f7a33); }
+.accent-orange .domain-media.is-art { background: linear-gradient(135deg, var(--mtg-orange), #d1541f); }
+.domain-body { position: relative; flex: 1; display: flex; flex-direction: column; padding: 30px 22px 22px; }
+.domain-icon { position: absolute; top: -22px; left: 22px; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 0 0 4px var(--mtg-surface); }
+.accent-blue .domain-icon { background: var(--mtg-blue-solid); }
+.accent-green .domain-icon { background: var(--mtg-green); }
+.accent-orange .domain-icon { background: var(--mtg-orange); }
+.domain-body h3 { font-size: 1.08rem; line-height: 1.35; margin: 0 0 8px; color: var(--mtg-heading); }
+.domain-body p { font-size: .9rem; line-height: 1.55; margin: 0 0 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.domain-link { margin-top: auto; font-weight: 700; font-size: .9rem; color: var(--mtg-blue); }
+@media (max-width: 1100px) {
+  .domain-track { grid-auto-columns: calc((100% - 2 * var(--domain-gap)) / 2.5); }
+}
+@media (max-width: 640px) {
+  .domain-track { --domain-gap: 16px; grid-auto-columns: calc((100% - var(--domain-gap)) / 1.25); }
+  .domains-head { text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .domain-arrows { position: static; }
+  .domains-head .section-title { text-align: left; font-size: 1.4rem; }
+}
+/* Touch screens swipe natively: let cards snap into place */
+@media (pointer: coarse) {
+  .domain-track { scroll-snap-type: x mandatory; cursor: auto; }
+  .domain-item { scroll-snap-align: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .domain-card, .domain-media img { transition: none; }
+  .domain-card:hover, .domain-card:hover .domain-media img { transform: none; }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 960px) {
+  .home-hero-inner { grid-template-columns: 1fr; }
+  .pillar-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .pillar-grid { grid-template-columns: 1fr; }
+  .home-hero h1 { font-size: 1.7rem; }
+}

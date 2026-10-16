@@ -9,3 +9,4 @@ public/uploads/documents/*
 source-assets/
 *.log
 .DS_Store
+tests/output/

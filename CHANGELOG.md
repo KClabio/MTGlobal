@@ -6,7 +6,18 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.0.7] - 2026-10-16
+## [1.0.8] - 2026-10-17
+
+### Added
+- **Automatic tests** (`npm test`): one command checks the whole website and admin area in a real browser and prints only what fails. Test data is temporary and removed afterwards.
+- **Release script** (`npm run release`): one command dates the changelog, makes the commit and the version tag, and publishes the GitHub Release with the full changelog.
+- `CLAUDE.md`: working notes for Claude (how the project is built and run, tests, the release routine).
+
+### Changed
+- The site's styles are split into six files by area (base, layout, shared parts, home page, content pages, admin). Public pages no longer load the admin styles. Every page looks exactly as before.
+- `package.json` now shows the current version number.
+
+## [1.0.7] - 2026-10-16 · `fa0ff18`
 
 ### Added
 - Version tags (v1.0.0–v1.0.7) and a GitHub Release for every version, with the notes from this file.

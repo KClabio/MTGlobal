@@ -1,0 +1,245 @@
+/* Content pages: Giải pháp pages (partials/solution-section.ejs: jump menu, folds, compact cards, picture tabs,
+   process trail, "Khám phá thêm" + CTA band), Dịch vụ landing + service pages, STEM equipment, projects and news search. */
+
+.solution-intro { max-width: 820px; margin: 0 auto 8px; text-align: center; font-size: 1.05rem; line-height: 1.75; color: var(--mtg-ink); }
+.info-list { margin: 0; padding-left: 1.2em; line-height: 1.7; }
+.info-list li { margin-bottom: .35em; }
+.info-list li::marker { color: var(--mtg-blue); }
+.section-cta { text-align: center; margin-top: 40px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+/* Editable solution pages (views/partials/solution-section.ejs) */
+.solution-block.is-sub { margin-top: 40px; }
+.solution-subtitle { margin: 0 0 8px; font-size: 1.15rem; color: var(--mtg-heading); }
+.solution-subtext { margin: 0 0 16px; color: var(--mtg-muted); }
+.solution-block.is-sub .solution-subtitle + .media-grid, .solution-block.is-sub .solution-subtitle + .card-grid, .solution-block.is-sub .solution-subtitle + .timeline { margin-top: 16px; }
+.section-text { line-height: 1.75; color: var(--mtg-ink); }
+.section-text p { margin: 0 0 1em; }
+.section-text ul, .card-text ul { margin: 0 0 1em; padding-left: 1.3em; }
+.section-text li, .card-text li { margin-bottom: .4em; }
+.section-text li::marker, .card-text li::marker { color: var(--mtg-blue); }
+.section-text > :last-child, .card-text > :last-child { margin-bottom: 0; }
+.section-text + .card-grid, .section-text + .timeline, .section-text + .media-grid { margin-top: 24px; }
+.card-text p { margin: 0 0 .6em; }
+
+/* ---- Closing section of the Giải pháp pages: "Khám phá thêm" link cards + consultation band (partials/next-steps.ejs) ---- */
+.next-steps { background: var(--mtg-bg); border-top: 1px solid var(--mtg-border); }
+.next-steps-title { margin: 0 0 18px; font-size: 1.3rem; color: var(--mtg-heading); }
+.next-links { list-style: none; margin: 0 0 32px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.next-link { height: 100%; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto 1fr auto; column-gap: 12px; row-gap: 6px; padding: 16px;
+  border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); background: var(--mtg-surface); color: var(--mtg-ink); text-decoration: none;
+  transition: transform calc(220ms * var(--anim)) ease, border-color calc(220ms * var(--anim)) ease, box-shadow calc(220ms * var(--anim)) ease; }
+.next-link-icon { grid-row: 1 / 3; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.next-link-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.next-link-body strong { color: var(--mtg-heading); font-size: .98rem; line-height: 1.3; }
+.next-link-text { color: var(--mtg-muted); font-size: .84rem; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.next-link-arrow { grid-column: 2; justify-self: end; align-self: end; color: var(--mtg-blue); font-weight: 700; transition: transform calc(220ms * var(--anim)) ease; }
+.next-link:hover, .next-link:focus-visible { transform: translateY(-3px); border-color: var(--mtg-hover-border); box-shadow: var(--mtg-shadow); }
+.next-link:hover .next-link-arrow, .next-link:focus-visible .next-link-arrow { transform: translateX(4px); }
+.next-link:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
+/* Blue band with the consultation button (also on the Dịch vụ landing page) */
+.cta-band { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px 32px; padding: 28px 32px; border-radius: var(--mtg-radius);
+  background: linear-gradient(120deg, var(--mtg-blue-solid), #0b3d8c); color: #fff; box-shadow: 0 18px 32px -20px rgba(13, 71, 161, .7); }
+.cta-band-text { flex: 1 1 320px; }
+.cta-band h2 { margin: 0 0 6px; font-size: 1.35rem; color: #fff; }
+.cta-band p { margin: 0; color: rgba(255, 255, 255, .85); }
+.cta-band-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.cta-band-btn { background: #fff; color: #0d47a1; border: 0; font-weight: 700; padding: 12px 22px; }
+.cta-band-btn:hover { background: #e8f1fc; color: #0d47a1; }
+.cta-band-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.services-cta { margin-top: 40px; }
+@media (max-width: 640px) {
+  .next-links { grid-template-columns: 1fr; gap: 10px; }
+  .next-link { grid-template-rows: auto; align-items: center; padding: 12px 14px; }
+  .next-link-icon { grid-row: auto; }
+  .next-link-text { -webkit-line-clamp: 2; }
+  .next-link { grid-template-columns: auto 1fr auto; }
+  .next-link-arrow { grid-column: 3; align-self: center; }
+  .cta-band { padding: 22px 20px; }
+  .cta-band-actions, .cta-band-btn { width: 100%; justify-content: center; }
+}
+
+/* Dịch vụ landing page: a service without a photo shows colour art with its icon, like the home page cards */
+.card-media.is-art { display: flex; align-items: center; justify-content: center; color: rgba(255, 255, 255, .92); }
+.accent-blue .card-media.is-art { background: linear-gradient(135deg, var(--mtg-blue-solid), var(--mtg-blue-dark)); }
+.accent-orange .card-media.is-art { background: linear-gradient(135deg, var(--mtg-orange), #d1541f); }
+.accent-green .card-media.is-art { background: linear-gradient(135deg, var(--mtg-green), #1f7a33); }
+.card-more-link { margin-top: auto; padding-top: 6px; color: var(--mtg-blue); font-weight: 600; font-size: .92rem; }
+
+/* ---- Giải pháp pages: jump menu, folded sections, "more" in cards, picture tabs ---- */
+/* Jump menu: sticky just under the header (--header-h is measured by public/js/main.js); scrolls sideways on phones */
+.page-jump { position: sticky; top: var(--header-h, 72px); z-index: 40; background: var(--mtg-surface); border-bottom: 1px solid var(--mtg-border); box-shadow: 0 6px 14px -12px rgba(15, 23, 42, .35); }
+.page-jump-list { list-style: none; display: flex; gap: 4px; margin: 0; padding: 10px 0; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.page-jump-list::-webkit-scrollbar { display: none; }
+.page-jump-link { display: block; padding: 6px 12px; border-radius: 999px; color: var(--mtg-muted); font-size: .86rem; font-weight: 600; white-space: nowrap; text-decoration: none; transition: background-color .15s ease, color .15s ease; }
+.page-jump-link:hover { background: var(--mtg-bg-alt); color: var(--mtg-heading); }
+.page-jump-link:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 1px; }
+.page-jump-link.is-current { background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+[data-jump-target] { scroll-margin-top: calc(var(--header-h, 72px) + var(--jump-h, 58px)); }
+
+/* A section folded under its title (display "collapsed") */
+.solution-block.is-folded { margin-top: 28px; }
+.solution-fold { border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); background: var(--mtg-surface); }
+.solution-fold-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; cursor: pointer; list-style: none; font-weight: 700; color: var(--mtg-heading); font-size: 1.08rem; }
+.solution-fold-summary::-webkit-details-marker { display: none; }
+.solution-fold-summary:hover { color: var(--mtg-blue); }
+.solution-fold-summary:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; border-radius: var(--mtg-radius); }
+.solution-fold-icon { flex: none; color: var(--mtg-muted); transition: transform .2s ease; }
+.solution-fold[open] .solution-fold-icon { transform: rotate(180deg); }
+.solution-fold-body { padding: 0 20px 20px; }
+.solution-fold-body > .card-grid { margin-top: 4px; }
+
+/* Cards that show a short summary, with the rest under "Xem chi tiết" (display "compact") */
+.card-grid.is-compact { align-items: start; } /* opening one card's details must not stretch its neighbour */
+.card-more { margin-top: 10px; }
+.card-more > summary { display: inline-flex; align-items: center; gap: 6px; color: var(--mtg-blue); font-weight: 600; font-size: .92rem; cursor: pointer; list-style: none; }
+.card-more > summary::-webkit-details-marker { display: none; }
+.card-more > summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s ease; }
+.card-more[open] > summary::after { transform: translateY(1px) rotate(-135deg); }
+.card-more > summary:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; border-radius: 4px; }
+.card-more[open] > summary { margin-bottom: 8px; }
+
+/* One picture at a time behind tabs (display "tabs") */
+.media-tablist { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 20px; }
+.media-tab { min-height: 40px; padding: 8px 18px; border: 1px solid var(--mtg-border); border-radius: 999px; background: var(--mtg-surface); color: var(--mtg-heading); font: inherit; font-weight: 600; cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+.media-tab:hover { border-color: var(--mtg-blue); color: var(--mtg-blue); }
+.media-tab:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
+.media-tab[aria-selected="true"] { background: var(--mtg-blue-solid); border-color: var(--mtg-blue-solid); color: #fff; }
+.media-tabpanel { max-width: 920px; margin: 0 auto; }
+.media-tabpanel + .media-tabpanel { margin-top: 32px; }
+.media-tabs.is-tabbed .media-tabpanel + .media-tabpanel { margin-top: 0; }
+.media-tabpanel-title { margin: 0 0 10px; font-size: 1.1rem; color: var(--mtg-heading); }
+.media-tabs.is-tabbed .media-tabpanel-title { display: none; } /* the selected tab already names it */
+.solution-intro p { margin: 0 0 .8em; }
+.solution-intro > :last-child { margin-bottom: 0; }
+.solution-intro + .section-cta { margin-top: 24px; }
+.solution-split { align-items: center; }
+.section-cta.is-start { justify-content: flex-start; margin-top: 20px; }
+.media-grid.is-single { max-width: calc(50% - 10px); }
+@media (max-width: 760px) { .media-grid.is-single { max-width: none; } }
+.equipment-group + .equipment-group { margin-top: 48px; }
+.equipment-group-title { font-size: 1.25rem; margin: 0 0 18px; padding-bottom: 10px; border-bottom: 2px solid var(--mtg-border); color: var(--mtg-heading); }
+
+/* ---- STEM equipment: search + one Phần per tab (switched on by main.js; without JS all parts show) ---- */
+.equip-tools { display: grid; gap: 14px; margin-bottom: 28px; }
+.equip-search, .search-pill { display: flex; align-items: center; gap: 10px; max-width: 440px; padding: 0 16px; border: 1px solid var(--mtg-border); border-radius: 999px; background: var(--mtg-surface); color: var(--mtg-muted); }
+.equip-search:focus-within, .search-pill:focus-within { border-color: var(--mtg-blue); box-shadow: 0 0 0 3px var(--mtg-blue-tint); }
+.equip-search input, .search-pill input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 11px 0; font: inherit; color: var(--mtg-ink); }
+.equip-tabs { display: grid; grid-template-columns: repeat(var(--tabs, 4), minmax(0, 1fr)); gap: 10px; transition: opacity .2s ease; }
+.equip-tab { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 10px 14px; border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); background: var(--mtg-surface); color: var(--mtg-heading); font: inherit; font-size: .92rem; text-align: left; cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.equip-tab:hover { border-color: var(--mtg-blue); }
+.equip-tab:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
+.equip-tab-label { font-weight: 800; }
+.equip-tab-name { grid-column: 1 / -1; grid-row: 2; font-size: .82rem; font-weight: 500; line-height: 1.35; color: var(--mtg-muted); }
+.equip-tab-count { min-width: 24px; padding: 1px 7px; border-radius: 999px; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .78rem; font-weight: 700; text-align: center; }
+.equip-tab[aria-selected="true"] { background: var(--mtg-blue-solid); border-color: var(--mtg-blue-solid); color: #fff; }
+.equip-tab[aria-selected="true"] .equip-tab-name { color: rgba(255, 255, 255, .88); }
+.equip-tab[aria-selected="true"] .equip-tab-count { background: rgba(255, 255, 255, .22); color: #fff; }
+/* While searching, results come from every part: the tabs step back */
+.equip-tools.is-searching .equip-tabs { opacity: .55; }
+.equip-tools.is-searching .equip-tab[aria-selected="true"] { background: var(--mtg-surface); border-color: var(--mtg-border); color: var(--mtg-heading); }
+.equip-tools.is-searching .equip-tab[aria-selected="true"] .equip-tab-name, .equip-tools.is-searching .equip-tab[aria-selected="true"] .equip-tab-count { color: var(--mtg-muted); }
+.equip-tools:not([hidden]) ~ .equip-panel { margin-top: 0; }
+@media (max-width: 640px) { .equip-tabs { grid-template-columns: 1fr 1fr; } }
+.equipment-subgroup-title { font-size: 1.05rem; margin: 30px 0 14px; color: var(--mtg-heading); }
+.equip-results-count { margin: 0 0 14px; font-weight: 600; color: var(--mtg-muted); }
+/* Search above a card list (projects, news): public/js/main.js [data-card-search] */
+.card-search { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 28px; }
+.card-search .search-pill { flex: 1 1 280px; }
+.card-search-count { margin: 0; font-weight: 600; color: var(--mtg-muted); }
+.search-none { margin-top: 8px; }
+/* Reference projects grouped by school level */
+.level-group + .level-group { margin-top: 48px; }
+.level-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 18px; padding-bottom: 10px; border-bottom: 2px solid var(--mtg-border); }
+.level-head h2 { margin: 0; font-size: 1.35rem; color: var(--mtg-heading); }
+.level-head .level-sub { color: var(--mtg-muted); font-size: .95rem; }
+.level-count { margin-left: auto; padding: 2px 10px; border-radius: 999px; background: var(--mtg-blue-tint); color: var(--mtg-blue); font-weight: 700; font-size: .85rem; }
+.level-empty { margin: 0; padding: 22px; border: 1px dashed var(--mtg-border); border-radius: 12px; color: var(--mtg-muted); text-align: center; }
+.card-body .card-kicker { display: block; margin: 0 0 4px; color: var(--mtg-muted); font-size: .88rem; }
+.card-part { align-self: flex-start; width: fit-content; display: inline-block; margin-bottom: 6px; padding: 2px 9px; border-radius: 999px; background: var(--mtg-blue-tint); color: var(--mtg-blue); font-size: .72rem; font-weight: 700; }
+
+/* ---- Process trail ("steps" blocks): one line through numbered stops, with arrows showing the direction ----
+   Each stop draws the segment to the next stop (track + fill), so the line is continuous across and down. */
+.process-trail { --node: 50px; --gap: 20px; --line: 6px; --seg: calc(900ms / var(--steps) * var(--anim));
+  list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(var(--steps), minmax(0, 1fr)); gap: 0 var(--gap); }
+.trail-step { position: relative; text-align: center; }
+.trail-step:not(:last-child)::before, .trail-step:not(:last-child)::after {
+  content: ''; position: absolute; z-index: 0; top: calc(var(--node) / 2 - var(--line) / 2); left: 50%; width: calc(100% + var(--gap)); height: var(--line); border-radius: var(--line);
+}
+.trail-step:not(:last-child)::before { background: var(--mtg-border); }
+.trail-step:not(:last-child)::after { background: linear-gradient(90deg, var(--mtg-blue), var(--mtg-green)); transform-origin: 0 50%; }
+.trail-step:nth-child(n + 3):not(:last-child)::after { background: linear-gradient(90deg, var(--mtg-green), var(--mtg-orange)); }
+/* Direction arrow in the middle of each segment */
+.trail-step:not(:last-child) .trail-body::before {
+  content: ''; position: absolute; z-index: 1; top: calc(var(--node) / 2 - 4px); left: calc(100% + var(--gap) / 2 - 5px);
+  width: 7px; height: 7px; border-top: 2px solid #fff; border-right: 2px solid #fff; transform: rotate(45deg);
+}
+.trail-node { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: var(--node); height: var(--node); margin: 0 auto 16px;
+  border-radius: 50%; background: var(--mtg-gradient-brand); color: #fff; font-size: 1.15rem; font-weight: 800; box-shadow: 0 6px 16px rgba(21, 101, 192, .25), 0 0 0 5px var(--mtg-surface); }
+.trail-body h3 { font-size: 1rem; margin: 0 0 6px; }
+.trail-body .card-text { font-size: .92rem; color: var(--mtg-muted); }
+/* Reveal (main.js adds .is-drawn when the trail scrolls into view): stop 1 appears, the line runs to stop 2, it appears, and so on */
+.js .process-trail .trail-step:not(:last-child)::after { transform: scaleX(0); transition: transform var(--seg) linear; transition-delay: calc(var(--i) * var(--seg)); }
+.js .process-trail .trail-step:not(:last-child) .trail-body::before { opacity: 0; transition: opacity .2s ease; transition-delay: calc((var(--i) + .5) * var(--seg)); }
+.js .process-trail .trail-node { opacity: 0; transform: scale(.4); transition: transform calc(380ms * var(--anim)) cubic-bezier(.3, 1.6, .5, 1), opacity calc(250ms * var(--anim)) ease; transition-delay: calc(var(--i) * var(--seg)); }
+.js .process-trail .trail-body { opacity: 0; transform: translateY(10px); transition: transform calc(450ms * var(--anim)) ease, opacity calc(450ms * var(--anim)) ease; transition-delay: calc(var(--i) * var(--seg) + 80ms); }
+.js .process-trail.is-drawn .trail-step:not(:last-child)::after { transform: none; }
+.js .process-trail.is-drawn .trail-node, .js .process-trail.is-drawn .trail-body { opacity: 1; transform: none; }
+.js .process-trail.is-drawn .trail-step:not(:last-child) .trail-body::before { opacity: 1; }
+/* Phones and narrow screens: the trail runs down the left side */
+@media (max-width: 900px) {
+  .process-trail { --node: 44px; --gap: 26px; grid-template-columns: 1fr; gap: var(--gap) 0; }
+  .trail-step { display: grid; grid-template-columns: var(--node) minmax(0, 1fr); gap: 16px; align-items: start; text-align: left; }
+  .trail-step:not(:last-child)::before, .trail-step:not(:last-child)::after {
+    top: calc(var(--node) / 2); left: calc(var(--node) / 2 - var(--line) / 2); width: var(--line); height: calc(100% + var(--gap));
+  }
+  .trail-step:not(:last-child)::after { background: linear-gradient(180deg, var(--mtg-blue), var(--mtg-green)); transform-origin: 50% 0; }
+  .trail-step:nth-child(n + 3):not(:last-child)::after { background: linear-gradient(180deg, var(--mtg-green), var(--mtg-orange)); }
+  .trail-step:not(:last-child) .trail-body::before { top: calc(50% + (var(--gap) + var(--node)) / 2 - 5px); left: calc(var(--node) / 2 - 4px); transform: rotate(135deg); }
+  .js .process-trail .trail-step:not(:last-child)::after { transform: scaleY(0); }
+  .trail-node { margin: 0; font-size: 1.05rem; }
+  .trail-body { padding-top: 10px; }
+}
+
+/* ---- Service pages: extra sections (each shown only once it has content) ---- */
+.service-aside { position: sticky; top: 100px; }
+.service-section { margin-top: 48px; }
+.service-section > h2 { font-size: 1.4rem; margin: 0 0 18px; }
+.service-section .timeline-item h3 { margin: 6px 0 4px; }
+.service-section .timeline-item .prose-text { margin-bottom: 0; }
+.package-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+.package-card { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 24px 22px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow); }
+.package-card.is-highlighted { border: 2px solid var(--mtg-blue); box-shadow: var(--mtg-shadow-lg); }
+.package-card h3 { margin: 0; font-size: 1.1rem; }
+.package-badge { position: absolute; top: -12px; left: 20px; padding: 3px 12px; border-radius: 999px; background: var(--mtg-blue-solid); color: #fff; font-size: .74rem; font-weight: 700; }
+.package-price { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--mtg-blue); }
+.package-features { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; flex: 1; }
+.package-features li { position: relative; padding-left: 26px; font-size: .92rem; color: var(--mtg-ink); }
+.package-features li::before { content: '✓'; position: absolute; left: 0; top: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--mtg-green-tint); color: var(--mtg-green-ink); font-size: .72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.faq-list { display: grid; gap: 10px; }
+.faq-item { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); }
+.faq-item summary { cursor: pointer; list-style: none; padding: 16px 48px 16px 18px; position: relative; font-weight: 600; color: var(--mtg-heading); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: '+'; position: absolute; right: 18px; top: 50%; transform: translateY(-50%); font-size: 1.3rem; color: var(--mtg-blue); }
+.faq-item[open] summary::after { content: '–'; }
+.faq-item summary:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; border-radius: var(--mtg-radius-sm); }
+.faq-item .prose-text { padding: 0 18px 16px; margin: 0; }
+.service-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.service-gallery a { display: block; aspect-ratio: 4 / 3; border-radius: var(--mtg-radius-sm); overflow: hidden; background: var(--mtg-bg-alt); }
+.service-gallery img { width: 100%; height: 100%; object-fit: cover; transition: transform .2s ease; }
+.service-gallery a:hover img { transform: scale(1.04); }
+.testimonial-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.testimonial-card { margin: 0; padding: 22px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-left: 4px solid var(--mtg-blue); border-radius: var(--mtg-radius-sm); }
+.testimonial-card blockquote { margin: 0 0 12px; font-style: italic; color: var(--mtg-ink); }
+.testimonial-card blockquote p { margin: 0 0 .6em; }
+.testimonial-card figcaption { display: flex; flex-direction: column; font-size: .88rem; }
+.testimonial-card figcaption span { color: var(--mtg-muted); }
+
+/* ---- Responsive ---- */
+@media (max-width: 960px) {
+  .service-aside { position: static; }
+}
+@media (max-width: 640px) {
+  /* Key facts on the Giải pháp pages stay 2 × 2, so they read at a glance instead of one long column */
+  .solution-block .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .solution-block .stat-card { padding: 14px; font-size: .9rem; }
+  .solution-block .stat-card .num { font-size: 1.35rem; }
+}

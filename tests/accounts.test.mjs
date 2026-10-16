@@ -1,0 +1,289 @@
+// Accounts: show/hide password (eye) on login, register and profile; profile page over HTTP (about/news language,
+// avatar + bio rules, password change); role badge (view only); oversized photo refused in the browser.
+import { existsSync, readdirSync, unlinkSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import zlib from 'node:zlib';
+import { suite, part, check, db, BASE, ROOT, createUser, stamp } from './lib/index.mjs';
+
+const PUBLIC = path.join(ROOT, 'public');
+
+await suite(async (b) => {
+  const { send, ev, sleep } = b;
+
+  await part(b, 'password eye', async () => {
+    const EMAIL = `zztest-eye-${stamp}@example.com`;
+    const r0 = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: 'ZZ Eye', email: EMAIL, password: 'secret1', confirmPassword: 'secret1' }) });
+    check('test account created', r0.status === 302);
+    const posted = [];
+    b.on('Network.requestWillBeSent', (p) => { if (p.request.method === 'POST') posted.push({ url: p.request.url, body: p.request.postData || '' }); });
+    const nav = (p) => b.nav(p, 400);
+    const waitLoad = () => b.waitLoad();
+    const mouse = (type, x, y, extra = {}) => send('Input.dispatchMouseEvent', { type, x, y, ...extra });
+    const clickSel = async (sel) => { const p = await ev(`(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+      await mouse('mouseMoved', p.x, p.y); await mouse('mousePressed', p.x, p.y, { button: 'left', buttons: 1, clickCount: 1 }); await mouse('mouseReleased', p.x, p.y, { button: 'left', buttons: 0, clickCount: 1 }); await sleep(150); };
+    const typeInto = async (sel, text) => { await ev(`document.querySelector(${JSON.stringify(sel)}).focus()`); await send('Input.insertText', { text }); };
+    const key = async (k, code) => { const text = k === 'Enter' ? String.fromCharCode(13) : k === ' ' ? ' ' : undefined; await send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code: k === ' ' ? 'Space' : k, windowsVirtualKeyCode: code, text }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code: k === ' ' ? 'Space' : k, windowsVirtualKeyCode: code }); await sleep(120); };
+    const boxState = (inputId) => ev(`(() => { const i = document.getElementById('${inputId}'); const b = document.querySelector('[aria-controls="${inputId}"]');
+      return { type: i.type, pressed: b.getAttribute('aria-pressed'), label: b.getAttribute('aria-label'), eye: getComputedStyle(b.querySelector('.icon-eye')).display !== 'none', eyeOff: getComputedStyle(b.querySelector('.icon-eye-off')).display !== 'none', focused: document.activeElement === i,
+        iconRight: Math.round(i.getBoundingClientRect().right - b.getBoundingClientRect().right), inside: b.getBoundingClientRect().top >= i.getBoundingClientRect().top - 1 && b.getBoundingClientRect().bottom <= i.getBoundingClientRect().bottom + 1 }; })()`);
+
+    for (const [p, ids] of [['/dang-nhap', ['loginPassword']], ['/dang-ky', ['regPassword', 'regConfirm']]]) {
+      await nav(p);
+      const cov = await ev(`({ pw: document.querySelectorAll('input[type=password]').length, toggles: document.querySelectorAll('[data-password-toggle]').length, labels: [...document.querySelectorAll('[data-password-toggle]')].map((b) => b.getAttribute('aria-label')),
+        forOk: ${JSON.stringify(ids)}.every((i) => !!document.querySelector('label[for="' + i + '"]')), auto: [...document.querySelectorAll('input[autocomplete]')].map((i) => i.name + ':' + i.getAttribute('autocomplete')) })`);
+      check(`${p}: ${ids.length} password box(es), each with one eye button "Hiện mật khẩu", labels linked`, cov.pw === ids.length && cov.toggles === ids.length && cov.labels.every((l) => l === 'Hiện mật khẩu') && cov.forOk, cov);
+      check(`${p}: browser hints (email=username, password=${p === '/dang-nhap' ? 'current' : 'new'}-password)`, cov.auto.includes('email:username') && cov.auto.filter((a) => a.endsWith(p === '/dang-nhap' ? ':current-password' : ':new-password')).length === ids.length, cov.auto);
+    }
+    await nav('/dang-nhap?lang=en');
+    check('EN label "Show password"', (await ev(`document.querySelector('[data-password-toggle]').getAttribute('aria-label')`)) === 'Show password');
+    await nav('/dang-nhap?lang=vi');
+
+    // Toggle behaviour (login page)
+    await typeInto('#loginEmail', EMAIL);
+    await typeInto('#loginPassword', 'secret1');
+    await ev(`document.getElementById('loginPassword').setSelectionRange(3, 3)`);
+    await clickSel('[aria-controls="loginPassword"]');
+    let s = await boxState('loginPassword');
+    const caret = await ev(`document.getElementById('loginPassword').selectionStart`);
+    check('click eye: shown as text, crossed-eye icon, pressed, label "Ẩn mật khẩu", cursor stays in the box', s.type === 'text' && s.eyeOff && !s.eye && s.pressed === 'true' && s.label === 'Ẩn mật khẩu' && s.focused && caret === 3, { s, caret });
+    check('eye sits inside the box, on the right', s.inside && s.iconRight >= 0 && s.iconRight <= 12, s);
+    await b.shot('eye-login-shown');
+    await clickSel('[aria-controls="loginPassword"]');
+    s = await boxState('loginPassword');
+    check('click again: hidden, eye icon, not pressed, label "Hiện mật khẩu"', s.type === 'password' && s.eye && !s.eyeOff && s.pressed === 'false' && s.label === 'Hiện mật khẩu', s);
+    await ev(`document.querySelector('[aria-controls="loginPassword"]').focus()`);
+    await key('Enter', 13);
+    check('keyboard: Enter on the eye shows the password', (await boxState('loginPassword')).type === 'text');
+    await key(' ', 32);
+    check('keyboard: Space hides it again', (await boxState('loginPassword')).type === 'password');
+    // Log in with the password shown
+    await clickSel('[aria-controls="loginPassword"]');
+    let l = waitLoad(); await ev(`document.querySelector('form[action="/dang-nhap"]').requestSubmit()`);
+    const typeAtSubmit = await ev(`document.getElementById('loginPassword') ? document.getElementById('loginPassword').type : 'gone'`).catch(() => 'navigated');
+    await l; await sleep(400);
+    check('logging in works with the password shown; the box was hidden again on submit', (await ev('location.pathname')) !== '/dang-nhap' && typeAtSubmit !== 'text', { at: await ev('location.pathname'), typeAtSubmit });
+
+    // Profile: change password with boxes shown
+    await nav('/ho-so');
+    const prof = await ev(`(() => { const f = document.querySelector('form[action="/ho-so/mat-khau"]'); const u = f.querySelector('input[autocomplete="username"]');
+      return { toggles: f.querySelectorAll('[data-password-toggle]').length, user: u && { name: u.getAttribute('name'), value: u.value, readonly: u.readOnly, hiddenVisually: u.getBoundingClientRect().width <= 1, tab: u.tabIndex },
+        current: document.getElementById('currentPassword').getAttribute('autocomplete'), newAc: document.getElementById('newPassword').getAttribute('autocomplete'), confAc: document.getElementById('confirmNewPassword').getAttribute('autocomplete') }; })()`);
+    check('profile "Đổi mật khẩu": 3 boxes with eye buttons', prof.toggles === 3, prof);
+    check('browser-fill setup: invisible unnamed username = your email; current = current-password, new/confirm = new-password',
+      prof.user && prof.user.name === null && prof.user.value === EMAIL && prof.user.readonly && prof.user.hiddenVisually && prof.user.tab === -1 && prof.current === 'current-password' && prof.newAc === 'new-password' && prof.confAc === 'new-password', prof);
+    await typeInto('#currentPassword', 'secret1');
+    await typeInto('#newPassword', 'secret22');
+    await typeInto('#confirmNewPassword', 'secret22');
+    await clickSel('[aria-controls="currentPassword"]');
+    await clickSel('[aria-controls="newPassword"]');
+    const each = await ev(`['currentPassword','newPassword','confirmNewPassword'].map((i) => document.getElementById(i).type)`);
+    check('each box toggles on its own (current + new shown, confirm hidden)', JSON.stringify(each) === JSON.stringify(['text', 'text', 'password']), each);
+    posted.length = 0;
+    l = waitLoad(); await ev(`document.querySelector('form[action="/ho-so/mat-khau"]').requestSubmit()`); await l; await sleep(400);
+    const body = new URLSearchParams(posted.find((p) => p.url.endsWith('/ho-so/mat-khau'))?.body || '');
+    check('only currentPassword / newPassword / confirmPassword are sent (no username field)', JSON.stringify([...body.keys()].sort()) === JSON.stringify(['confirmPassword', 'currentPassword', 'newPassword']), [...body.keys()]);
+    check('password changed with the boxes shown (success message)', await ev(`!!document.querySelector('.form-alert.success')`));
+    const tryLogin = async (pw) => (await fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ email: EMAIL, password: pw }) })).headers.get('location');
+    const oldLoc = await tryLogin('secret1'); const newLoc = await tryLogin('secret22');
+    check('old password rejected, new password accepted', oldLoc === null && newLoc && newLoc !== '/dang-nhap', { oldLoc, newLoc });
+    // back/forward restore hides everything
+    await b.clearCookie('connect.sid');
+    await nav('/dang-ky');
+    await typeInto('#regPassword', 'matkhau123'); await typeInto('#regConfirm', 'matkhau123');
+    await clickSel('[aria-controls="regPassword"]');
+    await nav('/dang-nhap'); await send('Runtime.evaluate', { expression: 'history.back()' }); await sleep(1200);
+    check('coming back to a page via Back: all boxes hidden', (await ev(`[...document.querySelectorAll('[data-password-toggle]')].every((b) => document.getElementById(b.getAttribute('aria-controls')).type === 'password')`)));
+  });
+
+  await part(b, 'profile page (HTTP)', async () => {
+    const EMAIL = `zztest-profile-${stamp}@example.com`;
+    let sid = null;
+    const req = async (p, { method = 'GET', body, lang = 'vi', redirect = 'manual' } = {}) => {
+      const headers = { cookie: [sid && `connect.sid=${sid}`, `lang=${lang}`].filter(Boolean).join('; ') };
+      const res = await fetch(BASE + p, { method, body, headers, redirect });
+      const set = res.headers.getSetCookie().find((c) => c.startsWith('connect.sid='));
+      if (set) sid = set.split(';')[0].slice('connect.sid='.length);
+      return { status: res.status, text: await res.text(), location: res.headers.get('location') };
+    };
+    const form = (obj) => new URLSearchParams(obj);
+    const multipart = (fields, file) => {
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(fields)) fd.append(k, v);
+      if (file) fd.append('avatar', new Blob([file.data], { type: file.type }), file.name);
+      return fd;
+    };
+    // Minimal valid 1x1 PNG
+    const png = () => {
+      const crc = (buf) => { let c; const crcTable = []; for (let n = 0; n < 256; n++) { c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crcTable[n] = c >>> 0; } let x = 0xffffffff; for (const v of buf) x = crcTable[(x ^ v) & 0xff] ^ (x >>> 8); return (x ^ 0xffffffff) >>> 0; };
+      const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+      const ihdr = Buffer.from([0, 0, 0, 1, 0, 0, 0, 1, 8, 2, 0, 0, 0]);
+      const idat = zlib.deflateSync(Buffer.from([0, 21, 101, 192]));
+      return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
+    };
+    const avatarSrc = (html) => (html.match(/class="avatar-lg" src="([^"]+)"/) || [])[1] || null;
+    const has = (html, s) => html.includes(s);
+    const created = new Set();
+    try {
+      // About page language
+      let r = await req('/ve-mtg', { lang: 'en' });
+      check('About EN shows English profile', has(r.text, 'MTG works across 3 main areas') && !has(r.text, 'MTG hoạt động trên 3 lĩnh vực'));
+      r = await req('/ve-mtg', { lang: 'vi' });
+      check('About VI shows Vietnamese profile', has(r.text, 'MTG hoạt động trên 3 lĩnh vực') && !has(r.text, 'MTG works across'));
+      // News: the list shows the title in the page's language; the article page keeps the original title
+      r = await req('/tin-tuc', { lang: 'en' });
+      check('News list EN shows the English title', has(r.text, 'MTG launches 3rd-gen stair-climbing robot'));
+      const articlePath = (r.text.match(/href="(\/tin-tuc\/[a-f0-9]+)"/) || [])[1];
+      r = await req(articlePath, { lang: 'en' });
+      check('Article EN: original title + English body', has(r.text, '<h1>MTG ra mat Robot leo cau thang the he 3</h1>') && has(r.text, 'Article body') && has(r.text, '<title>MTG ra mat Robot'));
+      r = await req(articlePath, { lang: 'vi' });
+      check('Article VI: original title + Vietnamese body', has(r.text, '<h1>MTG ra mat Robot leo cau thang the he 3</h1>') && has(r.text, 'Noi dung tin tuc'));
+
+      r = await req('/dang-ky', { method: 'POST', body: form({ name: 'Test Người Dùng', email: EMAIL, password: 'oldpass1', confirmPassword: 'oldpass1' }) });
+      check('register test account', r.status === 302, r.status);
+      r = await req('/ho-so', { lang: 'vi' });
+      check('VI: button "Cập nhật", password card, initials', has(r.text, '>Cập nhật</button>') && has(r.text, 'Đổi mật khẩu') && has(r.text, 'avatar-fallback" aria-hidden="true">TD<') && has(r.text, 'Chưa có giới thiệu.'));
+      r = await req('/ho-so', { lang: 'en' });
+      check('EN: button "Update", English labels', has(r.text, '>Update</button>') && has(r.text, 'Change password') && has(r.text, 'Member since') && has(r.text, 'No bio yet.'));
+      r = await req('/ho-so', { method: 'POST', lang: 'en', body: multipart({ name: '  ', phone: '0912', bio: 'keep me' }) });
+      check('empty name rejected (EN message) and typed values kept', r.status === 400 && has(r.text, 'Please enter your full name.') && has(r.text, '>keep me</textarea>'), r.status);
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Test', bio: 'x'.repeat(501) }) });
+      check('bio over 500 characters rejected', r.status === 400 && has(r.text, 'Phần giới thiệu tối đa 500 ký tự.'), r.status);
+      // 480 chars + 20 line breaks = exactly 500 in the browser's count, but 520 bytes once sent as \r\n
+      const fullBio = Array.from({ length: 20 }, () => 'y'.repeat(24)).join('\n') + '\n';
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Test', bio: fullBio }) });
+      check('500-char bio with line breaks accepted (\\r\\n counted as one)', r.status === 200 && has(r.text, 'Cập nhật hồ sơ thành công.'), { status: r.status, length: fullBio.length });
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Test' }, { data: Buffer.from('this is not an image, just text'), type: 'image/png', name: 'fake.png' }) });
+      check('text file renamed .png (declared image/png) rejected by signature', r.status === 400 && has(r.text, 'Ảnh đại diện phải là file JPG, PNG, WEBP hoặc GIF.'), r.status);
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Test' }, { data: Buffer.from('plain'), type: 'text/plain', name: 'notes.txt' }) });
+      check('.txt file rejected', r.status === 400 && has(r.text, 'Ảnh đại diện phải là file JPG'), r.status);
+      const MB = 1024 * 1024;
+      const uploadsBefore = readdirSync(PUBLIC + '/uploads/images').length;
+      const tooBig = Buffer.concat([png(), Buffer.alloc(21 * MB)]);
+      r = await req('/ho-so', { method: 'POST', lang: 'en', body: multipart({ name: 'Test' }, { data: tooBig, type: 'image/png', name: 'big.png' }) });
+      check('21 MB photo rejected (EN message)', r.status === 400 && has(r.text, 'The profile photo can be at most 20 MB.'), r.status);
+      r = await req('/ho-so', { method: 'POST', lang: 'vi', body: multipart({ name: 'Test' }, { data: tooBig, type: 'image/png', name: 'big.png' }) });
+      check('21 MB photo rejected (VI message)', r.status === 400 && has(r.text, 'Ảnh đại diện tối đa 20 MB.'), r.status);
+      check('rejected 21 MB uploads leave no file behind', readdirSync(PUBLIC + '/uploads/images').length === uploadsBefore);
+      const large = Buffer.concat([png(), Buffer.alloc(15 * MB)]);
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Test' }, { data: large, type: 'image/png', name: 'large.png' }) });
+      const largeAvatar = avatarSrc(r.text);
+      if (largeAvatar) created.add(largeAvatar);
+      check('15 MB photo accepted', r.status === 200 && !!largeAvatar && existsSync(PUBLIC + largeAvatar), r.status);
+      check('hint shows 20 MB', has(r.text, 'tối đa 20 MB.'));
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Người Kiểm Thử', phone: '0912345678', schoolOrCompany: 'THCS Test', bio: 'Dòng một\nDòng hai' }, { data: png(), type: 'image/png', name: 'me.png' }) });
+      const firstAvatar = avatarSrc(r.text);
+      if (firstAvatar) created.add(firstAvatar);
+      check('valid update with avatar: success + avatar shown + bio in summary', r.status === 200 && has(r.text, 'Cập nhật hồ sơ thành công.') && !!firstAvatar && has(r.text, '<p class="bio-text">Dòng một\nDòng hai</p>'), { status: r.status, firstAvatar });
+      check('avatar file exists on disk', !!firstAvatar && existsSync(PUBLIC + firstAvatar));
+      r = await req(firstAvatar);
+      check('avatar is served', r.status === 200);
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Người Kiểm Thử' }, { data: png(), type: 'image/png', name: 'me2.png' }) });
+      const secondAvatar = avatarSrc(r.text);
+      if (secondAvatar) created.add(secondAvatar);
+      check('replacing avatar removes the old file', !!secondAvatar && secondAvatar !== firstAvatar && !existsSync(PUBLIC + firstAvatar) && existsSync(PUBLIC + secondAvatar));
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Người Kiểm Thử', removeAvatar: '1' }) });
+      check('remove photo: initials back, file deleted', r.status === 200 && !avatarSrc(r.text) && has(r.text, 'aria-hidden="true">NT<') && !existsSync(PUBLIC + secondAvatar));
+      // Password change
+      const pw = (o, lang = 'vi') => req('/ho-so/mat-khau', { method: 'POST', lang, body: form(o) });
+      r = await pw({ currentPassword: 'wrong', newPassword: 'newpass1', confirmPassword: 'newpass1' });
+      check('wrong current password rejected', r.status === 400 && has(r.text, 'Mật khẩu hiện tại không đúng.'));
+      r = await pw({ currentPassword: 'oldpass1', newPassword: '123', confirmPassword: '123' }, 'en');
+      check('too-short new password rejected (EN)', r.status === 400 && has(r.text, 'at least 6 characters'));
+      r = await pw({ currentPassword: 'oldpass1', newPassword: 'oldpass1', confirmPassword: 'oldpass1' });
+      check('new = current rejected', r.status === 400 && has(r.text, 'Mật khẩu mới phải khác mật khẩu hiện tại.'));
+      r = await pw({ currentPassword: 'oldpass1', newPassword: 'newpass1', confirmPassword: 'newpass2' });
+      check('mismatched confirmation rejected', r.status === 400 && has(r.text, 'Mật khẩu xác nhận không khớp.'));
+      const sidBefore = sid;
+      r = await pw({ currentPassword: 'oldpass1', newPassword: 'newpass1', confirmPassword: 'newpass1' });
+      check('valid password change succeeds', r.status === 200 && has(r.text, 'Đổi mật khẩu thành công.'));
+      check('session id rotated, still logged in', sid !== sidBefore && (await req('/ho-so')).status === 200);
+      check('profile card error/success are separate', !has(r.text, 'Cập nhật hồ sơ thành công.'));
+      sid = null;
+      r = await req('/dang-nhap', { method: 'POST', body: form({ email: EMAIL, password: 'oldpass1' }) });
+      check('old password no longer works', r.status === 400);
+      r = await req('/dang-nhap', { method: 'POST', body: form({ email: EMAIL, password: 'newpass1', redirectTo: '/ho-so' }) });
+      check('login with new password works', r.status === 302 && r.location === '/ho-so', r);
+    } finally {
+      for (const url of created) if (existsSync(PUBLIC + url)) unlinkSync(PUBLIC + url);
+    }
+  });
+
+  await part(b, 'role badge on the profile', async () => {
+    const d = await db();
+    const accounts = {};
+    for (const role of ['owner', 'admin', 'customer']) accounts[role] = await createUser(`role-${role}`, role);
+    const profile = async (role, lang = 'vi') => (await fetch(BASE + '/ho-so', { headers: { cookie: `connect.sid=${accounts[role].sid}; lang=${lang}` } })).text();
+    const summary = (html) => html.slice(html.indexOf('<aside class="profile-summary">'), html.indexOf('</aside>'));
+    const want = {
+      owner: { cls: 'tag role-owner', vi: 'Chủ sở hữu', en: 'Owner', crown: true },
+      admin: { cls: 'tag role-admin', vi: 'Quản trị viên', en: 'Administrator', crown: false },
+      customer: { cls: 'tag', vi: 'Khách hàng', en: 'Customer', crown: false },
+    };
+    for (const role of Object.keys(want)) for (const lang of ['vi', 'en']) {
+      const aside = summary(await profile(role, lang));
+      const block = (aside.match(/<div class="profile-bio profile-role">([\s\S]*?)<\/div>/) || [])[1] || '';
+      const heading = ((block.match(/<h3>([^<]+)<\/h3>/) || [])[1] || '').trim();
+      const span = block.match(/<span class="([^"]+)">([\s\S]*?)<\/span>/) || [];
+      const label = (span[2] || '').replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<%[\s\S]*?%>/g, '').trim();
+      const crown = /<svg/.test(span[2] || '');
+      const roleAt = aside.indexOf('profile-role'); const bioAt = aside.indexOf('<div class="profile-bio">');
+      const bioHeading = ((aside.slice(bioAt).match(/<h3>([^<]+)<\/h3>/) || [])[1] || '').trim();
+      check(`[${role}/${lang}] "${heading}": ${label} (${span[1]}${crown ? ', crown' : ''}), right above "${bioHeading}"`,
+        heading === (lang === 'en' ? 'Role' : 'Vai trò') && span[1] === want[role].cls && label === want[role][lang] && crown === want[role].crown && roleAt > 0 && roleAt < bioAt
+          && bioHeading === (lang === 'en' ? 'About me' : 'Giới thiệu bản thân') && !/<(input|select|textarea)/.test(block),
+        { heading, cls: span[1], label, crown, roleAt, bioAt, bioHeading });
+    }
+    // View only: posting role=owner with the profile form changes nothing
+    const fd = new FormData();
+    fd.append('name', 'ZZ customer'); fd.append('phone', ''); fd.append('schoolOrCompany', ''); fd.append('bio', 'zz'); fd.append('role', 'owner');
+    const res = await fetch(BASE + '/ho-so', { method: 'POST', body: fd, redirect: 'manual', headers: { cookie: `connect.sid=${accounts.customer.sid}` } });
+    const after = await d.collection('users').findOne({ email: accounts.customer.email });
+    check('customer posting the profile form with role=owner stays a customer (profile still saved)', after.role === 'customer' && after.bio === 'zz' && res.status < 500, { status: res.status, role: after.role, bio: after.bio });
+    check('the profile form has no role field', !/name="role"/.test(await profile('customer')));
+    await b.login(accounts.owner.sid);
+    await b.nav('/ho-so', 600);
+    await b.shot('role-owner-light');
+  });
+
+  await part(b, 'oversized photo refused in the browser', async () => {
+    const user = await createUser('avsize', 'customer');
+    const dir = mkdtempSync(path.join(tmpdir(), 'mtg-avatar-'));
+    const bigPath = path.join(dir, 'big-25mb.jpg');
+    const smallPath = path.join(dir, 'small.jpg');
+    writeFileSync(bigPath, Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(25 * 1024 * 1024)]));
+    writeFileSync(smallPath, Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(2048)]));
+    try {
+      await send('DOM.enable');
+      await b.login(user.sid);
+      let requests = 0;
+      b.on('Network.requestWillBeSent', (p) => { if (p.request.method === 'POST' && p.request.url.endsWith('/ho-so')) requests++; });
+      const chooseFile = async (file) => {
+        const { root } = await send('DOM.getDocument');
+        const { nodeId } = await send('DOM.querySelector', { nodeId: root.nodeId, selector: '[data-avatar-input]' });
+        await send('DOM.setFileInputFiles', { nodeId, files: [file] });
+        await sleep(300);
+      };
+      const state = () => ev(`({
+        error: (document.querySelector('[data-avatar-error]') || {}).textContent || null,
+        files: document.querySelector('[data-avatar-input]').files.length,
+        previewTag: document.querySelector('[data-avatar-preview]').tagName,
+        previewSrc: (document.querySelector('[data-avatar-preview]').src || '').slice(0, 5),
+        href: location.pathname,
+      })`);
+      for (const lang of ['vi', 'en']) {
+        await b.nav(`/ho-so?lang=${lang}`, 300);
+        await chooseFile(bigPath);
+        const s = await state();
+        const expected = lang === 'vi' ? 'Ảnh đại diện tối đa 20 MB.' : 'The profile photo can be at most 20 MB.';
+        check(`[${lang}] 25 MB file refused instantly with message`, s.error === expected, s.error);
+        check(`[${lang}] input cleared, preview unchanged, nothing uploaded`, s.files === 0 && s.previewTag === 'DIV' && requests === 0 && s.href === '/ho-so', { files: s.files, preview: s.previewTag, posts: requests });
+        await chooseFile(smallPath);
+        const s2 = await state();
+        check(`[${lang}] small file previews and clears the error`, s2.error === null && s2.files === 1 && s2.previewTag === 'IMG' && s2.previewSrc === 'blob:', s2);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

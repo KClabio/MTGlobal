@@ -1,0 +1,131 @@
+/* Page frame: header + menus (views/partials/header.ejs, user-menu.ejs), page banner (partials/page-banner.ejs),
+   sections, footer, light/dark switch and the phone menu drawer. */
+
+/* ---- Header / Nav ---- */
+.brand-bar { height: 4px; background: var(--mtg-gradient-brand); }
+.site-header { position: sticky; top: 0; z-index: 50; background: var(--mtg-surface); box-shadow: var(--mtg-shadow); }
+.header-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 20px; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; color: var(--mtg-heading); }
+.logo img { height: 42px; }
+/* Uploaded logo is a white-background JPG with wide margins: crop the empty top/bottom so the mark reads larger */
+.logo .logo-img { height: 44px; width: auto; aspect-ratio: 2.6 / 1; object-fit: cover; }
+.logo-text small { display: block; font-weight: 500; font-size: .68rem; color: var(--mtg-muted); letter-spacing: .04em; }
+
+.main-nav { display: flex; align-items: center; gap: 4px; flex: 1; justify-content: center; }
+.main-nav > a, .nav-dropdown > .nav-dropdown-trigger { padding: 10px 14px; font-weight: 600; font-size: .92rem; color: var(--mtg-heading); border: none; background: none; cursor: pointer; border-radius: var(--mtg-radius-sm); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.main-nav > a:hover, .nav-dropdown > .nav-dropdown-trigger:hover, .nav-dropdown:hover > .nav-dropdown-trigger { background: var(--mtg-bg-alt); color: var(--mtg-blue); }
+.nav-dropdown { position: relative; }
+.nav-caret { font-size: .7em; }
+.nav-dropdown-menu {
+  position: absolute; top: 100%; left: 0; min-width: 260px; background: var(--mtg-surface); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow-lg);
+  padding: 8px; display: none; flex-direction: column; gap: 2px; border: 1px solid var(--mtg-border);
+}
+/* Shown while the pointer is on the item or its menu; keyboard focus (not a mouse click) also opens it: .is-kbd-open, set in main.js */
+.nav-dropdown:hover .nav-dropdown-menu, .nav-dropdown.is-kbd-open .nav-dropdown-menu { display: flex; }
+.nav-dropdown-menu a { padding: 10px 12px; border-radius: var(--mtg-radius-sm); font-size: .9rem; color: var(--mtg-ink); }
+.nav-dropdown-menu a:hover { background: var(--mtg-bg-alt); color: var(--mtg-blue); }
+
+.header-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+.header-actions .btn { white-space: nowrap; }
+.lang-switch { display: flex; border: 1px solid var(--mtg-border); border-radius: 999px; overflow: hidden; }
+.lang-switch a { padding: 6px 12px; font-size: .78rem; font-weight: 700; color: var(--mtg-muted); }
+.lang-switch a.active { background: var(--mtg-blue-solid); color: #fff; }
+
+.user-menu { position: relative; }
+.user-menu-trigger { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--mtg-bg-alt); font-weight: 600; font-size: .88rem; cursor: pointer; border: none; }
+.user-menu-dropdown { position: absolute; right: 0; top: 100%; margin-top: 6px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow-lg); min-width: 180px; padding: 6px; display: none; flex-direction: column; }
+/* Invisible bridge over the 6px gap so :hover isn't lost while moving the mouse onto the menu */
+.user-menu-dropdown::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
+.user-menu:hover .user-menu-dropdown, .user-menu.is-kbd-open .user-menu-dropdown { display: flex; }
+.user-menu-dropdown a, .user-menu-dropdown button { text-align: left; padding: 9px 12px; border-radius: var(--mtg-radius-sm); font-size: .88rem; border: none; background: none; cursor: pointer; width: 100%; color: var(--mtg-ink); }
+.user-menu-dropdown a:hover, .user-menu-dropdown button:hover { background: var(--mtg-bg-alt); }
+
+.nav-toggle { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 6px; }
+.nav-toggle span { width: 24px; height: 2px; background: var(--mtg-heading); }
+
+/* ---- Hero ---- */
+.page-hero { background: var(--mtg-navy); color: #fff; padding: 64px 0; text-align: center; }
+/* Back link on detail pages: top-left of the banner, aligned with the page content */
+.hero-back-row { text-align: left; margin: -36px 0 20px; }
+.hero-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; color: rgba(255,255,255,.82); font-weight: 600; font-size: .92rem; }
+.hero-back:hover { color: #fff; }
+.page-hero h1 { color: #fff; font-size: 2.1rem; }
+.page-hero p { color: rgba(255,255,255,.78); max-width: 640px; margin: 0 auto 1em; }
+.page-hero.has-image { background-image: linear-gradient(rgba(12, 20, 33, .74), rgba(12, 20, 33, .74)), var(--hero-image); background-size: cover; background-position: center; } /* image from Admin → Cài đặt chung, darkened so the white text stays readable */
+.page-hero.has-image p { color: rgba(255,255,255,.9); }
+.hero-pill { display: inline-block; padding: 6px 16px; border-radius: 999px; background: rgba(255,255,255,.12); font-size: .8rem; font-weight: 700; letter-spacing: .04em; margin-bottom: 16px; }
+
+/* ---- Sections ---- */
+.section { padding: 64px 0; }
+.section-alt { background: var(--mtg-bg-alt); }
+.section-title { text-align: center; font-size: 1.7rem; }
+.section-subtitle { text-align: center; max-width: 620px; margin: 0 auto 2.4em; }
+.section-head { text-align: center; margin-bottom: 40px; }
+
+/* ---- Footer ---- */
+.site-footer { background: var(--mtg-navy); color: rgba(255,255,255,.78); padding: 56px 0 24px; margin-top: 40px; }
+.footer-inner { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 32px; }
+.footer-brand .logo { color: #fff; }
+.footer-brand p { color: rgba(255,255,255,.72); }
+.footer-brand .footer-company { margin: 18px 0 6px; color: #fff; font-weight: 700; font-size: .95rem; } /* matches .footer-col h4 */
+.footer-brand .footer-about { max-width: 340px; margin: 0; font-size: .9rem; line-height: 1.6; text-wrap: pretty; }
+/* On the navy footer, present the white logo as a badge instead of a raw white block */
+.footer-brand .logo .logo-img { height: 56px; padding: 6px 12px; background: #fff; border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow); }
+.footer-col h4 { color: #fff; font-size: .95rem; margin-bottom: 14px; }
+.footer-col a, .footer-col p { color: rgba(255,255,255,.72); font-size: .9rem; display: block; margin-bottom: 8px; }
+.footer-col a:hover { color: #fff; }
+.footer-bottom { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); text-align: center; font-size: .82rem; color: rgba(255,255,255,.55); }
+
+/* ---- Light/dark theme switch ---- */
+.theme-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 0; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+.theme-toggle-label { font-size: .88rem; color: var(--mtg-ink); }
+.theme-toggle-track { position: relative; flex: none; width: 46px; height: 26px; border-radius: 999px; background: var(--mtg-border); transition: background-color .25s ease; }
+.theme-toggle-thumb { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; color: #f4a21f; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  display: flex; align-items: center; justify-content: center; transition: transform .25s cubic-bezier(.4, 0, .2, 1), color .25s ease; }
+.theme-toggle .tt-moon { display: none; }
+.theme-toggle[aria-checked="true"] .theme-toggle-track { background: var(--mtg-blue-solid); }
+.theme-toggle[aria-checked="true"] .theme-toggle-thumb { transform: translateX(20px); color: #2470c4; }
+.theme-toggle[aria-checked="true"] .tt-sun { display: none; }
+.theme-toggle[aria-checked="true"] .tt-moon { display: block; }
+.theme-toggle:focus-visible .theme-toggle-track { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
+.theme-toggle--compact .theme-toggle-track { width: 42px; height: 24px; }
+.theme-toggle--compact .theme-toggle-thumb { width: 18px; height: 18px; }
+.theme-toggle--compact[aria-checked="true"] .theme-toggle-thumb { transform: translateX(18px); }
+.admin-lang .theme-toggle { margin-left: auto; }
+/* In the account menu: a full-width row above "Quản trị" */
+.user-menu-theme { padding: 4px 4px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--mtg-border); }
+.user-menu-dropdown .user-menu-theme .theme-toggle { width: 100%; justify-content: space-between; padding: 6px 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle-track, .theme-toggle-thumb { transition: none; }
+}
+
+/* Dark theme: logos keep a white badge (their navy tagline needs a light background) */
+[data-theme="dark"] .site-header .logo .logo-img,
+[data-theme="dark"] .admin-brand img { background: #fff; border-radius: 6px; padding: 2px 6px; }
+
+/* ---- Responsive ---- */
+@media (max-width: 1240px) {
+  .header-inner { gap: 16px; }
+  .main-nav > a, .nav-dropdown > .nav-dropdown-trigger { padding: 10px 9px; font-size: .88rem; }
+}
+/* Full nav no longer fits (Vietnamese labels are longest): switch to the hamburger drawer */
+@media (max-width: 1100px) {
+  .main-nav { display: none; }
+  .nav-toggle { display: flex; }
+}
+@media (max-width: 960px) {
+  .header-actions .lang-switch { display: none; }
+  .footer-inner { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .page-hero h1 { font-size: 1.7rem; }
+  .hero-back-row { margin: -40px 0 16px; }
+}
+
+/* ---- Mobile nav drawer ---- */
+body.nav-open .main-nav {
+  display: flex; flex-direction: column; align-items: stretch; position: fixed; inset: 64px 0 0 0;
+  background: var(--mtg-surface); padding: 16px; overflow-y: auto; z-index: 49;
+}
+body.nav-open .nav-dropdown-menu { position: static; display: flex; box-shadow: none; border: none; padding-left: 12px; }
