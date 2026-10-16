@@ -6,7 +6,15 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.0.6] - 2026-10-16
+## [1.0.7] - 2026-10-16
+
+### Added
+- Version tags (v1.0.0–v1.0.7) and a GitHub Release for every version, with the notes from this file.
+
+### Changed
+- The README links to the changelog and the Releases page right at the top.
+
+## [1.0.6] - 2026-10-16 · `fab5e7d`
 
 ### Added
 - **Partner pages** (`/doi-tac/<name>`): each partner logo opens its own page with a description (VI/EN), a "Visit website" button and contact details (emails and phone numbers are clickable). The admin partner form gains description, contacts, website and page-address fields. Seven partners are loaded with logos, descriptions and contacts.

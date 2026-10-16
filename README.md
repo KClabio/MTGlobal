@@ -4,6 +4,8 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 
 **[English](#english)** · **[Tiếng Việt](#tiếng-việt)**
 
+📋 **[Changelog](CHANGELOG.md)** · **[Releases](https://github.com/KClabio/MTGlobal/releases)** — what changed in each version / thay đổi của từng phiên bản
+
 ---
 
 ## English
