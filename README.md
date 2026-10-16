@@ -24,14 +24,18 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 | Post news | **News** |
 | Change the logo, home picture or a page banner | **General settings** |
 | Change company address, phone, email | **Company info** |
-| Add a partner logo | **Partners** |
+| Add or edit a partner (logo, its own page, contacts) | **Partners** |
 | See customer requests | **Consultation requests** |
 | Make someone an admin | **Users** (Owner only) |
 
 ### For visitors
-- **Menu:** point at *Smart Robotics*, *Solutions* or *Services* to see their pages.
+- **Menu:** point at *Smart Robotics*, *Solutions* or *Services* to see their pages; click the name itself to open its overview page.
+- **Videos** can be watched (play, time bar, volume, fullscreen) but not downloaded.
 - **Home page:** scroll the **What We Do** cards sideways (mouse wheel, arrows or drag) and click one to open it.
 - **Language:** **VI / EN** at the top right.
+- **Partners:** click a partner logo to read about it and open its website.
+- **Reference projects:** grouped by school level (lower secondary, upper secondary, university); search by school name.
+- **News:** search by title or text.
 - **Ask for advice:** fill in the form on **Contact** (or on a robot or service page).
 - **Your account:** **Sign Up**, then see your requests in **My Requests** and your details and role in **Profile**.
 
@@ -46,7 +50,7 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 - **Add:** the blue **+ Add…** button. **Change:** **Edit** on a row. Then **Save**.
 - **Two languages:** fill in Vietnamese and English. If English is empty, Vietnamese is shown.
 - **Order:** drag a row by its ⠿ handle. The website follows the new order.
-- **Find:** type in the search box (accents not needed: `may in` finds "máy in").
+- **Find:** type in the search box (accents not needed: `may in` finds "máy in"). Equipment can also be filtered by part (*Part I…IV*), reference projects by school level.
 - **Delete:** **Delete**, then confirm.
 - **See the result:** the round button at the bottom right opens the page on the website.
 - **Admin language:** **VI / EN** at the bottom of the left menu.
@@ -60,6 +64,7 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 - A page is a list of blocks: text, cards, steps, photos & videos, numbers or buttons.
 - Add a block at the bottom, drag ⠿ to move it, **Remove** to delete it, then **Save page**.
 - **Restore default content** puts the original page back.
+- **Display** of a block: *folded under its title*, *short cards* (first paragraph + "Read more") or *tabs* for photos (tab name = caption before the "—"). **Short name in the page menu** is the label in the menu under the banner.
 
 **General settings** has three tabs:
 - **Brand:** the logo.
@@ -68,7 +73,9 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 
 ![General settings — page banners](docs/images/en/admin-general-settings.jpg)
 
-**Consultation requests:** set each one to *New → Contacted → Completed*. The customer sees the same status.
+**Consultation requests:** set each one to *New → Contacted → Completed*. The customer sees the same status. **Delete** removes a request for good (after confirming).
+
+**Reference projects:** the school level is taken from the school name (THCS / THPT / Đại học); choose **School level** in the form to set it by hand.
 
 **Who can do what**
 
@@ -95,6 +102,8 @@ Needs Node.js 18+ and MongoDB.
 Uploaded photos and the database are not stored in this repository — copy them from the current computer when moving.
 </details>
 
+**What's new:** see [CHANGELOG.md](CHANGELOG.md) for the changes in each version.
+
 **License:** © 2026 Công ty TNHH Công nghệ Mễ Trì Global. All rights reserved — see [LICENSE](LICENSE).
 
 ---
@@ -117,14 +126,18 @@ Uploaded photos and the database are not stored in this repository — copy them
 | Đăng tin tức | **Tin tức** |
 | Đổi logo, ảnh trang chủ hoặc banner trang | **Cài đặt chung** |
 | Đổi địa chỉ, điện thoại, email công ty | **Thông tin công ty** |
-| Thêm logo đối tác | **Đối tác đồng hành** |
+| Thêm / sửa đối tác (logo, trang giới thiệu, liên hệ) | **Đối tác đồng hành** |
 | Xem yêu cầu của khách | **Yêu cầu tư vấn** |
 | Cấp quyền quản trị cho ai đó | **Người dùng** (chỉ Chủ sở hữu) |
 
 ### Dành cho khách truy cập
-- **Menu:** đưa chuột vào *Robotics thông minh*, *Giải pháp* hoặc *Dịch vụ* để xem các trang con.
+- **Menu:** đưa chuột vào *Robotics thông minh*, *Giải pháp* hoặc *Dịch vụ* để xem các trang con; bấm vào chính tên đó để mở trang tổng quan.
+- **Video** xem được (phát, thanh thời gian, âm lượng, toàn màn hình) nhưng không tải về được.
 - **Trang chủ:** lướt ngang các thẻ **Lĩnh vực hoạt động** (cuộn chuột, mũi tên hoặc kéo) và bấm để mở.
 - **Ngôn ngữ:** **VI / EN** ở góc trên bên phải.
+- **Đối tác:** bấm vào logo đối tác để xem giới thiệu và mở website của họ.
+- **Dự án tham khảo:** chia theo cấp học (THCS, THPT, Đại học); tìm theo tên trường.
+- **Tin tức:** tìm theo tiêu đề hoặc nội dung.
 - **Cần tư vấn:** điền biểu mẫu ở trang **Liên hệ** (hoặc trang robot, trang dịch vụ).
 - **Tài khoản:** **Đăng ký**, rồi xem yêu cầu ở **Yêu cầu của tôi**, thông tin và vai trò ở **Hồ sơ**.
 
@@ -139,7 +152,7 @@ Uploaded photos and the database are not stored in this repository — copy them
 - **Thêm:** nút xanh **+ Thêm…**. **Sửa:** nút **Sửa** ở từng dòng. Xong bấm **Lưu**.
 - **Hai ngôn ngữ:** điền cả tiếng Việt và tiếng Anh. Để trống tiếng Anh thì sẽ hiện tiếng Việt.
 - **Thứ tự:** kéo dòng bằng tay nắm ⠿. Website đổi theo thứ tự mới.
-- **Tìm:** gõ vào ô tìm kiếm (không cần dấu: `may in` vẫn ra "máy in").
+- **Tìm:** gõ vào ô tìm kiếm (không cần dấu: `may in` vẫn ra "máy in"). Thiết bị còn lọc được theo phần (*Phần I…IV*), dự án tham khảo theo cấp học.
 - **Xoá:** bấm **Xoá** rồi xác nhận.
 - **Xem kết quả:** nút tròn ở góc dưới bên phải mở trang đó trên website.
 - **Ngôn ngữ trang quản trị:** **VI / EN** ở cuối menu bên trái.
@@ -153,6 +166,7 @@ Uploaded photos and the database are not stored in this repository — copy them
 - Mỗi trang gồm các khối: văn bản, thẻ, các bước, ảnh & video, số liệu hoặc nút bấm.
 - Thêm khối ở cuối trang, kéo ⠿ để đổi chỗ, **Xoá** để bỏ, rồi bấm **Lưu trang**.
 - **Khôi phục nội dung mặc định** đưa trang về như ban đầu.
+- **Cách hiển thị** của khối: *thu gọn dưới tiêu đề*, *thẻ rút gọn* (đoạn đầu + "Xem chi tiết") hoặc *dạng tab* cho ảnh (tên tab = chú thích trước dấu "—"). **Tên ngắn trên thanh mục lục** là chữ hiện ở thanh mục lục dưới banner.
 
 **Cài đặt chung** có ba thẻ:
 - **Thương hiệu:** logo.
@@ -161,7 +175,9 @@ Uploaded photos and the database are not stored in this repository — copy them
 
 ![Cài đặt chung — banner các trang](docs/images/vi/admin-general-settings.jpg)
 
-**Yêu cầu tư vấn:** chuyển trạng thái *Mới → Đã liên hệ → Hoàn tất*. Khách hàng thấy cùng trạng thái.
+**Yêu cầu tư vấn:** chuyển trạng thái *Mới → Đã liên hệ → Hoàn tất*. Khách hàng thấy cùng trạng thái. **Xoá** xoá hẳn yêu cầu (sau khi xác nhận).
+
+**Dự án tham khảo:** cấp học được nhận theo tên trường (THCS / THPT / Đại học); chọn **Cấp học** trong biểu mẫu để xếp thủ công.
 
 **Ai được làm gì**
 
@@ -187,5 +203,7 @@ Cần Node.js 18+ và MongoDB.
 
 Ảnh đã tải lên và cơ sở dữ liệu không nằm trong repository — hãy sao chép từ máy hiện tại khi chuyển máy.
 </details>
+
+**Có gì mới:** xem [CHANGELOG.md](CHANGELOG.md) để biết thay đổi của từng phiên bản.
 
 **Giấy phép:** © 2026 Công ty TNHH Công nghệ Mễ Trì Global. Bảo lưu mọi quyền — xem [LICENSE](LICENSE).

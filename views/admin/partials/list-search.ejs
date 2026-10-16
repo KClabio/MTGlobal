@@ -1,13 +1,17 @@
-<%# Name search for a long admin list; filtering happens in the browser (public/js/admin.js). Usage: include('partials/list-search', { target: 'equipment' }) %>
+<%# Search for a long admin list; filtering happens in the browser (public/js/admin.js).
+    Usage: include('partials/list-search', { target: 'equipment' }) — target is the list's data-sortable type,
+    and its texts are admin.search.<target>.* (placeholder, label, count, none). Rows carry data-search; the cell
+    with data-search-name gets the matches highlighted. Works together with partials/list-filter (chips). %>
 <div class="list-search" role="search"
      data-list-search="<%= target %>"
-     data-count="<%= t('admin.search.count') %>"
-     data-none="<%= t('admin.search.none') %>"
+     data-count="<%= t('admin.search.' + target + '.count') %>"
+     data-none="<%= t('admin.search.' + target + '.none') %>"
+     data-none-filter="<%= t('admin.search.noneFilter') %>"
      data-drag-paused="<%= t('admin.search.dragPaused') %>">
   <div class="list-search-box">
     <%- include('icon', { name: 'search', size: 18, cls: 'list-search-icon' }) %>
     <input class="form-control" type="search" autocomplete="off" spellcheck="false"
-           placeholder="<%= t('admin.search.placeholder') %>" aria-label="<%= t('admin.search.label') %>">
+           placeholder="<%= t('admin.search.' + target + '.placeholder') %>" aria-label="<%= t('admin.search.' + target + '.label') %>">
     <button type="button" class="list-search-clear" hidden aria-label="<%= t('admin.search.clear') %>" title="<%= t('admin.search.clear') %>"><%- include('icon', { name: 'x', size: 16 }) %></button>
   </div>
   <p class="list-search-count" aria-live="polite"></p>

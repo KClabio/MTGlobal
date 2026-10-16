@@ -9,7 +9,8 @@
 %><figure class="media-figure<%= mfContain ? ' is-contain' : '' %>">
   <div class="media-frame" style="aspect-ratio:<%= mfRatio %>;">
     <% if (mfIsVideo) { %>
-      <video controls preload="metadata" playsinline<% if (typeof poster !== 'undefined' && poster) { %> poster="<%= poster %>"<% } %>>
+      <%# Watch only: play/pause, time bar, volume, fullscreen; no download, speed, picture-in-picture or casting (see public/js/main.js) %>
+      <video controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture disableRemotePlayback preload="metadata" playsinline<% if (typeof poster !== 'undefined' && poster) { %> poster="<%= poster %>"<% } %>>
         <source src="<%= src %>" type="video/mp4">
       </video>
     <% } else { %>

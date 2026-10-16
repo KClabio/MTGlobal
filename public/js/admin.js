@@ -33,6 +33,13 @@
     if (toast.dataset.text) showToast(toast.dataset.text, toast.dataset.type);
   }
 
+  // ---- Charts follow the mouse only: a click never focuses (and so never pins) a column, slice or row.
+  // They stay reachable with Tab, and keyboard focus still shows the same highlight and tooltip. ----
+  var keyFocus = function (el) { try { return el.matches(':focus-visible'); } catch (err) { return true; } };
+  document.querySelectorAll('.chart-col, .pie-slice, .hbar-row').forEach(function (el) {
+    el.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  });
+
   // ---- Chart tooltip: any [data-tip] element shows its text on hover or keyboard focus ----
   var tip = document.getElementById('chartTooltip');
   if (tip) {
@@ -51,6 +58,7 @@
       el.addEventListener('mousemove', function (e) { show(el, e.clientX, e.clientY); });
       el.addEventListener('mouseleave', hide);
       el.addEventListener('focus', function () {
+        if (!keyFocus(el)) return;
         var r = el.getBoundingClientRect();
         show(el, r.left + r.width / 2, r.top);
       });
@@ -58,6 +66,35 @@
     });
     window.addEventListener('scroll', hide, { passive: true });
   }
+
+  // ---- Dashboard charts: hovering a month lights up its point on the line too ----
+  document.querySelectorAll('.chart-col[data-i]').forEach(function (col) {
+    var svg = col.ownerSVGElement;
+    var pt = svg && svg.querySelector('.chart-pt[data-i="' + col.getAttribute('data-i') + '"]');
+    if (!pt) return;
+    var on = function () { pt.classList.add('is-hot'); };
+    var off = function () { pt.classList.remove('is-hot'); };
+    col.addEventListener('mouseenter', on);
+    col.addEventListener('mouseleave', function () { if (document.activeElement !== col) off(); });
+    col.addEventListener('focus', function () { if (keyFocus(col)) on(); });
+    col.addEventListener('blur', off);
+  });
+
+  // ---- Status pie: a slice and its legend row highlight together; the slice slides out, the others dim ----
+  document.querySelectorAll('[data-pie]').forEach(function (wrap) {
+    var pie = wrap.querySelector('.pie');
+    var setHot = function (key) {
+      wrap.querySelectorAll('[data-key]').forEach(function (el) { el.classList.toggle('is-hot', el.getAttribute('data-key') === key); });
+      pie.classList.toggle('has-hot', !!key && !!pie.querySelector('.pie-slice[data-key="' + key + '"]'));
+    };
+    wrap.querySelectorAll('.pie-slice, .legend-row').forEach(function (el) {
+      var key = el.getAttribute('data-key');
+      el.addEventListener('mouseenter', function () { setHot(key); });
+      el.addEventListener('mouseleave', function () { setHot(null); });
+      el.addEventListener('focus', function () { if (keyFocus(el)) setHot(key); });
+      el.addEventListener('blur', function () { setHot(null); });
+    });
+  });
 
   // ---- Forms with data-confirm (deleting items/users) ask first in a centred dialog ----
   var confirmBox = document.getElementById('confirmDialog');
@@ -294,6 +331,9 @@
       section.querySelectorAll('[data-kinds]').forEach(function (el) {
         el.hidden = el.getAttribute('data-kinds').split(' ').indexOf(kind) === -1;
       });
+      // A display style the new type doesn't offer falls back to "normal"
+      var display = section.querySelector('[data-field="display"]');
+      if (display && display.selectedIndex > 0 && display.options[display.selectedIndex].hidden) display.value = '';
       ['[data-items-title]', '[data-add-item]', '[data-media-title]'].forEach(function (sel) {
         var el = section.querySelector(sel);
         if (el && el.getAttribute('data-label-' + kind)) setText(el, el.getAttribute('data-label-' + kind));
@@ -513,16 +553,26 @@
     if (pos < text.length) cell.appendChild(document.createTextNode(text.slice(pos)));
   }
 
-  document.querySelectorAll('[data-list-search]').forEach(function (box) {
-    var type = box.getAttribute('data-list-search');
+  // One controller per list: the search box and/or the filter chips that target it (data-list-search / data-list-filter)
+  var listTypes = [];
+  document.querySelectorAll('[data-list-search], [data-list-filter]').forEach(function (el) {
+    var type = el.getAttribute('data-list-search') || el.getAttribute('data-list-filter');
+    if (listTypes.indexOf(type) === -1) listTypes.push(type);
+  });
+  listTypes.forEach(function (type) {
     var tbody = document.querySelector('tbody[data-sortable="' + type + '"]');
     if (!tbody) return;
-    var input = box.querySelector('input');
-    var clearBtn = box.querySelector('.list-search-clear');
-    var count = box.querySelector('.list-search-count');
+    var box = document.querySelector('[data-list-search="' + type + '"]');
+    var chips = document.querySelector('[data-list-filter="' + type + '"]');
+    var input = box && box.querySelector('input');
+    var clearBtn = box && box.querySelector('.list-search-clear');
+    var count = box && box.querySelector('.list-search-count');
     var none = document.querySelector('[data-list-search-none="' + type + '"]');
     var hint = document.querySelector('.sort-hint span');
     var hintText = hint ? hint.textContent : '';
+    var param = chips ? chips.getAttribute('data-param') : '';
+    var chipButtons = chips ? Array.prototype.slice.call(chips.querySelectorAll('.filter-chip')) : [];
+    var filterValue = '';
     var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-id]'));
     rows.forEach(function (tr) {
       tr._searchWords = words(tr.getAttribute('data-search'));
@@ -530,52 +580,75 @@
       if (tr._nameCell) tr._nameCell._originalText = tr._nameCell.textContent.normalize('NFC');
     });
 
+    function setUrl(key, value) {
+      var url = new URL(window.location.href);
+      if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+      // ...and through the admin VI/EN switch
+      document.querySelectorAll('a[href*="alang="]').forEach(function (a) {
+        var link = new URL(a.href);
+        if (value) link.searchParams.set(key, value); else link.searchParams.delete(key);
+        a.href = link.pathname + link.search;
+      });
+    }
+
     function apply() {
-      var raw = input.value.trim();
+      var raw = input ? input.value.trim() : '';
       var query = words(raw);
-      var active = query.length > 0;
+      var searching = query.length > 0;
+      var active = searching || !!filterValue;
       var shown = 0;
       rows.forEach(function (tr) {
-        var match = !active || query.every(function (q) {
+        var inFilter = !filterValue || tr.getAttribute('data-filter') === filterValue;
+        var match = inFilter && (!searching || query.every(function (q) {
           return tr._searchWords.some(function (w) { return w.indexOf(q) === 0; });
-        });
+        }));
         tr.hidden = !match;
         if (tr._nameCell) highlight(tr._nameCell, match ? query : []);
         if (match) shown++;
       });
 
-      clearBtn.hidden = !input.value;
-      count.textContent = active ? fill(box.getAttribute('data-count'), { shown: shown, total: rows.length }) : '';
+      chipButtons.forEach(function (b) {
+        var on = b.getAttribute('data-value') === filterValue;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      if (box) {
+        clearBtn.hidden = !input.value;
+        count.textContent = active ? fill(box.getAttribute('data-count'), { shown: shown, total: rows.length }) : '';
+      }
       if (none) {
         none.hidden = !active || shown > 0;
-        none.textContent = fill(box.getAttribute('data-none'), { q: raw });
+        none.textContent = searching ? fill(box.getAttribute('data-none'), { q: raw }) : (box ? box.getAttribute('data-none-filter') : '');
       }
 
-      // Reordering a partial list would move items relative to hidden ones, so pause it while searching
+      // Reordering a partial list would move items relative to hidden ones, so pause it while filtering
       tbody.classList.toggle('is-filtered', active);
       if (tbody._sortable) tbody._sortable.option('disabled', active);
-      if (hint) hint.textContent = active ? box.getAttribute('data-drag-paused') : hintText;
+      if (hint) hint.textContent = active && box ? box.getAttribute('data-drag-paused') : hintText;
       if (hint) hint.parentElement.classList.toggle('is-paused', active);
 
-      // Keep the search in the URL so Back from an edit page brings it back
-      var url = new URL(window.location.href);
-      if (active) url.searchParams.set('q', raw); else url.searchParams.delete('q');
-      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
-      // ...and through the admin VI/EN switch
-      document.querySelectorAll('a[href*="alang="]').forEach(function (a) {
-        var link = new URL(a.href);
-        if (active) link.searchParams.set('q', raw); else link.searchParams.delete('q');
-        a.href = link.pathname + link.search;
-      });
+      // Keep the search and the chip in the URL so Back from an edit page brings them back
+      if (input) setUrl('q', searching ? raw : '');
+      if (param) setUrl(param, filterValue);
     }
 
-    input.addEventListener('input', apply);
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && input.value) { e.preventDefault(); input.value = ''; apply(); }
+    if (input) {
+      input.addEventListener('input', apply);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && input.value) { e.preventDefault(); input.value = ''; apply(); }
+      });
+      clearBtn.addEventListener('click', function () { input.value = ''; apply(); input.focus(); });
+    }
+    chipButtons.forEach(function (b) {
+      b.addEventListener('click', function () { filterValue = b.getAttribute('data-value'); apply(); });
     });
-    clearBtn.addEventListener('click', function () { input.value = ''; apply(); input.focus(); });
 
-    var initial = new URLSearchParams(window.location.search).get('q');
-    if (initial) { input.value = initial; apply(); }
+    var params = new URLSearchParams(window.location.search);
+    var initialQ = input ? params.get('q') : '';
+    var initialF = param ? params.get(param) : '';
+    if (initialF && chipButtons.some(function (b) { return b.getAttribute('data-value') === initialF; })) filterValue = initialF;
+    if (initialQ) input.value = initialQ;
+    if (initialQ || filterValue) apply();
   });
 })();

@@ -1,6 +1,6 @@
 <a class="card" href="/san-pham/<%= product.category %>">
   <div class="card-media">
-    <% if (product.comingSoon) { %><div class="coming-soon-overlay"><%= t('common.comingSoon') %></div><% } %>
+    <% if (product.comingSoon) { %><div class="coming-soon-overlay"><span class="coming-soon-badge"><%= t('common.comingSoon') %></span></div><% } %>
     <% if (product.images && product.images[0]) { %>
       <img src="<%= product.images[0] %>" alt="<%= pick(product, 'name') %>" loading="lazy">
     <% } %>

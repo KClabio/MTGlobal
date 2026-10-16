@@ -53,7 +53,19 @@
     "featuredProjectsTitle": "Dự án tiêu biểu",
     "partnersTitle": "Đối tác đồng hành",
     "domainsPrev": "Lĩnh vực trước",
-    "domainsNext": "Lĩnh vực tiếp theo"
+    "domainsNext": "Lĩnh vực tiếp theo",
+    "partnerVisit": "Truy cập website",
+    "partnerContact": "Liên hệ",
+    "partnerView": "Xem giới thiệu {name}",
+    "partnerNoInfo": "Thông tin giới thiệu đang được cập nhật.",
+    "partnerAbout": "Giới thiệu"
+  },
+  "equipment": {
+    "search": "Tìm thiết bị…",
+    "noResults": "Không tìm thấy thiết bị phù hợp.",
+    "resultsCount": "{n} thiết bị phù hợp",
+    "resultsOne": "1 thiết bị phù hợp",
+    "other": "Khác"
   },
   "forms": {
     "name": "Họ và tên",
@@ -201,7 +213,7 @@
       "kpiTotal": "Tổng yêu cầu",
       "kpiTotalSub": "Tỉ lệ hoàn tất",
       "kpiCustomers": "Khách hàng",
-      "kpiCustomersSub": "+{n} trong 30 ngày · {staff} quản trị",
+      "kpiCustomersSub": "+{n} trong 30 ngày",
       "kpiNews": "Tin tức đã đăng",
       "kpiNewsSub": "{published} / {total} bài viết",
       "monthlyTitle": "Yêu cầu theo tháng",
@@ -213,6 +225,10 @@
       "monthShort": "T{m}",
       "monthLong": "Tháng {m}/{y}",
       "tipMonth": "{month}: {n} yêu cầu",
+      "seriesReceived": "Yêu cầu nhận",
+      "seriesDone": "Đã hoàn tất",
+      "tipMonthDone": "{month}: {n} yêu cầu · {done} đã hoàn tất",
+      "doneCol": "Đã hoàn tất",
       "statusTitle": "Tình trạng xử lý",
       "statusSub": "Trên tổng {n} yêu cầu",
       "statusNone": "Chưa có yêu cầu nào",
@@ -250,7 +266,11 @@
       "videoView": "xem",
       "videoReplace": "(tải video mới sẽ thay thế)",
       "featured": "Dự án nổi bật (hiển thị ở trang chủ)",
-      "errName": "Tên dự án (Tiếng Việt) là bắt buộc."
+      "errName": "Tên dự án (Tiếng Việt) là bắt buộc.",
+      "level": "Cấp học",
+      "colLevel": "Cấp học",
+      "levelAuto": "Tự nhận theo tên trường (hiện: {level})",
+      "levelHint": "Tên trường có “THCS”, “THPT” hoặc “Đại học” được xếp tự động; dự án không có trường được xếp vào “Khác”. Chọn cấp học để xếp thủ công."
     },
     "products": {
       "robotsTitle": "Robotics thông minh",
@@ -388,7 +408,15 @@
       "name": "Tên đối tác *",
       "website": "Website (tuỳ chọn)",
       "logo": "Logo",
-      "errName": "Tên đối tác là bắt buộc."
+      "errName": "Tên đối tác là bắt buộc.",
+      "errWebsite": "Website chưa đúng. Ví dụ: https://tpe.vn",
+      "websiteHint": "Nút \"Truy cập website\" trên trang đối tác mở địa chỉ này. Để trống thì ẩn nút.",
+      "descriptionVi": "Giới thiệu (Tiếng Việt)",
+      "descriptionEn": "Giới thiệu (Tiếng Anh)",
+      "contacts": "Thông tin liên hệ (tuỳ chọn)",
+      "contactsHint": "Mỗi dòng một mục, dạng \"Nhãn: giá trị\". Email và số điện thoại tự thành liên kết bấm được.",
+      "slug": "Địa chỉ trang (tuỳ chọn)",
+      "slugHint": "Phần cuối địa chỉ /doi-tac/… — để trống thì tự tạo từ tên đối tác."
     },
     "articles": {
       "title": "Tin tức",
@@ -418,7 +446,8 @@
       "colInterest": "Quan tâm",
       "colMessage": "Nội dung",
       "colStatus": "Trạng thái",
-      "empty": "Chưa có yêu cầu nào."
+      "empty": "Chưa có yêu cầu nào.",
+      "confirmDelete": "Xoá yêu cầu tư vấn của {name}? Thao tác này không thể hoàn tác."
     },
     "users": {
       "title": "Người dùng",
@@ -466,12 +495,30 @@
       "forbidden": "Bạn không có quyền thực hiện thao tác này."
     },
     "search": {
-      "placeholder": "Tìm theo tên thiết bị…",
-      "label": "Tìm thiết bị theo tên",
       "clear": "Xóa tìm kiếm",
-      "count": "Hiển thị {shown} / {total} thiết bị",
-      "none": "Không tìm thấy thiết bị nào khớp “{q}”.",
-      "dragPaused": "Đang lọc theo tìm kiếm — xóa tìm kiếm để kéo thả sắp xếp thứ tự."
+      "all": "Tất cả",
+      "dragPaused": "Đang lọc — chọn “Tất cả” và xóa tìm kiếm để kéo thả sắp xếp thứ tự.",
+      "noneFilter": "Không có mục nào trong nhóm này.",
+      "filterPart": "Lọc theo phần",
+      "filterLevel": "Lọc theo cấp học",
+      "projects": {
+        "placeholder": "Tìm theo tên trường…",
+        "label": "Tìm dự án theo tên trường",
+        "count": "Hiển thị {shown} / {total} dự án",
+        "none": "Không tìm thấy trường nào khớp “{q}”."
+      },
+      "articles": {
+        "placeholder": "Tìm theo tiêu đề…",
+        "label": "Tìm tin tức theo tiêu đề",
+        "count": "Hiển thị {shown} / {total} bài viết",
+        "none": "Không tìm thấy bài viết nào khớp “{q}”."
+      },
+      "equipment": {
+        "placeholder": "Tìm theo tên thiết bị…",
+        "label": "Tìm thiết bị theo tên",
+        "count": "Hiển thị {shown} / {total} thiết bị",
+        "none": "Không tìm thấy thiết bị nào khớp “{q}”."
+      }
     },
     "viewPage": {
       "list": "Xem trang trên website",
@@ -575,7 +622,15 @@
       "errButtonUrl": "Mục {n}, nút {m}: liên kết phải bắt đầu bằng / hoặc https://",
       "errTextOneImage": "Mục {n}: mục Đoạn văn chỉ có tối đa 1 ảnh minh hoạ.",
       "bannerNote": "Banner đầu trang “{title}” (dòng giới thiệu và ảnh nền) được chỉnh trong Cài đặt chung.",
-      "bannerLink": "Mở banner của trang này"
+      "bannerLink": "Mở banner của trang này",
+      "display": "Cách hiển thị",
+      "display_": "Bình thường",
+      "display_collapsed": "Thu gọn dưới tiêu đề (bấm để mở)",
+      "display_compact": "Thẻ rút gọn: đoạn đầu + “Xem chi tiết”",
+      "display_tabs": "Dạng tab: mỗi lần một ảnh (tên tab = chú thích trước dấu “—”)",
+      "navVi": "Tên ngắn trên thanh mục lục (VI)",
+      "navEn": "Tên ngắn trên thanh mục lục (EN)",
+      "navPlaceholder": "Để trống = dùng tiêu đề"
     },
     "general": {
       "subtitle": "Thiết lập dùng chung cho toàn website: logo, phần mở đầu trang chủ và banner đầu mỗi trang.",
@@ -612,5 +667,45 @@
     "galleryTitle": "Hình ảnh",
     "testimonialsTitle": "Khách hàng nói gì",
     "packageField": "Gói quan tâm"
+  },
+  "projectLevels": {
+    "thcs": "THCS",
+    "thpt": "THPT",
+    "dai-hoc": "Đại học",
+    "khac": "Khác"
+  },
+  "projectsPage": {
+    "search": "Tìm theo tên trường…",
+    "resultsOne": "Tìm thấy 1 dự án",
+    "resultsCount": "Tìm thấy {n} dự án",
+    "noResults": "Không tìm thấy trường nào khớp “{q}”.",
+    "levelEmpty": "Chưa có dự án ở cấp học này — đang cập nhật.",
+    "levelSub": {
+      "thcs": "Trung học cơ sở",
+      "thpt": "Trung học phổ thông",
+      "dai-hoc": "Đại học, cao đẳng",
+      "khac": "Dự án khác"
+    }
+  },
+  "newsPage": {
+    "search": "Tìm tin tức…",
+    "resultsOne": "Tìm thấy 1 bài viết",
+    "resultsCount": "Tìm thấy {n} bài viết",
+    "noResults": "Không tìm thấy bài viết nào khớp “{q}”."
+  },
+  "solutionPage": {
+    "onThisPage": "Trên trang này",
+    "more": "Xem chi tiết"
+  },
+  "nextSteps": {
+    "title": "Khám phá thêm",
+    "ctaTitle": "Bạn cần tư vấn cho trường mình?",
+    "ctaText": "Để lại thông tin, đội ngũ MTG sẽ liên hệ với bạn.",
+    "ctaButton": "Yêu cầu tư vấn"
+  },
+  "servicesPage": {
+    "ctaTitle": "Bạn cần tư vấn về dịch vụ?",
+    "ctaText": "Để lại thông tin, đội ngũ MTG sẽ liên hệ với bạn.",
+    "empty": "Danh sách dịch vụ đang được cập nhật."
   }
 }

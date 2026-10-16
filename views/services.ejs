@@ -6,20 +6,30 @@
   bannerKey: 'services'
 }) %>
 
+<%# Dịch vụ landing page: one card per service (lib/home-domains.js → buildServiceCards), then the consultation band %>
 <section class="section">
   <div class="container">
-    <div class="card-grid cols-2">
-      <% services.forEach(function (service) { %>
-        <a class="card" href="/dich-vu/<%= service.slug %>">
-          <% if (service.heroImage) { %>
-            <div class="card-media"><img src="<%= service.heroImage %>" alt="<%= pick(service, 'title') %>"></div>
-          <% } %>
+    <div class="card-grid cols-2 service-cards">
+      <% cards.forEach(function (card) { %>
+        <a class="card accent-<%= card.accent %>" href="<%= card.url %>">
+          <div class="card-media<%= card.contain ? ' is-contain' : '' %><%= card.image ? '' : ' is-art' %>">
+            <% if (card.image) { %>
+              <img src="<%= card.image %>" alt="<%= card.title %>" loading="lazy">
+            <% } else { %>
+              <%- include('admin/partials/icon', { name: card.icon, size: 72 }) %>
+            <% } %>
+          </div>
           <div class="card-body">
-            <h3><%= pick(service, 'title') %></h3>
-            <p><%= pick(service, 'summary') %></p>
+            <h3><%= card.title %></h3>
+            <% if (card.text) { %><p><%= card.text %></p><% } %>
+            <span class="card-more-link"><%= t('common.learnMore') %> →</span>
           </div>
         </a>
       <% }) %>
+    </div>
+    <% if (!cards.length) { %><p class="empty-note"><%= t('servicesPage.empty') %></p><% } %>
+    <div class="services-cta">
+      <%- include('partials/cta-band', { heading: t('servicesPage.ctaTitle'), text: t('servicesPage.ctaText'), buttons: [{ url: '/lien-he', title: t('nextSteps.ctaButton') }] }) %>
     </div>
   </div>
 </section>

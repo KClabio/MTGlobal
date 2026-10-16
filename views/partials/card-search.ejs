@@ -1,0 +1,10 @@
+<%# Search box above a list of cards (public/js/main.js); hidden without JS. Cards carry data-search-item + data-search,
+    groups of cards data-search-group. Usage: include('partials/card-search', { placeholder, one, many, none }) — one/many/none are texts, {n} and {q} filled in. %>
+<div class="card-search" data-card-search data-none="<%= none %>" hidden>
+  <label class="search-pill">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <span class="sr-only"><%= placeholder %></span>
+    <input type="search" placeholder="<%= placeholder %>" autocomplete="off" spellcheck="false">
+  </label>
+  <p class="card-search-count" aria-live="polite" data-one="<%= one %>" data-many="<%= many %>"></p>
+</div>

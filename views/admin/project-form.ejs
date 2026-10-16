@@ -27,6 +27,15 @@
           <input class="form-control" name="location" value="<%= (project && project.location) || '' %>">
         </div>
       </div>
+      <div class="form-group" style="max-width:420px;">
+        <label for="projectLevel"><%= t('admin.projects.level') %></label>
+        <% const lvNow = (project && project.level) || ''; %>
+        <select class="form-control" id="projectLevel" name="level">
+          <option value="" <%= lvNow === '' ? 'selected' : '' %>><%= t('admin.projects.levelAuto', { level: t('projectLevels.' + levelFromSchool(project && project.schoolName)) }) %></option>
+          <% LEVELS.forEach(function (lv) { %><option value="<%= lv %>" <%= lvNow === lv ? 'selected' : '' %>><%= t('projectLevels.' + lv) %></option><% }) %>
+        </select>
+        <p class="form-hint"><%= t('admin.projects.levelHint') %></p>
+      </div>
       <div class="form-group">
         <label><%= t('admin.projects.descVi') %></label>
         <textarea class="form-control" name="descriptionVi" rows="10"><%= (project && project.descriptionVi) || '' %></textarea>

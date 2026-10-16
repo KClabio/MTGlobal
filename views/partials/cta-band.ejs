@@ -1,0 +1,10 @@
+<%# Blue consultation band (Giải pháp pages, Dịch vụ landing page). include('partials/cta-band', { heading, text, buttons: [{ url, title }] }) %>
+<div class="cta-band">
+  <div class="cta-band-text">
+    <h2><%= heading %></h2>
+    <% if (text) { %><p><%= text %></p><% } %>
+  </div>
+  <div class="cta-band-actions">
+    <% buttons.forEach(function (c) { %><a class="btn cta-band-btn" href="<%= c.url %>"><%= c.title %> <span aria-hidden="true">→</span></a><% }) %>
+  </div>
+</div>

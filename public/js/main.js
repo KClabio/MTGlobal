@@ -37,7 +37,11 @@
     var prev = trail[trail.length - 2];
     if (!prev) return;
     document.querySelectorAll('[data-back]').forEach(function (link) {
-      link.setAttribute('href', prev);
+      // A server link with a #part (equipment detail -> its Phần tab) keeps that part when going back to the same list
+      var home = link.getAttribute('data-home') || link.getAttribute('href') || '';
+      link.setAttribute('data-home', home);
+      var hash = home.indexOf('#') > 0 ? home.slice(home.indexOf('#')) : '';
+      link.setAttribute('href', hash && pageKey(home) === prev ? prev + hash : prev);
     });
   }
 
@@ -489,4 +493,237 @@
     } catch (err) { /* storage unavailable */ }
   }
   updateArrows();
+})();
+
+// STEM equipment catalog: one Phần per tab (Phần I first, #phan-N opens another) plus a search across every part.
+// Without JS the page keeps showing all parts as one list (the tools and tab panels are only switched on here).
+(function () {
+  var tools = document.querySelector('[data-equip-tools]');
+  if (!tools) return;
+  var tabs = Array.prototype.slice.call(tools.querySelectorAll('[role="tab"]'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('[data-panel]'));
+  var input = tools.querySelector('[data-equip-search]');
+  var results = document.querySelector('[data-equip-results]');
+  var grid = results.querySelector('[data-equip-grid]');
+  var count = results.querySelector('[data-equip-count]');
+  var empty = results.querySelector('[data-equip-empty]');
+  var current = null;
+
+  // Accents and case don't matter: "may in" finds "Máy in"
+  function fold(text) {
+    return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+  }
+
+  function select(slug, focus) {
+    var tab = tabs.filter(function (t) { return t.getAttribute('data-tab') === slug; })[0] || tabs[0];
+    current = tab.getAttribute('data-tab');
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+    });
+    panels.forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== current; });
+    if (focus) tab.focus();
+    try { history.replaceState(history.state, '', '#' + current); } catch (err) { /* file:// or sandboxed */ }
+  }
+
+  tabs.forEach(function (tab, i) {
+    tab.addEventListener('click', function () {
+      if (input.value) { input.value = ''; search(); } // picking a part ends the search
+      select(tab.getAttribute('data-tab'));
+    });
+    tab.addEventListener('keydown', function (e) {
+      var to = null;
+      if (e.key === 'ArrowRight') to = tabs[(i + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') to = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') to = tabs[0];
+      else if (e.key === 'End') to = tabs[tabs.length - 1];
+      if (!to) return;
+      e.preventDefault();
+      if (input.value) { input.value = ''; search(); }
+      select(to.getAttribute('data-tab'), true);
+    });
+  });
+
+  // Every card once, with the part it belongs to (shown on search results, which mix parts)
+  var cards = [];
+  panels.forEach(function (panel) {
+    var label = panel.getAttribute('data-part-label');
+    var partTitle = (panel.querySelector('.equipment-group-title') || {}).textContent || '';
+    panel.querySelectorAll('.card').forEach(function (card) {
+      cards.push({ card: card, label: label, text: fold(card.textContent + ' ' + partTitle + ' ' + label) });
+    });
+  });
+
+  function search() {
+    var q = fold(input.value);
+    if (!q) {
+      results.hidden = true;
+      grid.innerHTML = '';
+      tools.classList.remove('is-searching');
+      select(current);
+      return;
+    }
+    var words = q.split(' ');
+    var hits = cards.filter(function (c) { return words.every(function (w) { return c.text.indexOf(w) !== -1; }); });
+    grid.innerHTML = '';
+    hits.forEach(function (h) {
+      var copy = h.card.cloneNode(true);
+      var tag = document.createElement('span');
+      tag.className = 'card-part';
+      tag.textContent = h.label;
+      copy.querySelector('.card-body').insertBefore(tag, copy.querySelector('.card-body').firstChild);
+      grid.appendChild(copy);
+    });
+    count.textContent = hits.length === 1 ? count.getAttribute('data-one') : count.getAttribute('data-many').replace('{n}', hits.length);
+    count.hidden = !hits.length;
+    empty.hidden = !!hits.length;
+    tools.classList.add('is-searching');
+    panels.forEach(function (p) { p.hidden = true; });
+    results.hidden = false;
+  }
+  input.addEventListener('input', search);
+  input.addEventListener('keydown', function (e) { if (e.key === 'Escape' && input.value) { input.value = ''; search(); } });
+
+  tools.hidden = false;
+  var fromHash = (window.location.hash || '').slice(1);
+  select(tabs.some(function (t) { return t.getAttribute('data-tab') === fromHash; }) ? fromHash : tabs[0].getAttribute('data-tab'));
+  window.addEventListener('hashchange', function () {
+    var h = window.location.hash.slice(1);
+    if (tabs.some(function (t) { return t.getAttribute('data-tab') === h; })) { input.value = ''; search(); select(h); }
+  });
+})();
+
+// Search above a list of cards (reference projects: by school; news: by title and text). Accents and case don't matter.
+// Cards: [data-search-item][data-search]; optional groups [data-search-group] hide when none of their cards match.
+(function () {
+  var box = document.querySelector('[data-card-search]');
+  if (!box) return;
+  var input = box.querySelector('input');
+  var count = box.querySelector('.card-search-count');
+  var none = document.querySelector('[data-search-none]');
+  var groups = Array.prototype.slice.call(document.querySelectorAll('[data-search-group]'));
+  function fold(text) {
+    return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+  }
+  var items = Array.prototype.slice.call(document.querySelectorAll('[data-search-item]')).map(function (el) {
+    return { el: el, text: fold(el.getAttribute('data-search')) };
+  });
+
+  function search() {
+    var raw = input.value.trim();
+    var words = fold(raw).split(' ').filter(Boolean);
+    var shown = 0;
+    items.forEach(function (it) {
+      var match = words.every(function (w) { return it.text.indexOf(w) !== -1; });
+      it.el.hidden = !match;
+      if (match) shown++;
+    });
+    groups.forEach(function (g) {
+      var visible = g.querySelectorAll('[data-search-item]:not([hidden])').length;
+      // While searching, a level without matches (or an empty "being updated" level) steps aside
+      g.hidden = words.length > 0 && visible === 0;
+      var c = g.querySelector('[data-search-group-count]');
+      if (c) c.textContent = words.length ? visible : g.querySelectorAll('[data-search-item]').length;
+    });
+    count.textContent = !words.length ? '' : shown === 1 ? count.getAttribute('data-one') : count.getAttribute('data-many').replace('{n}', shown);
+    if (none) {
+      none.hidden = !words.length || shown > 0;
+      none.textContent = box.getAttribute('data-none').replace('{q}', raw);
+    }
+  }
+  input.addEventListener('input', search);
+  input.addEventListener('keydown', function (e) { if (e.key === 'Escape' && input.value) { input.value = ''; search(); } });
+  box.hidden = false;
+  if (input.value) search(); // the browser may restore the text on Back
+})();
+
+// Videos are for watching on the site: no "Save video as…" from the right-click menu (the player hides its own download button)
+document.addEventListener('contextmenu', function (e) {
+  if (e.target.closest && e.target.closest('video')) e.preventDefault();
+});
+
+// Giải pháp pages: pictures behind tabs (gallery shown as "tabs"). Without JS every picture stays on the page.
+(function () {
+  document.querySelectorAll('[data-media-tabs]').forEach(function (wrap) {
+    var list = wrap.querySelector('[role="tablist"]');
+    var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
+    var panels = Array.prototype.slice.call(wrap.querySelectorAll('[role="tabpanel"]'));
+    function select(i, focus) {
+      tabs.forEach(function (tab, k) {
+        var on = k === i;
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        tab.tabIndex = on ? 0 : -1;
+        panels[k].hidden = !on;
+        if (!on) panels[k].querySelectorAll('video').forEach(function (v) { v.pause(); });
+      });
+      if (focus) tabs[i].focus();
+    }
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener('click', function () { select(i); });
+      tab.addEventListener('keydown', function (e) {
+        var to = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
+          : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
+        if (to < 0) return;
+        e.preventDefault();
+        select(to, true);
+      });
+    });
+    list.hidden = false;
+    wrap.classList.add('is-tabbed');
+    select(0);
+  });
+})();
+
+// Giải pháp pages: the jump menu sits under the sticky header and marks the section being read
+(function () {
+  var nav = document.querySelector('[data-page-jump]');
+  if (!nav) return;
+  var header = document.querySelector('.site-header');
+  var links = Array.prototype.slice.call(nav.querySelectorAll('a[href^="#"]'));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  function measure() {
+    document.documentElement.style.setProperty('--header-h', (header ? Math.round(header.getBoundingClientRect().height) : 0) + 'px');
+    document.documentElement.style.setProperty('--jump-h', Math.ceil(nav.getBoundingClientRect().height) + 'px');
+  }
+  var ticking = false;
+  function spy() {
+    ticking = false;
+    var line = (header ? header.getBoundingClientRect().height : 0) + nav.offsetHeight + 24;
+    var current = -1;
+    targets.forEach(function (el, i) { if (el && el.getBoundingClientRect().top <= line) current = i; });
+    // At the very bottom the last section counts as read, even when it is too short to reach the line
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) current = targets.length - 1;
+    links.forEach(function (a, i) {
+      var on = i === current;
+      if (a.classList.contains('is-current') === on) return;
+      a.classList.toggle('is-current', on);
+      if (on) { a.setAttribute('aria-current', 'location'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+      else a.removeAttribute('aria-current');
+    });
+  }
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }
+  measure();
+  spy();
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', function () { measure(); onScroll(); });
+})();
+
+// Process trails (the "steps" blocks of the Giải pháp pages): when a trail scrolls into view its line fills
+// from the first step to the last and each step lights up as the line reaches it. Without JS (or an observer) it is simply shown.
+(function () {
+  var trails = document.querySelectorAll('.process-trail');
+  if (!trails.length) return;
+  if (!('IntersectionObserver' in window)) {
+    trails.forEach(function (t) { t.classList.add('is-drawn'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-drawn');
+      io.unobserve(entry.target);
+    });
+  }, { threshold: 0, rootMargin: '0px 0px -15% 0px' }); // a tall (phone) trail starts once its top is well inside the screen
+  trails.forEach(function (t) { io.observe(t); });
 })();

@@ -1,11 +1,17 @@
-<a class="card" href="/giai-phap/du-an/<%= project._id %>">
+<%# Reference project card. The project names are much alike, so the card leads with the school; without a school it shows the project name. %>
+<%
+  const pcTitle = pick(project, 'title');
+  const pcHeading = project.schoolName || pcTitle;
+  const pcSub = [project.schoolName ? pcTitle : '', project.location].filter(Boolean).join(' — ');
+%>
+<a class="card" href="/giai-phap/du-an/<%= project._id %>" data-search-item data-search="<%= [project.schoolName, project.location].filter(Boolean).join(' ') %>">
   <div class="card-media">
     <% if (project.images && project.images[0]) { %>
-      <img src="<%= project.images[0] %>" alt="<%= pick(project, 'title') %>" loading="lazy">
+      <img src="<%= project.images[0] %>" alt="<%= pcHeading %>" loading="lazy">
     <% } %>
   </div>
   <div class="card-body">
-    <h3><%= pick(project, 'title') %></h3>
-    <p><%= project.schoolName %><% if (project.location) { %> — <%= project.location %><% } %></p>
+    <h3><%= pcHeading %></h3>
+    <% if (pcSub) { %><p><%= pcSub %></p><% } %>
   </div>
 </a>

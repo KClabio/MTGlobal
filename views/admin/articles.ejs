@@ -1,9 +1,11 @@
 <%- include('partials/head', { active: 'tin-tuc' }) %>
 
 <div class="admin-topbar">
-  <h1><%= t('admin.articles.title') %></h1>
+  <h1><%= t('admin.articles.title') %> <span class="count-badge"><%= articles.length %></span></h1>
   <a class="btn btn-primary" href="/admin/tin-tuc/moi"><%= t('admin.articles.add') %></a>
 </div>
+
+<%- include('partials/list-search', { target: 'articles' }) %>
 
 <%- include('partials/sort-hint') %>
 
@@ -12,10 +14,10 @@
   <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.articles.colTitle') %></th><th><%= t('admin.articles.colDate') %></th><th><%= t('admin.articles.colVisible') %></th><th></th></tr></thead>
   <tbody data-sortable="articles">
     <% articles.forEach(function (a) { %>
-      <tr data-id="<%= a._id %>">
+      <tr data-id="<%= a._id %>" data-search="<%= [a.titleVi, a.titleEn].filter(Boolean).join(' ') %>">
         <%- include('partials/drag-handle', { name: a.titleVi }) %>
         <td><% if (a.coverImage) { %><img class="thumb" src="<%= a.coverImage %>" alt=""><% } %></td>
-        <td><%= a.titleVi %></td>
+        <td data-search-name><%= a.titleVi %></td>
         <td><%= new Date(a.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
         <td><%= a.published ? t('admin.articles.visible') : t('admin.articles.hidden') %></td>
         <td>
@@ -31,6 +33,7 @@
   </tbody>
 </table>
 </div>
+<p class="empty-note list-search-none" data-list-search-none="articles" hidden></p>
 <% if (!articles.length) { %><p class="empty-note"><%= t('admin.common.empty') %></p><% } %>
 
 <%- include('partials/view-page-fab', { href: '/tin-tuc', label: t('admin.viewPage.list') }) %>

@@ -7,15 +7,42 @@
 }) %>
 
 <%
+  // The page's last block of buttons is shown inside the closing "Khám phá thêm" section (partials/next-steps.ejs)
+  const allSections = page.sections || [];
+  const closing = allSections.length && allSections[allSections.length - 1].kind === 'buttons' ? allSections[allSections.length - 1] : null;
   // Consecutive "continued" sections share one background block; blocks alternate plain / tinted
   const blocks = [];
-  (page.sections || []).forEach(function (s) {
+  allSections.slice(0, closing ? -1 : undefined).forEach(function (s) {
     if (s.continued && blocks.length) blocks[blocks.length - 1].push(s);
     else blocks.push([s]);
   });
+  // Jump menu: one link per block that opens with a titled (not folded) section; only on longer pages
+  const used = {};
+  const jumps = [];
+  blocks.forEach(function (block) {
+    const first = block[0];
+    const title = pick(first, 'title');
+    if (!title || first.display === 'collapsed') return;
+    let id = slugify(first.titleVi || first.titleEn) || 'phan';
+    while (used[id]) id += '-2';
+    used[id] = true;
+    block.anchor = id;
+    jumps.push({ id: id, title: pick(first, 'nav') || title });
+  });
+  const showJumps = jumps.length >= 4;
 %>
+<% if (showJumps) { %>
+  <%# Sticky under the header; public/js/main.js marks the section being read %>
+  <nav class="page-jump" aria-label="<%= t('solutionPage.onThisPage') %>" data-page-jump>
+    <div class="container">
+      <ul class="page-jump-list">
+        <% jumps.forEach(function (j) { %><li><a class="page-jump-link" href="#<%= j.id %>"><%= j.title %></a></li><% }) %>
+      </ul>
+    </div>
+  </nav>
+<% } %>
 <% blocks.forEach(function (block, b) { %>
-  <section class="section<%= b % 2 ? ' section-alt' : '' %>">
+  <section class="section<%= b % 2 ? ' section-alt' : '' %>"<% if (showJumps && block.anchor) { %> id="<%= block.anchor %>" data-jump-target<% } %>>
     <div class="container">
       <% block.forEach(function (s, i) { %>
         <%- include('partials/solution-section', { s, sub: i > 0 }) %>
@@ -23,5 +50,7 @@
     </div>
   </section>
 <% }) %>
+
+<%- include('partials/next-steps', { current: page.slug, closing: closing }) %>
 
 <%- include('partials/footer') %>

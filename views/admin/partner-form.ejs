@@ -4,23 +4,52 @@
 
 <% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
 
-<form method="POST" action="<%= partner && partner._id ? '/admin/doi-tac/' + partner._id + '/sua' : '/admin/doi-tac/moi' %>" enctype="multipart/form-data" style="max-width:520px;">
-  <div class="form-group">
-    <label><%= t('admin.partners.name') %></label>
-    <input class="form-control" name="name" value="<%= (partner && partner.name) || '' %>" required>
+<form method="POST" action="<%= partner && partner._id ? '/admin/doi-tac/' + partner._id + '/sua' : '/admin/doi-tac/moi' %>" enctype="multipart/form-data">
+  <div class="admin-form-grid">
+    <div>
+      <div class="form-group">
+        <label><%= t('admin.partners.name') %></label>
+        <input class="form-control" name="name" value="<%= (partner && partner.name) || '' %>" required>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.partners.descriptionVi') %></label>
+        <textarea class="form-control" name="descriptionVi" rows="9"><%= (partner && partner.descriptionVi) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.partners.descriptionEn') %></label>
+        <textarea class="form-control" name="descriptionEn" rows="9"><%= (partner && partner.descriptionEn) || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.partners.contacts') %></label>
+        <textarea class="form-control" name="contacts" rows="5" placeholder="Email: info@example.vn&#10;Điện thoại: 0912 345 678"><%= (partner && partner.contacts) || '' %></textarea>
+        <p class="form-hint"><%= t('admin.partners.contactsHint') %></p>
+      </div>
+    </div>
+    <aside>
+      <div class="form-group">
+        <label><%= t('admin.partners.logo') %></label>
+        <% if (partner && partner.logo) { %><div class="logo-preview"><img src="<%= partner.logo %>" alt="<%= partner.name %>"></div><% } %>
+        <input class="form-control" type="file" name="logo" accept="image/*">
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.partners.website') %></label>
+        <input class="form-control" name="url" value="<%= (partner && partner.url) || '' %>" placeholder="https://">
+        <p class="form-hint"><%= t('admin.partners.websiteHint') %></p>
+      </div>
+      <div class="form-group">
+        <label><%= t('admin.partners.slug') %></label>
+        <input class="form-control" name="slug" value="<%= (partner && partner.slug) || '' %>" placeholder="vd: vex-robotics">
+        <p class="form-hint"><%= t('admin.partners.slugHint') %></p>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('admin.common.save') %></button>
+    </aside>
   </div>
-  <div class="form-group">
-    <label><%= t('admin.partners.website') %></label>
-    <input class="form-control" name="url" value="<%= (partner && partner.url) || '' %>">
-  </div>
-  <div class="form-group">
-    <label><%= t('admin.partners.logo') %></label>
-    <% if (partner && partner.logo) { %><div class="logo-preview"><img src="<%= partner.logo %>" alt="<%= partner.name %>"></div><% } %>
-    <input class="form-control" type="file" name="logo" accept="image/*">
-  </div>
-  <button type="submit" class="btn btn-primary"><%= t('admin.common.save') %></button>
 </form>
 
-<%- include('partials/view-page-fab', { href: '/ve-mtg#doi-tac', label: partner && partner._id ? t('admin.viewPage.item', { name: partner.name }) : t('admin.viewPage.list') }) %>
+<%- include('partials/view-page-fab', partner && partner._id && partner.slug
+  ? { href: '/doi-tac/' + partner.slug, label: t('admin.viewPage.item', { name: partner.name }) }
+  : { href: '/ve-mtg#doi-tac', label: t('admin.viewPage.list') }) %>
 
 <%- include('partials/foot') %>

@@ -4,7 +4,7 @@
   pill: t('nav.solutionEquipment'),
   heading: pick(item, 'name'),
   subheading: ((lang === 'en' && item.subcategoryEn) ? item.subcategoryEn : item.subcategory) || null,
-  backHref: '/giai-phap/thiet-bi',
+  backHref: backHref,
   bannerKey: 'thiet-bi'
 }) %>
 <% const edProductShot = item.images && item.images[0] && item.images[0].indexOf('/assets/giai-phap/robot-stem/') === 0; %>

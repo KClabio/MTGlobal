@@ -1,0 +1,36 @@
+<%#
+  Closing section of every Giải pháp page: "Khám phá thêm" (the other Giải pháp pages as link cards, lib/home-domains.js)
+  and a consultation band. include('partials/next-steps', { current: 'thiet-bi', closing })
+  closing: the page's own last "buttons" block, if any (views/solution-page.ejs). It is shown here instead of as its own
+  row: its main (blue) buttons become the band's buttons, its other links extra cards.
+%><%
+  const nsCurrent = typeof current !== 'undefined' ? current : '';
+  const nsLinks = buildSolutionLinks(nsCurrent, { settings, lang, t });
+  const nsOwn = (typeof closing !== 'undefined' && closing && closing.items) ? closing.items.filter(function (it) { return it.url && pick(it, 'title'); }) : [];
+  nsOwn.filter(function (it) { return !it.primary; }).forEach(function (it) {
+    const path = it.url.split(/[?#]/)[0];
+    if (!nsLinks.some(function (l) { return l.url === path; })) nsLinks.push({ key: path, url: it.url, icon: 'external-link', title: pick(it, 'title'), text: '' });
+  });
+  let nsCta = nsOwn.filter(function (it) { return it.primary; }).map(function (it) { return { url: it.url, title: pick(it, 'title') }; });
+  if (!nsCta.length) nsCta = [{ url: '/lien-he?quan_tam=giai-phap-stem-lab', title: t('nextSteps.ctaButton') }];
+%>
+<section class="section next-steps" aria-labelledby="nextStepsTitle">
+  <div class="container">
+    <h2 class="next-steps-title" id="nextStepsTitle"><%= t('nextSteps.title') %></h2>
+    <ul class="next-links" style="--n:<%= nsLinks.length %>;">
+      <% nsLinks.forEach(function (l) { %>
+        <li>
+          <a class="next-link" href="<%= l.url %>">
+            <span class="next-link-icon"><%- include('../admin/partials/icon', { name: l.icon || 'layers', size: 20 }) %></span>
+            <span class="next-link-body">
+              <strong><%= l.title %></strong>
+              <% if (l.text) { %><span class="next-link-text"><%= l.text %></span><% } %>
+            </span>
+            <span class="next-link-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+    <%- include('cta-band', { heading: t('nextSteps.ctaTitle'), text: t('nextSteps.ctaText'), buttons: nsCta }) %>
+  </div>
+</section>

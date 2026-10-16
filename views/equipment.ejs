@@ -6,34 +6,49 @@
   bannerKey: 'thiet-bi'
 }) %>
 
-<%
-  // Group the catalog by section, in the order the admin arranged the items
-  const groups = [];
-  (equipment || []).forEach(function (item) {
-    const key = item.subcategory || '';
-    let group = groups.find(function (g) { return g.key === key; });
-    if (!group) {
-      group = { key: key, title: (lang === 'en' && item.subcategoryEn) ? item.subcategoryEn : key, items: [] };
-      groups.push(group);
-    }
-    group.items.push(item);
-  });
-%>
-
 <section class="section">
   <div class="container">
-    <% if (groups.length) { %>
-      <% groups.forEach(function (group) { %>
-        <div class="equipment-group">
-          <% if (group.title) { %><h2 class="equipment-group-title"><%= group.title %></h2><% } %>
-          <% if (/^Phần III/.test(group.key)) { %>
+    <% if (parts.length) { %>
+      <%# Search + Phần tabs: shown by public/js/main.js; without JS every part stays on the page as one list %>
+      <div class="equip-tools" data-equip-tools hidden>
+        <label class="equip-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span class="sr-only"><%= t('equipment.search') %></span>
+          <input type="search" data-equip-search placeholder="<%= t('equipment.search') %>" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="equip-tabs" role="tablist" aria-label="<%= t('nav.solutionEquipment') %>" style="--tabs:<%= Math.min(parts.length, 4) %>;">
+          <% parts.forEach(function (p, i) { %>
+            <button type="button" role="tab" class="equip-tab" id="tab-<%= p.slug %>" data-tab="<%= p.slug %>"
+                    aria-controls="equip-<%= p.slug %>" aria-selected="<%= i === 0 %>" tabindex="<%= i === 0 ? 0 : -1 %>">
+              <span class="equip-tab-label"><%= p.label %></span>
+              <% if (p.name) { %><span class="equip-tab-name"><%= p.name %></span><% } %>
+              <span class="equip-tab-count"><%= p.count %></span>
+            </button>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="equip-results" data-equip-results hidden>
+        <p class="equip-results-count" data-equip-count aria-live="polite"
+           data-one="<%= t('equipment.resultsOne') %>" data-many="<%= t('equipment.resultsCount', { n: '{n}' }) %>"></p>
+        <div class="card-grid" data-equip-grid></div>
+        <p class="empty-note" data-equip-empty hidden><%= t('equipment.noResults') %></p>
+      </div>
+
+      <% parts.forEach(function (p) { %>
+        <div class="equipment-group equip-panel" id="equip-<%= p.slug %>" role="tabpanel" aria-labelledby="tab-<%= p.slug %>" data-panel="<%= p.slug %>" data-part-label="<%= p.label %>">
+          <h2 class="equipment-group-title"><%= p.title.split(/\s+—\s+/)[0] %></h2>
+          <% if (p.slug === 'phan-3') { %>
             <p class="section-subtitle" style="text-align:left; margin:-6px 0 18px;"><%= lang === 'en' ? 'Product information from the official VEX Robotics materials — VEX Robotics is one of MTG\'s partners.' : 'Thông tin sản phẩm theo tài liệu chính thức của VEX Robotics — đối tác đồng hành của MTG.' %></p>
           <% } %>
-          <div class="card-grid">
-            <% group.items.forEach(function (item) { %>
-              <%- include('partials/equipment-card', { item, showGroup: false }) %>
-            <% }) %>
-          </div>
+          <% p.groups.forEach(function (g) { %>
+            <% if (g.showTitle && g.title.split(/\s+—\s+/)[1]) { %><h3 class="equipment-subgroup-title"><%= g.title.split(/\s+—\s+/)[1] %></h3><% } %>
+            <div class="card-grid">
+              <% g.items.forEach(function (item) { %>
+                <%- include('partials/equipment-card', { item, showGroup: false }) %>
+              <% }) %>
+            </div>
+          <% }) %>
         </div>
       <% }) %>
     <% } else { %>
@@ -41,5 +56,7 @@
     <% } %>
   </div>
 </section>
+
+<%- include('partials/next-steps', { current: 'thiet-bi' }) %>
 
 <%- include('partials/footer') %>

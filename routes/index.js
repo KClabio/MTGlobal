@@ -10,7 +10,9 @@ const QuoteRequest = require('../models/QuoteRequest');
 const { isNonEmpty, isValidEmail, isValidPhone } = require('../lib/validators');
 const { readServiceAnswers } = require('../lib/service-content');
 const { getSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
-const { buildHomeDomains, buildSolutionCards } = require('../lib/home-domains');
+const { groupProjectsByLevel } = require('../lib/project-levels');
+const { buildHomeDomains, buildSolutionCards, buildServiceCards } = require('../lib/home-domains');
+const { groupEquipmentByPart, partSlug } = require('../lib/equipment-parts');
 
 const ROBOT_CATEGORIES = [
   'robot-leo-cau-thang',
@@ -34,6 +36,13 @@ router.get('/', async (req, res) => {
 router.get('/ve-mtg', async (req, res) => {
   const partners = await Partner.find().sort({ order: 1, _id: 1 }).lean();
   res.render('about', { partners });
+});
+
+// A partner's own page (opened from its logo on the home and Về MTG pages), with a button to its website
+router.get('/doi-tac/:slug', async (req, res) => {
+  const partner = await Partner.findOne({ slug: String(req.params.slug) }).lean();
+  if (!partner) return res.status(404).render('404');
+  res.render('partner-detail', { partner });
 });
 
 // ---- Sản phẩm (Products — robotics) ----
@@ -85,7 +94,7 @@ router.get('/giai-phap', async (req, res) => {
 
 router.get('/giai-phap/du-an', async (req, res) => {
   const projects = await Project.find().sort({ order: 1, createdAt: -1 }).lean();
-  res.render('projects', { projects });
+  res.render('projects', { projects, groups: groupProjectsByLevel(projects) });
 });
 
 router.get('/giai-phap/du-an/:id', async (req, res) => {
@@ -96,13 +105,15 @@ router.get('/giai-phap/du-an/:id', async (req, res) => {
 
 router.get('/giai-phap/thiet-bi', async (req, res) => {
   const equipment = await Product.find({ category: 'stem-equipment' }).sort({ order: 1, _id: 1 }).lean();
-  res.render('equipment', { equipment });
+  const { lang, t } = res.locals;
+  res.render('equipment', { parts: groupEquipmentByPart(equipment, lang, t) });
 });
 
 router.get('/giai-phap/thiet-bi/:id', async (req, res) => {
   const item = await Product.findById(req.params.id).lean().catch(() => null);
   if (!item || item.category !== 'stem-equipment') return res.status(404).render('404');
-  res.render('equipment-detail', { item });
+  // Back to the same Phần tab of the catalog
+  res.render('equipment-detail', { item, backHref: `/giai-phap/thiet-bi#${partSlug(item.subcategory)}` });
 });
 
 // Editable pages (a. stem-lab, c. workshop, d. dao-tao, f. tap-huan), managed in Admin → Giải pháp
@@ -116,7 +127,7 @@ for (const slug of SOLUTION_SLUGS) {
 // ---- Dịch vụ (Services) ----
 router.get('/dich-vu', async (req, res) => {
   const services = await Service.find().sort({ order: 1, _id: 1 }).lean();
-  res.render('services', { services });
+  res.render('services', { cards: buildServiceCards({ lang: res.locals.lang, services }) });
 });
 
 router.get('/dich-vu/:slug', async (req, res) => {

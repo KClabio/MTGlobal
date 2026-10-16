@@ -9,15 +9,33 @@
 <section class="section">
   <div class="container">
     <% if (projects && projects.length) { %>
-      <div class="card-grid">
-        <% projects.forEach(function (project) { %>
-          <%- include('partials/project-card', { project }) %>
-        <% }) %>
-      </div>
+      <%- include('partials/card-search', { placeholder: t('projectsPage.search'), one: t('projectsPage.resultsOne'), many: t('projectsPage.resultsCount'), none: t('projectsPage.noResults') }) %>
+      <%# One section per school level (THCS, THPT, Đại học; "Khác" only when used) — see lib/project-levels.js %>
+      <% groups.forEach(function (g) { %>
+        <div class="level-group" id="<%= g.key %>" data-search-group>
+          <div class="level-head">
+            <h2><%= t('projectLevels.' + g.key) %></h2>
+            <span class="level-sub"><%= t('projectsPage.levelSub.' + g.key) %></span>
+            <span class="level-count" data-search-group-count><%= g.items.length %></span>
+          </div>
+          <% if (g.items.length) { %>
+            <div class="card-grid">
+              <% g.items.forEach(function (project) { %>
+                <%- include('partials/project-card', { project }) %>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <p class="level-empty" data-search-empty><%= t('projectsPage.levelEmpty') %></p>
+          <% } %>
+        </div>
+      <% }) %>
+      <p class="empty-note search-none" data-search-none hidden></p>
     <% } else { %>
       <p class="empty-note"><%= lang === 'en' ? 'Reference projects are being updated.' : 'Danh sách dự án đang được cập nhật.' %></p>
     <% } %>
   </div>
 </section>
+
+<%- include('partials/next-steps', { current: 'du-an' }) %>
 
 <%- include('partials/footer') %>

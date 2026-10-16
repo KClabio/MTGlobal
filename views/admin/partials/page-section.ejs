@@ -32,6 +32,15 @@
         <option value="3" <%= sec.columns === 3 ? 'selected' : '' %>><%= P('columns3') %></option>
       </select>
     </div>
+    <div class="form-group" data-kinds="text cards steps gallery">
+      <label><%= P('display') %></label>
+      <select class="form-control" data-field="display">
+        <option value="" <%= !sec.display ? 'selected' : '' %>><%= P('display_') %></option>
+        <option value="collapsed" data-kinds="text cards steps gallery" <%= sec.display === 'collapsed' ? 'selected' : '' %>><%= P('display_collapsed') %></option>
+        <option value="compact" data-kinds="cards" <%= sec.display === 'compact' ? 'selected' : '' %>><%= P('display_compact') %></option>
+        <option value="tabs" data-kinds="gallery" <%= sec.display === 'tabs' ? 'selected' : '' %>><%= P('display_tabs') %></option>
+      </select>
+    </div>
   </div>
   <span class="checkbox-row page-continued" data-mirror-wrap>
     <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror <%= sec.continued ? 'checked' : '' %>> <%= P('continued') %></label>
@@ -41,6 +50,10 @@
   <div class="form-row" data-kinds="text cards steps gallery stats">
     <div class="form-group"><label><%= P('titleVi') %></label><input class="form-control" data-field="titleVi" value="<%= sec.titleVi || '' %>"></div>
     <div class="form-group"><label><%= P('titleEn') %></label><input class="form-control" data-field="titleEn" value="<%= sec.titleEn || '' %>"></div>
+  </div>
+  <div class="form-row" data-kinds="text cards steps gallery">
+    <div class="form-group"><label><%= P('navVi') %></label><input class="form-control" data-field="navVi" maxlength="40" value="<%= sec.navVi || '' %>" placeholder="<%= P('navPlaceholder') %>"></div>
+    <div class="form-group"><label><%= P('navEn') %></label><input class="form-control" data-field="navEn" maxlength="40" value="<%= sec.navEn || '' %>" placeholder="<%= P('navPlaceholder') %>"></div>
   </div>
   <div class="form-row" data-kinds="cards steps gallery stats">
     <div class="form-group"><label><%= P('subtitleSecVi') %></label><textarea class="form-control" data-field="subtitleVi" rows="2"><%= sec.subtitleVi || '' %></textarea></div>

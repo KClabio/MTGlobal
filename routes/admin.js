@@ -18,13 +18,15 @@ const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
 const { isNonEmpty } = require('../lib/validators');
 const { canDeleteUser, canChangeRole } = require('../lib/roles');
 const { getDashboardData } = require('../lib/dashboard');
-const { toPlainText } = require('../lib/text');
+const { toPlainText, slugify } = require('../lib/text');
 const { PRODUCT_SECTIONS, sectionForCategory } = require('../lib/admin-sections');
 const { parseServiceSections } = require('../lib/service-content');
 const SolutionPage = require('../models/SolutionPage');
 const { getSolutionPage, resetSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
 const { parseSolutionPageForm } = require('../lib/solution-page-form');
 const { BANNERS } = require('../lib/banners');
+const { partSlug, groupEquipmentByPart } = require('../lib/equipment-parts');
+const { LEVELS: PROJECT_LEVELS, projectLevel } = require('../lib/project-levels');
 
 router.use(requireAdmin);
 router.use(loadAdminLanguage);
@@ -108,9 +110,14 @@ router.post('/thu-tu/:type', async (req, res) => {
 });
 
 // ---- Projects (dự án tham khảo) ----
+// The chosen school level, or '' = worked out from the school name (lib/project-levels.js)
+const readLevel = (value) => (PROJECT_LEVELS.includes(value) ? value : '');
+
 router.get('/du-an', async (req, res) => {
-  const projects = await Project.find().sort({ order: 1, createdAt: -1 }).lean();
-  res.render('admin/projects', { projects });
+  const projects = (await Project.find().sort({ order: 1, createdAt: -1 }).lean()).map((p) => ({ ...p, levelKey: projectLevel(p) }));
+  const levels = PROJECT_LEVELS.map((key) => ({ key, count: projects.filter((p) => p.levelKey === key).length }))
+    .filter((l) => l.key !== 'khac' || l.count);
+  res.render('admin/projects', { projects, levels });
 });
 
 router.get('/du-an/moi', (req, res) => {
@@ -130,6 +137,7 @@ router.post('/du-an/moi', wrapUpload(uploadMedia, async (req, res) => {
     titleVi: titleVi.trim(), titleEn: (titleEn || '').trim(),
     schoolName: (schoolName || '').trim(), location: (location || '').trim(),
     descriptionVi: toPlainText(descriptionVi), descriptionEn: toPlainText(descriptionEn),
+    level: readLevel(req.body.level),
     images, videoUrl: videoFiles[0] || null,
     order: await nextOrder(Project), featured: featured === 'on',
   });
@@ -161,6 +169,7 @@ router.post('/du-an/:id/sua', wrapUpload(uploadMedia, async (req, res) => {
   project.titleEn = (titleEn || '').trim();
   project.schoolName = (schoolName || '').trim();
   project.location = (location || '').trim();
+  project.level = readLevel(req.body.level);
   project.descriptionVi = toPlainText(descriptionVi);
   project.descriptionEn = toPlainText(descriptionEn);
   project.images = images;
@@ -203,7 +212,9 @@ router.get('/san-pham/moi', (req, res) => res.redirect('/admin/robot/moi'));
 for (const section of Object.values(PRODUCT_SECTIONS)) {
   router.get(section.path.replace('/admin', ''), async (req, res) => {
     const products = await Product.find(section.filter).sort({ order: 1, _id: 1 }).lean();
-    res.render('admin/products', { products, section });
+    // Equipment: filter chips per "Phần I…IV" part, in catalog order
+    const parts = section.key === 'equipment' ? groupEquipmentByPart(products, res.locals.lang, res.locals.t) : [];
+    res.render('admin/products', { products, section, parts, partSlug });
   });
   router.get(`${section.path.replace('/admin', '')}/moi`, (req, res) => {
     return renderProductForm(res, { product: null, section });
@@ -399,15 +410,52 @@ router.get('/doi-tac/moi', (req, res) => {
   res.render('admin/partner-form', { partner: null, error: null });
 });
 
+// Website typed as "tpe.vn" or "https://tpe.vn" -> full link; anything that isn't an http(s) address is refused
+function readWebsite(value) {
+  const raw = (value || '').trim();
+  if (!raw) return { url: null };
+  try {
+    const u = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`);
+    if ((u.protocol === 'http:' || u.protocol === 'https:') && u.hostname.includes('.')) return { url: u.href };
+  } catch (err) { /* not an address */ }
+  return { error: true };
+}
+
+// The partner page's address: typed by the admin or made from the name, never the same as another partner's
+async function uniquePartnerSlug(wanted, name, exceptId) {
+  const base = slugify(wanted) || slugify(name) || 'doi-tac';
+  for (let n = 1; ; n += 1) {
+    const slug = n === 1 ? base : `${base}-${n}`;
+    const taken = await Partner.exists({ slug, ...(exceptId ? { _id: { $ne: exceptId } } : {}) });
+    if (!taken) return slug;
+  }
+}
+
+// Shared by add and edit: the checked form values, or the first error to show
+async function readPartnerForm(req, t, exceptId) {
+  const { name, url, slug, descriptionVi, descriptionEn, contacts } = req.body;
+  if (!isNonEmpty(name)) return { error: t('admin.partners.errName') };
+  const website = readWebsite(url);
+  if (website.error) return { error: t('admin.partners.errWebsite') };
+  return {
+    fields: {
+      name: name.trim(),
+      url: website.url,
+      slug: await uniquePartnerSlug(slug, name, exceptId),
+      descriptionVi: toPlainText(descriptionVi),
+      descriptionEn: toPlainText(descriptionEn),
+      contacts: toPlainText(contacts),
+    },
+  };
+}
+
 router.post('/doi-tac/moi', wrapUpload(uploadSingleImage('logo'), async (req, res) => {
   const t = res.locals.t;
   if (req.uploadError) return res.status(400).render('admin/partner-form', { partner: req.body, error: uploadErrorText(req, t) });
-  const { name, url } = req.body;
-  if (!isNonEmpty(name)) {
-    return res.status(400).render('admin/partner-form', { partner: req.body, error: t('admin.partners.errName') });
-  }
-  await Partner.create({ name: name.trim(), url: (url || '').trim() || null, order: await nextOrder(Partner), logo: fileUrl(req.file) });
-  done(req, res, 'admin.flash.created', { name: name.trim() }, '/admin/doi-tac');
+  const form = await readPartnerForm(req, t, null);
+  if (form.error) return res.status(400).render('admin/partner-form', { partner: req.body, error: form.error });
+  await Partner.create({ ...form.fields, order: await nextOrder(Partner), logo: fileUrl(req.file) });
+  done(req, res, 'admin.flash.created', { name: form.fields.name }, '/admin/doi-tac');
 }));
 
 router.get('/doi-tac/:id/sua', async (req, res) => {
@@ -421,12 +469,9 @@ router.post('/doi-tac/:id/sua', wrapUpload(uploadSingleImage('logo'), async (req
   const partner = await Partner.findById(req.params.id).catch(() => null);
   if (!partner) return notFound(req, res, '/admin/doi-tac');
   if (req.uploadError) return res.status(400).render('admin/partner-form', { partner: { ...partner.toObject(), ...req.body }, error: uploadErrorText(req, t) });
-  const { name, url } = req.body;
-  if (!isNonEmpty(name)) {
-    return res.status(400).render('admin/partner-form', { partner: { ...partner.toObject(), ...req.body }, error: t('admin.partners.errName') });
-  }
-  partner.name = name.trim();
-  partner.url = (url || '').trim() || null;
+  const form = await readPartnerForm(req, t, partner._id);
+  if (form.error) return res.status(400).render('admin/partner-form', { partner: { ...partner.toObject(), ...req.body }, error: form.error });
+  Object.assign(partner, form.fields);
   if (req.file) partner.logo = fileUrl(req.file);
   await partner.save();
   done(req, res, 'admin.flash.updated', { name: partner.name }, '/admin/doi-tac');
@@ -510,6 +555,13 @@ router.post('/yeu-cau/:id/trang-thai', async (req, res) => {
     : null;
   if (!request) return notFound(req, res, back);
   done(req, res, 'admin.flash.statusUpdated', { name: request.name, status: res.locals.t(`admin.status.${status}`) }, back);
+});
+
+router.post('/yeu-cau/:id/xoa', async (req, res) => {
+  const back = safeBack(req, '/admin/yeu-cau');
+  const request = await QuoteRequest.findByIdAndDelete(req.params.id).catch(() => null);
+  if (!request) return notFound(req, res, back);
+  done(req, res, 'admin.flash.deleted', { name: request.name }, back);
 });
 
 // ---- Users ----

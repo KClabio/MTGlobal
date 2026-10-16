@@ -1,0 +1,51 @@
+<%- include('partials/header', { title: partner.name + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: t('home.partnersTitle'),
+  heading: partner.name,
+  subheading: null,
+  backHref: '/ve-mtg#doi-tac',
+  bannerKey: 'about'
+}) %>
+<% const pdContacts = parseContacts(partner.contacts, lang); %>
+
+<section class="section">
+  <div class="container partner-detail">
+    <div class="partner-detail-main">
+      <h2 class="partner-detail-title"><%= t('home.partnerAbout') %></h2>
+      <% if (pick(partner, 'description')) { %>
+        <div class="prose-text prose-text-start"><%- formatText(pick(partner, 'description')) %></div>
+      <% } else { %>
+        <p class="empty-note" style="text-align:left;"><%= t('home.partnerNoInfo') %></p>
+      <% } %>
+    </div>
+
+    <aside class="partner-card">
+      <% if (partner.logo) { %>
+        <div class="partner-card-logo"><img src="<%= partner.logo %>" alt="<%= partner.name %>"></div>
+      <% } %>
+      <% if (partner.url) { %>
+        <a class="btn btn-primary btn-block partner-visit" href="<%= partner.url %>" target="_blank" rel="noopener">
+          <%= t('home.partnerVisit') %> <%- include('admin/partials/icon', { name: 'external-link', size: 16 }) %>
+        </a>
+      <% } %>
+      <% if (pdContacts.length) { %>
+        <h3 class="partner-card-heading"><%= t('home.partnerContact') %></h3>
+        <ul class="partner-contacts">
+          <% pdContacts.forEach(function (c) {
+               const icon = !c.href ? (/fax/i.test(c.label) ? 'printer' : 'phone') : c.href.indexOf('mailto:') === 0 ? 'mail' : c.href.indexOf('tel:') === 0 ? 'phone' : 'globe'; %>
+            <li>
+              <span class="partner-contact-icon"><%- include('admin/partials/icon', { name: icon, size: 16 }) %></span>
+              <span class="partner-contact-text">
+                <% if (c.label) { %><span class="partner-contact-label"><%= c.label %></span><% } %>
+                <% if (c.href) { %><a href="<%= c.href %>"<% if (c.href.indexOf('http') === 0) { %> target="_blank" rel="noopener"<% } %>><%= c.value %></a><% } else { %><span><%= c.value %></span><% } %>
+              </span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </aside>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -34,7 +34,12 @@ if (process.env.NODE_ENV === 'production') {
 app.set('view engine', 'ejs');
 app.locals.formatText = require('./lib/text').plainTextToHtml; // plain-text fields -> paragraphs / lists
 app.locals.excerpt = require('./lib/text').excerpt; // one-line previews (cards)
+app.locals.parseContacts = require('./lib/text').parseContacts; // partner contact lines -> mailto:/tel: links
+app.locals.slugify = require('./lib/text').slugify; // in-page anchors (Giải pháp jump menu)
+app.locals.buildSolutionLinks = require('./lib/home-domains').buildSolutionLinks; // "Khám phá thêm" cards (partials/next-steps.ejs)
 app.locals.bannerFor = require('./lib/banners').bannerFor; // page banner line + background (Admin → Cài đặt chung)
+app.locals.LEVELS = require('./lib/project-levels').LEVELS; // school levels of the reference projects
+app.locals.levelFromSchool = require('./lib/project-levels').levelFromSchool;
 if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY);
 
 app.use(express.urlencoded({ extended: true }));
@@ -43,6 +48,14 @@ app.use(cookieParser());
 // Light/dark theme preference (shared by the website and the admin), light by default
 app.use((req, res, next) => {
   res.locals.theme = req.cookies && req.cookies.theme === 'dark' ? 'dark' : 'light';
+  next();
+});
+// Videos play inside the site's pages only: opening a video file directly in a tab (to save it from there) is refused.
+// The page's own player asks with Sec-Fetch-Dest: video and is unaffected.
+app.use((req, res, next) => {
+  if (/\.(mp4|webm|ogg|ogv|mov|m4v)$/i.test(req.path) && req.get('Sec-Fetch-Dest') === 'document') {
+    return res.status(403).type('text').send('Video chỉ xem được trên website. / Videos can only be watched on the website.');
+  }
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));

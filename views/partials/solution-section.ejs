@@ -12,9 +12,32 @@
     return include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: pick(m, 'caption'), ratio: s.ratio, contain: m.contain });
   };
   const ssCentered = !sub && s.kind !== 'text';
+  // display 'collapsed': the whole section folds under its title (a <details>, opened by a click — works without JS)
+  const ssFold = s.display === 'collapsed' && ssTitle;
+  // display 'compact' (cards): the first paragraph of a card shows, the rest folds under "Xem chi tiết"
+  const ssCardText = function (text) {
+    if (s.display !== 'compact') return ssFormat(text);
+    const parts = String(text).split(/\n\s*\n/);
+    const more = parts.slice(1).join('\n\n').trim();
+    return ssFormat(parts[0]) + (more ? '<details class="card-more"><summary>' + t('solutionPage.more') + '</summary>' + ssFormat(more) + '</details>' : '');
+  };
+  // display 'tabs' (gallery): the tab name is the caption before the first "—", the rest stays as the caption
+  const ssTabParts = function (m) {
+    const caption = pick(m, 'caption') || '';
+    const at = caption.indexOf(' — ');
+    return at > 0 ? { tab: caption.slice(0, at).trim(), caption: caption.slice(at + 3).trim() } : { tab: caption, caption: '' };
+  };
 %>
-<div class="solution-block<%= sub ? ' is-sub' : '' %>" data-section-kind="<%= s.kind %>">
-  <% if (ssTitle || (ssSubtitle && s.kind !== 'text')) { %>
+<div class="solution-block<%= sub ? ' is-sub' : '' %><%= ssFold ? ' is-folded' : '' %>" data-section-kind="<%= s.kind %>">
+  <% if (ssFold) { %>
+  <details class="solution-fold">
+    <summary class="solution-fold-summary">
+      <span class="solution-fold-title"><%= ssTitle %></span>
+      <svg class="solution-fold-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="solution-fold-body">
+    <% if (ssSubtitle && s.kind !== 'text') { %><p class="solution-subtext"><%= ssSubtitle %></p><% } %>
+  <% } else if (ssTitle || (ssSubtitle && s.kind !== 'text')) { %>
     <% if (ssCentered) { %>
       <div class="section-head">
         <% if (ssTitle) { %><h2 class="section-title"><%= ssTitle %></h2><% } %>
@@ -32,7 +55,7 @@
     <% if (s.media && s.media.length) { %>
       <div class="card-grid cols-2 solution-split">
         <div>
-          <% if (ssTitle && !sub) { %><h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2><% } %>
+          <% if (ssTitle && !sub && !ssFold) { %><h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2><% } %>
           <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
           <% if (ssButtons.length) { %>
             <div class="section-cta is-start">
@@ -53,25 +76,45 @@
 
   <% } else if (s.kind === 'cards') { %>
     <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
-    <div class="card-grid<%= s.columns === 2 ? ' cols-2' : '' %>">
+    <div class="card-grid<%= s.columns === 2 ? ' cols-2' : '' %><%= s.display === 'compact' ? ' is-compact' : '' %>">
       <% (s.items || []).forEach(function (it) { %>
         <div class="card"><div class="card-body">
           <% if (pick(it, 'title')) { %><h3><%= pick(it, 'title') %></h3><% } %>
-          <% if (pick(it, 'text')) { %><div class="card-text"><%- ssFormat(pick(it, 'text')) %></div><% } %>
+          <% if (pick(it, 'text')) { %><div class="card-text"><%- ssCardText(pick(it, 'text')) %></div><% } %>
         </div></div>
       <% }) %>
     </div>
 
   <% } else if (s.kind === 'steps') { %>
     <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
-    <div class="timeline">
+    <%# One continuous trail through numbered stops: across the page on wide screens, down the left side on phones.
+        public/js/main.js fills the line from stop to stop when it scrolls into view. %>
+    <ol class="process-trail" style="--steps:<%= (s.items || []).length %>;">
       <% (s.items || []).forEach(function (it, n) { %>
-        <div class="timeline-item">
-          <div class="timeline-num"><%= n + 1 %></div>
-          <div>
+        <li class="trail-step" style="--i:<%= n %>;">
+          <span class="trail-node" aria-hidden="true"><%= n + 1 %></span>
+          <div class="trail-body">
             <h3><%= pick(it, 'title') %></h3>
             <% if (pick(it, 'text')) { %><div class="card-text"><%- ssFormat(pick(it, 'text')) %></div><% } %>
           </div>
+        </li>
+      <% }) %>
+    </ol>
+
+  <% } else if (s.kind === 'gallery' && s.display === 'tabs' && (s.media || []).length > 1) { %>
+    <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
+    <%# Tabs are switched by public/js/main.js; without JS every picture stays on the page, one under another %>
+    <div class="media-tabs" data-media-tabs>
+      <div class="media-tablist" role="tablist" aria-label="<%= ssTitle %>" hidden>
+        <% s.media.forEach(function (m, k) { %>
+          <button type="button" role="tab" class="media-tab" id="mt-<%= s.uid %>-<%= k %>" aria-controls="mp-<%= s.uid %>-<%= k %>"
+                  aria-selected="<%= k === 0 %>" tabindex="<%= k === 0 ? 0 : -1 %>"><%= ssTabParts(m).tab || (k + 1) %></button>
+        <% }) %>
+      </div>
+      <% s.media.forEach(function (m, k) { const tp = ssTabParts(m); %>
+        <div class="media-tabpanel" role="tabpanel" id="mp-<%= s.uid %>-<%= k %>" aria-labelledby="mt-<%= s.uid %>-<%= k %>">
+          <% if (tp.tab) { %><h3 class="media-tabpanel-title"><%= tp.tab %></h3><% } %>
+          <%- include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: tp.caption, ratio: s.ratio, contain: m.contain }) %>
         </div>
       <% }) %>
     </div>
@@ -93,5 +136,9 @@
     <div class="section-cta">
       <% ssButtons.forEach(function (it) { %><a class="btn <%= it.primary ? 'btn-primary' : 'btn-ghost' %>" href="<%= it.url %>"><%= pick(it, 'title') %></a><% }) %>
     </div>
+  <% } %>
+  <% if (ssFold) { %>
+    </div>
+  </details>
   <% } %>
 </div>

@@ -19,7 +19,8 @@
       <% if (product.videos && product.videos.length) { %>
         <div class="video-stack">
           <% product.videos.forEach(function (v) { %>
-            <video controls preload="metadata">
+            <%# Watch only: play/pause, time bar, volume, fullscreen; no download, speed, picture-in-picture or casting %>
+            <video controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture disableRemotePlayback preload="metadata" playsinline>
               <source src="<%= v %>" type="video/mp4">
             </video>
           <% }) %>

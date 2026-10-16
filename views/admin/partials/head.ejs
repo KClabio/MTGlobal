@@ -44,6 +44,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/style.css">
+  <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
   <div class="admin-wrap">
@@ -70,4 +71,32 @@
         <%- include('../../partials/theme-toggle', { label: t('admin.theme.dark'), compact: true }) %>
       </div>
     </aside>
+    <script>
+      // The menu scrolls on its own (tall list on desktop, sideways bar on phones). Every item loads a new page,
+      // so keep the menu where it was (saved per tab) and make sure the current item is in view.
+      // Runs right here, before the page is drawn, so the menu never visibly jumps.
+      (function () {
+        var bar = document.querySelector('.admin-sidebar');
+        if (!bar) return;
+        var KEY = 'adminNavScroll';
+        var saved = null;
+        try { saved = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) { /* storage blocked */ }
+        if (saved) { bar.scrollTop = saved.top || 0; bar.scrollLeft = saved.left || 0; }
+        var active = bar.querySelector('.admin-nav a.active');
+        if (active) {
+          var b = bar.getBoundingClientRect();
+          var a = active.getBoundingClientRect();
+          // Hidden behind the sticky language bar at the bottom counts as hidden too
+          var lang = bar.querySelector('.admin-lang');
+          var bottom = b.bottom - (lang && getComputedStyle(lang).position === 'sticky' ? lang.offsetHeight : 0);
+          if (a.top < b.top || a.bottom > bottom) bar.scrollTop += a.top - b.top - (bottom - b.top - a.height) / 2;
+          if (a.left < b.left || a.right > b.right) bar.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
+        }
+        function save() {
+          try { sessionStorage.setItem(KEY, JSON.stringify({ top: bar.scrollTop, left: bar.scrollLeft })); } catch (e) { /* storage blocked */ }
+        }
+        bar.addEventListener('click', function (e) { if (e.target.closest('a, button')) save(); });
+        window.addEventListener('pagehide', save);
+      })();
+    </script>
     <main class="admin-main">

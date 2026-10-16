@@ -5,17 +5,21 @@
 <section class="section">
   <div class="container">
     <% if (articles && articles.length) { %>
+      <%- include('partials/card-search', { placeholder: t('newsPage.search'), one: t('newsPage.resultsOne'), many: t('newsPage.resultsCount'), none: t('newsPage.noResults') }) %>
       <div class="card-grid">
         <% articles.forEach(function (article) { %>
-          <a class="card" href="/tin-tuc/<%= article._id %>">
-            <% if (article.coverImage) { %><div class="card-media"><img src="<%= article.coverImage %>" alt="<%= article.titleVi %>"></div><% } %>
+          <%# Search looks at the title (VI + EN) and the article text %>
+          <a class="card" href="/tin-tuc/<%= article._id %>" data-search-item
+             data-search="<%= [article.titleVi, article.titleEn, excerpt(pick(article, 'body'), 1500)].filter(Boolean).join(' ') %>">
+            <% if (article.coverImage) { %><div class="card-media"><img src="<%= article.coverImage %>" alt="<%= pick(article, 'title') %>"></div><% } %>
             <div class="card-body">
-              <h3><%= article.titleVi %></h3>
+              <h3><%= pick(article, 'title') %></h3>
               <p><%= new Date(article.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></p>
             </div>
           </a>
         <% }) %>
       </div>
+      <p class="empty-note search-none" data-search-none hidden></p>
     <% } else { %>
       <p class="empty-note"><%= lang === 'en' ? 'No articles yet.' : 'Chưa có tin tức nào.' %></p>
     <% } %>

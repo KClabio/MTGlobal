@@ -1,7 +1,8 @@
+<%# Each logo opens the partner's own page on this site (/doi-tac/<slug>); that page has the button to the partner's website %>
 <div class="partner-tile">
-  <% if (partner.url) { %>
-    <a href="<%= partner.url %>" target="_blank" rel="noopener"><img src="<%= partner.logo %>" alt="<%= partner.name %>"></a>
+  <% if (partner.slug) { %>
+    <a href="/doi-tac/<%= partner.slug %>" title="<%= t('home.partnerView', { name: partner.name }) %>"><img src="<%= partner.logo %>" alt="<%= t('home.partnerView', { name: partner.name }) %>" loading="lazy"></a>
   <% } else { %>
-    <img src="<%= partner.logo %>" alt="<%= partner.name %>">
+    <img src="<%= partner.logo %>" alt="<%= partner.name %>" loading="lazy">
   <% } %>
 </div>

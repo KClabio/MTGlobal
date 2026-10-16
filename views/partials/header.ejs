@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/theme.css">
   <link rel="stylesheet" href="/css/style.css">
+  <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
   <div class="brand-bar"></div>
@@ -25,7 +26,7 @@
         <a href="/"><%= t('nav.home') %></a>
 
         <div class="nav-dropdown">
-          <button type="button" class="nav-dropdown-trigger" aria-expanded="false"><%= t('nav.products') %> <span class="nav-caret">▾</span></button>
+          <a class="nav-dropdown-trigger" href="/san-pham" aria-haspopup="true" aria-expanded="false"><%= t('nav.products') %> <span class="nav-caret" aria-hidden="true">▾</span></a>
           <div class="nav-dropdown-menu">
             <a href="/san-pham/robot-leo-cau-thang"><%= t('nav.productStairRobot') %></a>
             <a href="/san-pham/robot-di-theo-nguoi"><%= t('nav.productFollowRobot') %></a>
@@ -35,7 +36,7 @@
         </div>
 
         <div class="nav-dropdown">
-          <button type="button" class="nav-dropdown-trigger" aria-expanded="false"><%= t('nav.solutions') %> <span class="nav-caret">▾</span></button>
+          <a class="nav-dropdown-trigger" href="/giai-phap" aria-haspopup="true" aria-expanded="false"><%= t('nav.solutions') %> <span class="nav-caret" aria-hidden="true">▾</span></a>
           <div class="nav-dropdown-menu">
             <a href="/giai-phap/stem-lab"><%= t('nav.solutionOverview') %></a>
             <a href="/giai-phap/thiet-bi"><%= t('nav.solutionEquipment') %></a>
@@ -47,7 +48,7 @@
         </div>
 
         <div class="nav-dropdown">
-          <button type="button" class="nav-dropdown-trigger" aria-expanded="false"><%= t('nav.services') %> <span class="nav-caret">▾</span></button>
+          <a class="nav-dropdown-trigger" href="/dich-vu" aria-haspopup="true" aria-expanded="false"><%= t('nav.services') %> <span class="nav-caret" aria-hidden="true">▾</span></a>
           <div class="nav-dropdown-menu">
             <a href="/dich-vu/tu-van-du-hoc"><%= t('nav.serviceStudyAbroad') %></a>
             <a href="/dich-vu/phan-phoi-san-pham"><%= t('nav.serviceDistribution') %></a>

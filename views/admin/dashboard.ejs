@@ -2,8 +2,8 @@
 <%
   const k = dash.kpis;
   const m = dash.monthly;
-  const latestBar = m.bars[m.bars.length - 1];
   const hasRequests = k.totalRequests > 0;
+  const pie = dash.pie;
 %>
 
 <div class="admin-topbar">
@@ -32,7 +32,7 @@
     <span class="icon-chip chip-green"><%- include('partials/icon', { name: 'users', size: 20 }) %></span>
     <span class="kpi-label"><%= t('admin.dashboard.kpiCustomers') %></span>
     <span class="kpi-value"><%= k.customers %></span>
-    <span class="kpi-sub"><%= t('admin.dashboard.kpiCustomersSub', { n: k.newCustomers30, staff: k.staff }) %></span>
+    <span class="kpi-sub"><%= t('admin.dashboard.kpiCustomersSub', { n: k.newCustomers30 }) %></span>
   </a>
   <a class="kpi" href="/admin/tin-tuc">
     <span class="icon-chip chip-violet"><%- include('partials/icon', { name: 'newspaper', size: 20 }) %></span>
@@ -43,7 +43,7 @@
 </div>
 
 <div class="dash-grid">
-  <!-- Requests per month: column chart -->
+  <!-- Requests per month: columns (received) + line (now completed), one shared scale -->
   <section class="panel">
     <header class="panel-head">
       <span class="icon-chip chip-blue"><%- include('partials/icon', { name: 'bar-chart', size: 18 }) %></span>
@@ -55,30 +55,48 @@
     <% if (dash.monthTotal === 0) { %>
       <p class="panel-empty"><%= t('admin.dashboard.monthlyEmpty') %></p>
     <% } %>
-    <svg class="chart" viewBox="0 0 <%= m.W %> <%= m.H %>" role="img" aria-label="<%= t('admin.dashboard.monthlyAria') %>">
-      <% m.ticks.forEach(function (t) { %>
-        <line class="chart-grid<%= t.value === 0 ? ' chart-baseline' : '' %>" x1="<%= m.left %>" x2="<%= m.W - m.right %>" y1="<%= t.y %>" y2="<%= t.y %>"></line>
-        <text class="chart-tick" x="<%= m.left - 8 %>" y="<%= t.y + 4 %>" text-anchor="end"><%= t.value %></text>
+    <svg class="chart chart-anim" viewBox="0 0 <%= m.W %> <%= m.H %>" role="img" aria-label="<%= t('admin.dashboard.monthlyAria') %>" style="--n:<%= m.bars.length %>;">
+      <defs>
+        <%# Soft halo behind a hovered column: a blurred copy of the bar in its own colour %>
+        <filter id="chartGlow" x="-60%" y="-30%" width="220%" height="160%"><feGaussianBlur stdDeviation="5"></feGaussianBlur></filter>
+      </defs>
+      <% m.ticks.forEach(function (tk) { %>
+        <line class="chart-grid<%= tk.value === 0 ? ' chart-baseline' : '' %>" x1="<%= m.left %>" x2="<%= m.W - m.right %>" y1="<%= tk.y %>" y2="<%= tk.y %>"></line>
+        <text class="chart-tick" x="<%= m.left - 8 %>" y="<%= tk.y + 4 %>" text-anchor="end"><%= tk.value %></text>
       <% }) %>
-      <% m.bars.forEach(function (b, i) { %>
-        <g class="chart-col" tabindex="0" data-tip="<%= t('admin.dashboard.tipMonth', { month: b.title, n: b.value }) %>" aria-label="<%= t('admin.dashboard.tipMonth', { month: b.title, n: b.value }) %>">
+      <% m.bars.forEach(function (b, i) { const tip = t('admin.dashboard.tipMonthDone', { month: b.title, n: b.value, done: b.done }); %>
+        <g class="chart-col" tabindex="0" data-i="<%= i %>" data-tip="<%= tip %>" aria-label="<%= tip %>" style="--i:<%= i %>;">
           <rect class="chart-hit" x="<%= b.slotX %>" y="<%= m.top %>" width="<%= b.slotW %>" height="<%= m.baseline - m.top %>"></rect>
-          <% if (b.d) { %><path class="chart-bar" d="<%= b.d %>"></path><% } %>
+          <% if (b.d) { %>
+            <path class="chart-bar-glow" d="<%= b.d %>" filter="url(#chartGlow)"></path>
+            <path class="chart-bar" d="<%= b.d %>"></path>
+          <% } %>
           <text class="chart-label" x="<%= b.cx %>" y="<%= m.H - 10 %>" text-anchor="middle"><%= b.label %></text>
           <% if (i === m.bars.length - 1 && b.value > 0) { %>
             <text class="chart-value" x="<%= b.cx %>" y="<%= b.y - 6 %>" text-anchor="middle"><%= b.value %></text>
           <% } %>
         </g>
       <% }) %>
+      <path class="chart-line" d="<%= m.linePath %>" pathLength="1"></path>
+      <% m.bars.forEach(function (b, i) { %>
+        <g class="chart-pt" data-i="<%= i %>" style="--i:<%= i %>; --at:<%= b.at %>;">
+          <circle class="chart-dot-glow" cx="<%= b.cx %>" cy="<%= b.lineY %>" r="7" filter="url(#chartGlow)"></circle>
+          <circle class="chart-dot" cx="<%= b.cx %>" cy="<%= b.lineY %>" r="4"></circle>
+        </g>
+      <% }) %>
     </svg>
+    <ul class="chart-legend">
+      <li><span class="key-bar" aria-hidden="true"></span><%= t('admin.dashboard.seriesReceived') %></li>
+      <li><span class="key-line" aria-hidden="true"></span><%= t('admin.dashboard.seriesDone') %></li>
+    </ul>
     <table class="sr-only">
       <caption><%= t('admin.dashboard.monthlyTitle') %></caption>
-      <tr><th><%= t('admin.dashboard.monthCol') %></th><th><%= t('admin.dashboard.countCol') %></th></tr>
-      <% m.bars.forEach(function (b) { %><tr><td><%= b.title %></td><td><%= b.value %></td></tr><% }) %>
+      <tr><th><%= t('admin.dashboard.monthCol') %></th><th><%= t('admin.dashboard.countCol') %></th><th><%= t('admin.dashboard.doneCol') %></th></tr>
+      <% m.bars.forEach(function (b) { %><tr><td><%= b.title %></td><td><%= b.value %></td><td><%= b.done %></td></tr><% }) %>
     </table>
   </section>
 
-  <!-- Processing status: 100% stacked bar + legend -->
+  <!-- Processing status: pie (sweeps in on open, a slice slides out on hover) + legend -->
   <section class="panel">
     <header class="panel-head">
       <span class="icon-chip chip-green"><%- include('partials/icon', { name: 'pie-chart', size: 18 }) %></span>
@@ -87,26 +105,36 @@
         <p><%= hasRequests ? t('admin.dashboard.statusSub', { n: k.totalRequests }) : t('admin.dashboard.statusNone') %></p>
       </div>
     </header>
-    <div class="stack-bar" role="img" aria-label="<%= t('admin.dashboard.statusAria') %>">
-      <% if (hasRequests) { %>
-        <% dash.statuses.filter(function (s) { return s.count > 0; }).forEach(function (s) { %>
-          <span class="stack-seg" style="flex-grow:<%= s.count %>; background:<%= s.color %>;" tabindex="0"
-                data-tip="<%= s.label %>: <%= s.count %> (<%= s.percent %>%)"></span>
+    <div class="pie-wrap" data-pie>
+      <svg class="pie chart-anim" viewBox="0 0 <%= pie.S %> <%= pie.S %>" role="img" aria-label="<%= t('admin.dashboard.statusAria') %>">
+        <defs>
+          <mask id="pieReveal" maskUnits="userSpaceOnUse" x="0" y="0" width="<%= pie.S %>" height="<%= pie.S %>">
+            <circle class="pie-sweep" cx="<%= pie.c %>" cy="<%= pie.c %>" r="<%= pie.maskR %>" stroke-width="<%= pie.maskR * 2 %>" pathLength="1" transform="rotate(-90 <%= pie.c %> <%= pie.c %>)"></circle>
+          </mask>
+        </defs>
+        <% if (hasRequests) { %>
+          <g mask="url(#pieReveal)">
+            <% pie.slices.forEach(function (s) { %>
+              <path class="pie-slice" d="<%= s.d %>" data-key="<%= s.key %>" tabindex="0"
+                    style="--dx:<%= s.whole ? 0 : s.dx %>px; --dy:<%= s.whole ? 0 : s.dy %>px; fill:<%= s.color %>;"
+                    data-tip="<%= s.label %>: <%= s.count %> (<%= s.percent %>%)" aria-label="<%= s.label %>: <%= s.count %> (<%= s.percent %>%)"></path>
+            <% }) %>
+          </g>
+        <% } else { %>
+          <circle class="pie-empty" cx="<%= pie.c %>" cy="<%= pie.c %>" r="<%= pie.r - 9 %>"></circle>
+        <% } %>
+      </svg>
+      <ul class="legend-list">
+        <% dash.statuses.forEach(function (s) { %>
+          <li class="legend-row" data-key="<%= s.key %>">
+            <span class="legend-icon" style="color:<%= s.color %>;"><%- include('partials/icon', { name: s.icon, size: 18 }) %></span>
+            <span class="legend-label"><%= s.label %></span>
+            <span class="legend-count"><%= s.count %></span>
+            <span class="legend-pct"><%= s.percent %>%</span>
+          </li>
         <% }) %>
-      <% } else { %>
-        <span class="stack-seg stack-empty"></span>
-      <% } %>
+      </ul>
     </div>
-    <ul class="legend-list">
-      <% dash.statuses.forEach(function (s) { %>
-        <li class="legend-row">
-          <span class="legend-icon" style="color:<%= s.color %>;"><%- include('partials/icon', { name: s.icon, size: 18 }) %></span>
-          <span class="legend-label"><%= s.label %></span>
-          <span class="legend-count"><%= s.count %></span>
-          <span class="legend-pct"><%= s.percent %>%</span>
-        </li>
-      <% }) %>
-    </ul>
   </section>
 
   <!-- Requests by category: horizontal bars -->

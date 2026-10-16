@@ -1,22 +1,28 @@
 <%- include('partials/head', { active: 'du-an' }) %>
 
 <div class="admin-topbar">
-  <h1><%= t('admin.projects.title') %></h1>
+  <h1><%= t('admin.projects.title') %> <span class="count-badge"><%= projects.length %></span></h1>
   <a class="btn btn-primary" href="/admin/du-an/moi"><%= t('admin.projects.add') %></a>
 </div>
+
+<%# Search by school (the project names are much alike), plus school-level chips %>
+<%- include('partials/list-search', { target: 'projects' }) %>
+<%- include('partials/list-filter', { target: 'projects', param: 'cap', label: t('admin.search.filterLevel'), total: projects.length,
+      options: levels.map(function (l) { return { value: l.key, label: t('projectLevels.' + l.key), count: l.count }; }) }) %>
 
 <%- include('partials/sort-hint') %>
 
 <div style="overflow-x:auto;">
 <table class="data-table">
-  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.projects.colName') %></th><th><%= t('admin.projects.colSchool') %></th><th><%= t('admin.projects.colFeatured') %></th><th></th></tr></thead>
+  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.projects.colSchool') %></th><th><%= t('admin.projects.colLevel') %></th><th><%= t('admin.projects.colName') %></th><th><%= t('admin.projects.colFeatured') %></th><th></th></tr></thead>
   <tbody data-sortable="projects">
     <% projects.forEach(function (p) { %>
-      <tr data-id="<%= p._id %>">
-        <%- include('partials/drag-handle', { name: p.titleVi }) %>
+      <tr data-id="<%= p._id %>" data-search="<%= [p.schoolName, p.location].filter(Boolean).join(' ') %>" data-filter="<%= p.levelKey %>">
+        <%- include('partials/drag-handle', { name: p.schoolName || p.titleVi }) %>
         <td><% if (p.images && p.images[0]) { %><img class="thumb" src="<%= p.images[0] %>" alt=""><% } %></td>
+        <td><strong data-search-name><%= p.schoolName || '—' %></strong><% if (p.location) { %><br><small><%= p.location %></small><% } %></td>
+        <td><span class="tag"><%= t('projectLevels.' + p.levelKey) %></span></td>
         <td><%= p.titleVi %></td>
-        <td><%= p.schoolName %></td>
         <td><%= p.featured ? t('admin.common.yes') : '' %></td>
         <td>
           <div class="row-actions">
@@ -31,6 +37,7 @@
   </tbody>
 </table>
 </div>
+<p class="empty-note list-search-none" data-list-search-none="projects" hidden></p>
 <% if (!projects.length) { %><p class="empty-note"><%= t('admin.common.empty') %></p><% } %>
 
 <%- include('partials/view-page-fab', { href: '/giai-phap/du-an', label: t('admin.viewPage.list') }) %>

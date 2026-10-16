@@ -53,7 +53,19 @@
     "featuredProjectsTitle": "Featured Projects",
     "partnersTitle": "Our Partners",
     "domainsPrev": "Previous area",
-    "domainsNext": "Next area"
+    "domainsNext": "Next area",
+    "partnerVisit": "Visit website",
+    "partnerContact": "Contact",
+    "partnerView": "About {name}",
+    "partnerNoInfo": "Details coming soon.",
+    "partnerAbout": "About"
+  },
+  "equipment": {
+    "search": "Search equipment…",
+    "noResults": "No matching equipment found.",
+    "resultsCount": "{n} matching items",
+    "resultsOne": "1 matching item",
+    "other": "Other"
   },
   "forms": {
     "name": "Full Name",
@@ -201,7 +213,7 @@
       "kpiTotal": "Total requests",
       "kpiTotalSub": "Completion rate",
       "kpiCustomers": "Customers",
-      "kpiCustomersSub": "+{n} in the last 30 days · {staff} admins",
+      "kpiCustomersSub": "+{n} in the last 30 days",
       "kpiNews": "Published news",
       "kpiNewsSub": "{published} / {total} articles",
       "monthlyTitle": "Requests per month",
@@ -213,6 +225,10 @@
       "monthShort": "{name}",
       "monthLong": "{name} {y}",
       "tipMonth": "{month}: {n} requests",
+      "seriesReceived": "Requests received",
+      "seriesDone": "Completed",
+      "tipMonthDone": "{month}: {n} requests · {done} completed",
+      "doneCol": "Completed",
       "statusTitle": "Processing status",
       "statusSub": "Out of {n} requests",
       "statusNone": "No requests yet",
@@ -250,7 +266,11 @@
       "videoView": "view",
       "videoReplace": "(uploading a new video replaces it)",
       "featured": "Featured project (shown on the home page)",
-      "errName": "The project name (Vietnamese) is required."
+      "errName": "The project name (Vietnamese) is required.",
+      "level": "School level",
+      "colLevel": "Level",
+      "levelAuto": "Automatic from the school name (now: {level})",
+      "levelHint": "School names with “THCS”, “THPT” or “Đại học” are sorted automatically; projects without a school go under “Other”. Pick a level to set it by hand."
     },
     "products": {
       "robotsTitle": "Smart Robotics",
@@ -388,7 +408,15 @@
       "name": "Partner name *",
       "website": "Website (optional)",
       "logo": "Logo",
-      "errName": "The partner name is required."
+      "errName": "The partner name is required.",
+      "errWebsite": "The website isn't valid. Example: https://tpe.vn",
+      "websiteHint": "The \"Visit website\" button on the partner's page opens this address. Leave empty to hide the button.",
+      "descriptionVi": "About (Vietnamese)",
+      "descriptionEn": "About (English)",
+      "contacts": "Contact details (optional)",
+      "contactsHint": "One per line, as \"Label: value\". Emails and phone numbers become clickable links.",
+      "slug": "Page address (optional)",
+      "slugHint": "The end of the /doi-tac/… address — leave empty to make it from the partner's name."
     },
     "articles": {
       "title": "News",
@@ -418,7 +446,8 @@
       "colInterest": "Interested in",
       "colMessage": "Message",
       "colStatus": "Status",
-      "empty": "No requests yet."
+      "empty": "No requests yet.",
+      "confirmDelete": "Delete the consultation request from {name}? This cannot be undone."
     },
     "users": {
       "title": "Users",
@@ -466,12 +495,30 @@
       "forbidden": "You don't have permission to do this."
     },
     "search": {
-      "placeholder": "Search by equipment name…",
-      "label": "Search equipment by name",
       "clear": "Clear search",
-      "count": "Showing {shown} / {total} items",
-      "none": "No equipment matches “{q}”.",
-      "dragPaused": "Filtered by search — clear the search to drag and reorder."
+      "all": "All",
+      "dragPaused": "Filtered — choose “All” and clear the search to drag and reorder.",
+      "noneFilter": "Nothing in this group.",
+      "filterPart": "Filter by part",
+      "filterLevel": "Filter by school level",
+      "projects": {
+        "placeholder": "Search by school name…",
+        "label": "Search projects by school name",
+        "count": "Showing {shown} / {total} projects",
+        "none": "No school matches “{q}”."
+      },
+      "articles": {
+        "placeholder": "Search by title…",
+        "label": "Search news by title",
+        "count": "Showing {shown} / {total} articles",
+        "none": "No article matches “{q}”."
+      },
+      "equipment": {
+        "placeholder": "Search by equipment name…",
+        "label": "Search equipment by name",
+        "count": "Showing {shown} / {total} items",
+        "none": "No equipment matches “{q}”."
+      }
     },
     "viewPage": {
       "list": "View on website",
@@ -575,7 +622,15 @@
       "errButtonUrl": "Section {n}, button {m}: the link must start with / or https://",
       "errTextOneImage": "Section {n}: a Text section can have at most 1 picture.",
       "bannerNote": "The “{title}” page banner (intro line and background image) is edited in General settings.",
-      "bannerLink": "Open this page's banner"
+      "bannerLink": "Open this page's banner",
+      "display": "Display",
+      "display_": "Normal",
+      "display_collapsed": "Folded under its title (click to open)",
+      "display_compact": "Short cards: first paragraph + “Read more”",
+      "display_tabs": "Tabs: one picture at a time (tab name = caption before the “—”)",
+      "navVi": "Short name in the page menu (VI)",
+      "navEn": "Short name in the page menu (EN)",
+      "navPlaceholder": "Empty = use the title"
     },
     "general": {
       "subtitle": "Site-wide settings: logo, home page hero and the banner at the top of each page.",
@@ -612,5 +667,45 @@
     "galleryTitle": "Photos",
     "testimonialsTitle": "What our clients say",
     "packageField": "Package of interest"
+  },
+  "projectLevels": {
+    "thcs": "Lower secondary",
+    "thpt": "Upper secondary",
+    "dai-hoc": "University",
+    "khac": "Other"
+  },
+  "projectsPage": {
+    "search": "Search by school name…",
+    "resultsOne": "1 project found",
+    "resultsCount": "{n} projects found",
+    "noResults": "No school matches “{q}”.",
+    "levelEmpty": "No projects at this level yet — coming soon.",
+    "levelSub": {
+      "thcs": "THCS · grades 6–9",
+      "thpt": "THPT · grades 10–12",
+      "dai-hoc": "Universities & colleges",
+      "khac": "Other projects"
+    }
+  },
+  "newsPage": {
+    "search": "Search news…",
+    "resultsOne": "1 article found",
+    "resultsCount": "{n} articles found",
+    "noResults": "No article matches “{q}”."
+  },
+  "solutionPage": {
+    "onThisPage": "On this page",
+    "more": "Read more"
+  },
+  "nextSteps": {
+    "title": "Explore more",
+    "ctaTitle": "Need advice for your school?",
+    "ctaText": "Leave your details and the MTG team will get in touch.",
+    "ctaButton": "Request a consultation"
+  },
+  "servicesPage": {
+    "ctaTitle": "Questions about our services?",
+    "ctaText": "Leave your details and the MTG team will get in touch.",
+    "empty": "Our services are being updated."
   }
 }

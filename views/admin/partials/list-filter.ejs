@@ -1,0 +1,9 @@
+<%# Filter chips for a long admin list (public/js/admin.js), used together with partials/list-search.
+    Usage: include('partials/list-filter', { target: 'equipment', param: 'phan', label: '…', options: [{ value, label, count }], total })
+    Rows carry data-filter="<value>"; the chosen chip is kept in the URL (?<param>=<value>). %>
+<div class="list-filter" role="group" aria-label="<%= label %>" data-list-filter="<%= target %>" data-param="<%= param %>">
+  <button type="button" class="filter-chip is-active" data-value="" aria-pressed="true"><%= t('admin.search.all') %> <span class="filter-chip-count"><%= total %></span></button>
+  <% options.forEach(function (o) { %>
+    <button type="button" class="filter-chip" data-value="<%= o.value %>" aria-pressed="false"<% if (o.title) { %> title="<%= o.title %>"<% } %>><%= o.label %> <span class="filter-chip-count"><%= o.count %></span></button>
+  <% }) %>
+</div>

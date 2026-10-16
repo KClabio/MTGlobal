@@ -12,7 +12,7 @@
 
 <div style="overflow-x:auto;">
 <table class="data-table">
-  <thead><tr><th><%= t('admin.requests.colDate') %></th><th><%= t('admin.requests.colName') %></th><th><%= t('admin.requests.colContact') %></th><th><%= t('admin.requests.colInterest') %></th><th><%= t('admin.requests.colMessage') %></th><th><%= t('admin.requests.colStatus') %></th></tr></thead>
+  <thead><tr><th><%= t('admin.requests.colDate') %></th><th><%= t('admin.requests.colName') %></th><th><%= t('admin.requests.colContact') %></th><th><%= t('admin.requests.colInterest') %></th><th><%= t('admin.requests.colMessage') %></th><th><%= t('admin.requests.colStatus') %></th><th></th></tr></thead>
   <tbody>
     <% requests.forEach(function (r) { %>
       <tr>
@@ -37,6 +37,11 @@
                 <option value="<%= s %>" <%= r.status === s ? 'selected' : '' %>><%= t('admin.status.' + s) %></option>
               <% }) %>
             </select>
+          </form>
+        </td>
+        <td>
+          <form method="POST" action="/admin/yeu-cau/<%= r._id %>/xoa" data-confirm="<%= t('admin.requests.confirmDelete', { name: r.name }) %>">
+            <button class="btn btn-danger btn-sm" type="submit"><%= t('admin.common.delete') %></button>
           </form>
         </td>
       </tr>
