@@ -48,7 +48,8 @@ await suite(async (b) => {
     for (const n of names) {
       c[n] = client();
       const r = await c[n].req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1' }) });
-      if (r.status !== 302) throw new Error(`register ${n} failed: ${r.status}`);
+      if (r.status !== 303) throw new Error(`register ${n} failed: ${r.status}`);
+      await c[n].req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'secret1' }) }); // signing up doesn't log in
       id[n] = String((await users.findOne({ email: mail(n) }))._id);
     }
     await users.updateMany({ email: { $in: [mail('owner'), mail('owner2')] } }, { $set: { role: 'owner' } });
@@ -110,7 +111,7 @@ await suite(async (b) => {
     check('invalid id handled (redirect, no crash)', r.status === 302 && r.location === '/admin/nguoi-dung');
     const fresh = client();
     r = await fresh.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('owner'), password: 'secret1' }) });
-    check('owner login redirects to /admin', r.status === 302 && r.location === '/admin');
+    check('owner login lands on Trang chủ (not the admin), like everyone', r.status === 303 && r.location === '/', r);
   });
 
   await part(b, 'notifications (green / red)', async () => {
@@ -145,6 +146,7 @@ await suite(async (b) => {
     const adminC = client(), ownerC = client();
     for (const [c, n] of [[adminC, 'admin'], [ownerC, 'owner']]) {
       await c.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1' }) });
+      await c.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'secret1' }) });
       await d.collection('users').updateOne({ email: mail(n) }, { $set: { role: n } });
     }
     const id = async (col, q) => String((await d.collection(col).findOne(q))._id);
@@ -194,6 +196,7 @@ await suite(async (b) => {
     check('an outside Referer is ignored (no open redirect)', evil.headers.get('location') === '/admin/yeu-cau', evil.headers.get('location'));
     const cust = client();
     await cust.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: 'ZZ cust', email: mail('cust'), password: 'secret1', confirmPassword: 'secret1' }) });
+    await cust.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('cust'), password: 'secret1' }) });
     const custId = await id('users', { email: mail('cust') });
     r = await ownerC.act(`/admin/nguoi-dung/${custId}/vai-tro`, new URLSearchParams({ role: 'admin' }));
     expectToast('owner promotes user -> green', r.landed, 'success', 'ZZ cust');
@@ -404,8 +407,17 @@ await suite(async (b) => {
       url: location.search,
       fetches: window.__fetches || 0,
     }))()`);
+    // Robot list: same name search
+    const robots = await d.collection('products').find({ category: { $in: ['robot-leo-cau-thang', 'robot-di-theo-nguoi', 'robot-cat-co', 'robot-gia-dinh'] } }).toArray();
+    const robotWord = 'cat co'; // "Robot cắt cỏ", typed without accents
+    const robotHits = robots.filter((x) => { const w = wordsOf(x.nameVi + ' ' + x.nameEn); return wordsOf(robotWord).every((y) => w.some((z) => z.startsWith(y))); }).map((x) => String(x._id)).sort();
     await nav('/admin/robot');
-    check('robot list has no search box', !(await ev(`!!document.querySelector('.list-search')`)));
+    check('robot list has a search box with its own placeholder', (await ev(`(document.querySelector('.list-search input') || {}).placeholder`)) === 'Tìm theo tên robot…');
+    await type(robotWord);
+    const rs = await state();
+    check(`robot search "${robotWord}" finds the matching robots only, with a counter, drag paused`, robotHits.length > 0 && JSON.stringify(rs.visible) === JSON.stringify(robotHits)
+      && rs.count === `Hiển thị ${robotHits.length} / ${robots.length} robot` && rs.filtered && rs.url.includes('q='), { rs, robotHits });
+    check('robot search highlights the match in the name', await ev(`[...document.querySelectorAll('tbody tr:not([hidden]) [data-search-name] mark.search-hit')].some((m) => /^c[aắ]t$/i.test(m.textContent))`));
     await nav('/admin/thiet-bi');
     const layout = await ev(`(() => { const top = document.querySelector('.admin-topbar').getBoundingClientRect(), s = document.querySelector('.list-search').getBoundingClientRect(), tbl = document.querySelector('.data-table').getBoundingClientRect();
       return { below: s.top >= top.bottom, above: s.bottom <= tbl.top, ph: document.querySelector('.list-search input').placeholder }; })()`);
@@ -564,6 +576,61 @@ await suite(async (b) => {
     const bad = await fetch(BASE + '/admin/yeu-cau/000000000000000000000000/xoa', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}`, referer: BASE + '/admin/yeu-cau' } });
     const badPage = await (await fetch(BASE + bad.headers.get('location'), { headers: { cookie: `connect.sid=${admin.sid}` } })).text();
     check('deleting a missing request: back to the list with "not found"', bad.status === 302 && badPage.includes('Không tìm thấy mục này'), bad.status);
+  });
+
+  await part(b, 'request search + interest chips', async () => {
+    // Four temporary requests: 3 new (2 robot, 1 study abroad), 1 done (robot)
+    const base = { email: '', schoolOrCompany: '', details: [], user: null, createdAt: new Date(), updatedAt: new Date() };
+    await d.collection('quoterequests').insertMany([
+      { ...base, name: `${MARK} Nguyễn Thị Hoa`, phone: '0912 345 678', email: 'hoa.zz@example.com', schoolOrCompany: 'Trường Đông Hà', message: 'Cần robot leo cầu thang', interestedIn: 'san-pham-robot', status: 'moi' },
+      { ...base, name: `${MARK} Trần Văn Bình`, phone: '0987000111', message: 'Hỏi giá robot', interestedIn: 'san-pham-robot', status: 'moi' },
+      { ...base, name: `${MARK} Lê Minh`, phone: '0900000222', message: 'Du học Mỹ', interestedIn: 'tu-van-du-hoc', status: 'moi' },
+      { ...base, name: `${MARK} Phạm Thu`, phone: '0900000333', message: 'Robot gia đình', interestedIn: 'san-pham-robot', status: 'hoan_tat' },
+    ]);
+    const all = await d.collection('quoterequests').find({}).toArray();
+    const count = (f) => all.filter(f).length;
+    await signIn();
+    const nav = (p) => b.nav(p, 350);
+    const type = async (text) => { await ev(`(() => { const i = document.querySelector('[data-list-search="requests"] input'); i.focus(); i.select(); })()`); await send('Input.insertText', { text }); await sleep(150); };
+    const view = () => ev(`(() => ({
+      shown: [...document.querySelectorAll('tbody[data-list="requests"] tr[data-id]')].filter((r) => !r.hidden).map((r) => r.querySelector('[data-search-name]').textContent),
+      chips: [...document.querySelectorAll('[data-list-filter="requests"] .filter-chip')].map((c) => c.dataset.value + ':' + c.querySelector('.filter-chip-count').textContent),
+      active: (document.querySelector('[data-list-filter="requests"] .filter-chip.is-active') || {}).dataset?.value,
+      count: document.querySelector('[data-list-search="requests"] .list-search-count').textContent,
+      none: (() => { const n = document.querySelector('[data-list-search-none="requests"]'); return n.hidden ? null : n.textContent; })(),
+      url: location.search,
+      tabs: [...document.querySelectorAll('a[data-keep-query]')].map((a) => a.getAttribute('href')),
+    }))()`);
+    await nav('/admin/yeu-cau');
+    let v = await view();
+    const robotAll = count((r) => r.interestedIn === 'san-pham-robot');
+    check('"Tất cả": search box + one chip per interest present, with counts', v.chips[0] === `:${all.length}` && v.chips.includes(`san-pham-robot:${robotAll}`) && v.chips.includes(`tu-van-du-hoc:${count((r) => r.interestedIn === 'tu-van-du-hoc')}`) && !v.chips.some((c) => c.endsWith(':0')), v.chips);
+    await type('hoa');
+    v = await view();
+    check('search by name ignores accents ("hoa" finds "Hoa"), kept in the URL', v.shown.some((n) => n.endsWith('Nguyễn Thị Hoa')) && !v.shown.some((n) => n.endsWith('Lê Minh')) && v.url.includes('q=hoa'), v);
+    for (const [q, who] of [['0912345678', 'Nguyễn Thị Hoa'], ['0912 345', 'Nguyễn Thị Hoa'], ['hoa.zz', 'Nguyễn Thị Hoa'], ['dong ha', 'Nguyễn Thị Hoa'], ['du hoc my', 'Lê Minh']]) {
+      await type(q);
+      v = await view();
+      check(`search "${q}" finds ${who} (phone / email / school / message)`, v.shown.length >= 1 && v.shown.some((n) => n.endsWith(who)), v.shown);
+    }
+    await type(`${MARK.toLowerCase()} robot`);
+    v = await view();
+    check('several words must all match: the 3 test requests about robots', v.shown.length === 3, v.shown);
+    await b.clickAt('[data-list-filter="requests"] .filter-chip[data-value="tu-van-du-hoc"]'); await sleep(150);
+    v = await view();
+    check('robot words + study-abroad chip → nothing, with a message', v.shown.length === 0 && v.none && v.active === 'tu-van-du-hoc' && v.url.includes('quan-tam=tu-van-du-hoc'), v);
+    await b.clickAt('[data-list-filter="requests"] .filter-chip[data-value="san-pham-robot"]'); await sleep(150);
+    v = await view();
+    check('robot chip + search → the 3 robot test requests', v.shown.length === 3 && v.count === `Hiển thị 3 / ${all.length} yêu cầu`, v);
+    check('status tabs keep the search and the chip', v.tabs.every((h) => h.includes('q=') && h.includes('quan-tam=san-pham-robot')), v.tabs);
+    // "Mới" tab: the same search box and chips, counted within the tab
+    { const l = b.waitLoad(); await b.clickAt('a[data-keep-query][href*="status=moi"]'); await l; await sleep(300); }
+    v = await view();
+    const newRobot = count((r) => r.status === 'moi' && r.interestedIn === 'san-pham-robot');
+    check('"Mới" tab: search and chip carried over, chips counted within the tab', v.active === 'san-pham-robot' && v.url.includes('status=moi') && v.chips.includes(`san-pham-robot:${newRobot}`) && v.shown.length === 2, v);
+    await ev(`document.querySelector('[data-list-search="requests"] .list-search-clear').click()`); await b.clickAt('[data-list-filter="requests"] .filter-chip[data-value=""]'); await sleep(150);
+    v = await view();
+    check('"Mới" tab, cleared: every new request shown', v.shown.length === count((r) => r.status === 'moi') && !v.count, v);
   });
 
   await part(b, 'delete confirmation dialog', async () => {
@@ -739,5 +806,66 @@ await suite(async (b) => {
     await nav('/admin/cai-dat');
     s = await state();
     check('phone, fresh tab on /admin/cai-dat: bar scrolled so the item is visible', s.active === '/admin/cai-dat' && s.visibleH && s.left > 0, s);
+  });
+
+  await part(b, 'Người dùng: profile photos', async () => {
+    const admin = await createUser('photos-admin', 'admin');
+    const withPhoto = await createUser('photos-yes', 'customer');
+    const noPhoto = await createUser('photos-no', 'customer');
+    const PHOTO = '/assets/giai-phap/workshop/hoc-sinh-lap-trinh.jpg';
+    await d.collection('users').updateOne({ _id: withPhoto.id }, { $set: { avatar: PHOTO } });
+    await b.login(admin.sid); await b.setCookie('adminLang', 'vi');
+    await b.nav('/admin/nguoi-dung', 400);
+    const row = (email) => ev(`(() => { const tr = [...document.querySelectorAll('.data-table tbody tr')].find((r) => r.textContent.includes(${JSON.stringify(email)})); const a = tr.querySelector('.user-avatar'); const r = a.getBoundingClientRect();
+      return { tag: a.tagName, img: a.querySelector('img') && a.querySelector('img').getAttribute('src'), loaded: !!(a.querySelector('img') && a.querySelector('img').naturalWidth), text: a.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height), round: getComputedStyle(a).borderRadius, label: a.getAttribute('aria-label') }; })()`);
+    const yes = await row(withPhoto.email);
+    check('a user with a profile photo: a 36px round photo before the name, as a button "Xem ảnh đại diện của …"', yes.tag === 'BUTTON' && yes.img === PHOTO && yes.w === 36 && yes.h === 36 && yes.round === '50%' && yes.label === 'Xem ảnh đại diện của ZZ photos-yes', yes);
+    const no = await row(noPhoto.email);
+    check('a user without one: their initials in a 36px round badge (not clickable)', no.tag === 'SPAN' && no.text === 'ZP' && no.w === 36 && no.round === '50%', no);
+    const dlg = () => ev(`(() => { const g = document.querySelector('[data-avatar-dialog]'); const img = g.querySelector('[data-avatar-img]'); return { open: g.open, src: img.getAttribute('src'), w: Math.round(img.getBoundingClientRect().width), name: g.querySelector('[data-avatar-name]').textContent, email: g.querySelector('[data-avatar-email]').textContent, focus: document.activeElement && (document.activeElement.getAttribute('data-email') || document.activeElement.className) }; })()`);
+    const btnSel = `button.user-avatar[data-email="${withPhoto.email}"]`;
+    await b.clickAt(btnSel); await sleep(400);
+    let g = await dlg();
+    check('clicking the photo opens it larger, with the name and email', g.open && g.src === PHOTO && g.w >= 250 && g.name === 'ZZ photos-yes' && g.email === withPhoto.email, g);
+    await b.shot('users-photo-open');
+    await b.key('Escape', 'Escape', 27); await sleep(250);
+    g = await dlg();
+    check('Escape closes it and the photo button has the focus again', !g.open && g.focus === withPhoto.email, g);
+    await b.clickAt(btnSel); await sleep(300);
+    await b.mouse('mousePressed', { x: 5, y: 5 }, { button: 'left', clickCount: 1 }); await b.mouse('mouseReleased', { x: 5, y: 5 }, { button: 'left', clickCount: 1 }); await sleep(250);
+    check('a click outside closes it too', !(await dlg()).open);
+    await b.clickAt(btnSel); await sleep(300);
+    await b.clickAt('[data-avatar-close]'); await sleep(250);
+    check('so does the × button', !(await dlg()).open);
+  });
+
+  await part(b, 'Người dùng: filter by role, search', async () => {
+    const owner = await createUser('roles-owner', 'owner');
+    const admin = await createUser('roles-admin', 'admin');
+    const customer = await createUser('roles-customer', 'customer');
+    const counts = { owner: await d.collection('users').countDocuments({ role: 'owner' }), admin: await d.collection('users').countDocuments({ role: 'admin' }), customer: await d.collection('users').countDocuments({ role: 'customer' }) };
+    await b.login(owner.sid); await b.setCookie('adminLang', 'vi');
+    await b.nav('/admin/nguoi-dung', 400);
+    const chips = await ev(`[...document.querySelectorAll('[data-list-filter="users"] .filter-chip')].map((c) => ({ value: c.dataset.value, label: c.childNodes[0].textContent.trim(), count: +c.querySelector('.filter-chip-count').textContent }))`);
+    const total = counts.owner + counts.admin + counts.customer;
+    check('chips: Tất cả · Chủ sở hữu · Quản trị viên · Khách hàng, with their counts', JSON.stringify(chips) === JSON.stringify([
+      { value: '', label: 'Tất cả', count: total }, { value: 'owner', label: 'Chủ sở hữu', count: counts.owner }, { value: 'admin', label: 'Quản trị viên', count: counts.admin }, { value: 'customer', label: 'Khách hàng', count: counts.customer }]), { chips, counts });
+    const shown = () => ev(`[...document.querySelectorAll('tbody[data-list="users"] tr')].filter((tr) => !tr.hidden).map((tr) => tr.dataset.filter)`);
+    await b.clickAt('[data-list-filter="users"] .filter-chip[data-value="admin"]'); await sleep(200);
+    let rows = await shown();
+    check('"Quản trị viên": only admins, and ?vai-tro=admin in the address', rows.length === counts.admin && rows.every((r) => r === 'admin') && (await ev(`location.search`)) === '?vai-tro=admin', rows);
+    await b.shot('users-filter-admin');
+    await b.clickAt('[data-list-filter="users"] .filter-chip[data-value=""]'); await sleep(200);
+    await ev(`document.querySelector('[data-list-search="users"] input').focus()`); await send('Input.insertText', { text: customer.email }); await sleep(300);
+    rows = await ev(`[...document.querySelectorAll('tbody[data-list="users"] tr')].filter((tr) => !tr.hidden).map((tr) => tr.dataset.id)`);
+    check('searching an email finds just that account', rows.length === 1 && rows[0] === String(customer.id), rows);
+    // The chosen filter stays after an action on the list
+    await b.nav('/admin/nguoi-dung?vai-tro=customer', 400);
+    check('opening ?vai-tro=customer shows only customers', (await shown()).every((r) => r === 'customer'));
+    await b.clickAndWait(`tr[data-id="${customer.id}"] form[action$="/vai-tro"] button`, 400);
+    check('promoting a customer keeps the "Khách hàng" filter (and the green note)', (await ev(`location.search`)) === '?vai-tro=customer' && (await ev(`document.querySelector('[data-list-filter="users"] .filter-chip.is-active').dataset.value`)) === 'customer'
+      && (await d.collection('users').findOne({ _id: customer.id })).role === 'admin', await ev(`location.href`));
+    check('… the promoted account now counts under "Quản trị viên"', (await ev(`+document.querySelector('[data-list-filter="users"] .filter-chip[data-value="admin"] .filter-chip-count').textContent`)) === counts.admin + 1);
+    void admin;
   });
 });

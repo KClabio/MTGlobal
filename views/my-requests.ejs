@@ -4,44 +4,60 @@
 
 <section class="section">
   <div class="container">
+    <%# After "Cập nhật yêu cầu" (routes/account.js ?da-sua=<id>), or after trying to change one staff already handle (?khoa=1) %>
+    <% if (typeof editedId !== 'undefined' && editedId) { %><div class="form-alert success" data-request-updated><%= t('requests.updated') %></div><% } %>
+    <% if (typeof locked !== 'undefined' && locked) { %><div class="form-alert error" data-request-locked><%= t('requests.locked') %></div><% } %>
     <% if (requests && requests.length) { %>
       <div style="overflow-x:auto;">
-        <table class="data-table">
+        <table class="data-table my-requests">
           <thead>
             <tr>
-              <th><%= lang === 'en' ? 'Date' : 'Ngày gửi' %></th>
+              <th><%= t('requests.colDate') %></th>
               <th><%= t('forms.interestedIn') %></th>
               <th><%= t('forms.message') %></th>
-              <th><%= lang === 'en' ? 'Status' : 'Trạng thái' %></th>
+              <th><%= t('requests.colStatus') %></th>
+              <th><span class="sr-only"><%= t('requests.colActions') %></span></th>
             </tr>
           </thead>
           <tbody>
             <% requests.forEach(function (r) { %>
-              <tr>
-                <td><%= new Date(r.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
-                <td><%= t('forms.interestedIn' + ({
-                  'san-pham-robot': 'Robot',
-                  'giai-phap-stem-lab': 'StemLab',
-                  'tu-van-du-hoc': 'StudyAbroad',
-                  'phan-phoi-san-pham': 'Distribution',
-                  'khac': 'Other'
-                }[r.interestedIn] || 'Other')) %></td>
+              <tr data-request-id="<%= r._id %>"<% if (typeof editedId !== 'undefined' && String(r._id) === editedId) { %> class="is-just-edited"<% } %>>
+                <td>
+                  <%= new Date(r.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %>
+                  <% if (r.editedAt) { %><br><span class="tag tag-edited" title="<%= new Date(r.editedAt).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN') %>"><%= t('requests.edited') %></span><% } %>
+                </td>
+                <% const product = (r.details || []).filter(isProductLine); const answers = (r.details || []).filter(function (d) { return !isProductLine(d); }); %>
+                <td>
+                  <%= t('forms.interest.' + r.interestedIn) %>
+                  <%# Which robot (robot-page requests) goes with the category %>
+                  <% if (product.length) { %>
+                    <dl class="request-details request-product">
+                      <% product.forEach(function (d) { %><div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div><% }) %>
+                    </dl>
+                  <% } %>
+                </td>
                 <td>
                   <%= r.message.slice(0, 80) %><%= r.message.length > 80 ? '…' : '' %>
-                  <% if (r.details && r.details.length) { %>
+                  <% if (answers.length) { %>
                     <dl class="request-details">
-                      <% r.details.forEach(function (d) { %>
+                      <% answers.forEach(function (d) { %>
                         <div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div>
                       <% }) %>
                     </dl>
                   <% } %>
                 </td>
-                <td>
-                  <span class="tag status-<%= r.status %>">
-                    <%= r.status === 'moi' ? (lang === 'en' ? 'New' : 'Mới')
-                      : r.status === 'da_lien_he' ? (lang === 'en' ? 'Contacted' : 'Đã liên hệ')
-                      : (lang === 'en' ? 'Completed' : 'Hoàn tất') %>
-                  </span>
+                <td><span class="tag status-<%= r.status %>"><%= t('admin.status.' + r.status) %></span></td>
+                <td class="my-requests-action">
+                  <%# Only while "Mới": once staff act on it, the request is locked %>
+                  <% if (r.status === 'moi') { %>
+                    <a class="btn btn-ghost btn-sm" href="/tai-khoan/yeu-cau/<%= r._id %>/sua" data-edit-request>
+                      <%- include('admin/partials/icon', { name: 'pencil', size: 14 }) %> <%= t('requests.edit') %>
+                    </a>
+                  <% } else if (r.status === 'hoan_tat') { %>
+                    <span class="form-hint" title="<%= t('requests.doneHint') %>" data-request-done><%= t('requests.done') %></span>
+                  <% } else { %>
+                    <span class="form-hint" title="<%= t('requests.lockedHint') %>" data-request-in-progress><%= t('requests.inProgress') %></span>
+                  <% } %>
                 </td>
               </tr>
             <% }) %>
@@ -49,7 +65,7 @@
         </table>
       </div>
     <% } else { %>
-      <p class="empty-note"><%= lang === 'en' ? "You haven't submitted any requests yet." : 'Bạn chưa gửi yêu cầu nào.' %></p>
+      <p class="empty-note"><%= t('requests.empty') %></p>
       <div style="text-align:center;"><a class="btn btn-primary" href="/lien-he"><%= t('common.requestQuote') %></a></div>
     <% } %>
   </div>

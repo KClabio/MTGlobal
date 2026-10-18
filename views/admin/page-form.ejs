@@ -3,9 +3,14 @@
   const P = (key, vars) => t('admin.pages.' + key, vars);
   const errorList = typeof errors !== 'undefined' && errors ? errors : [];
   const pageTitle = t(titleKey);
+  // Kinds an admin can add (buttons and their links are set by the developer)
+  const KINDS = ['text', 'cards', 'steps', 'gallery', 'stats'];
+  const KIND_ICONS = { text: 'align-left', cards: 'layout-grid', steps: 'list-ordered', gallery: 'image', stats: 'hash' };
+  // Short counts on each closed section ("6 thẻ"), read by public/js/admin.js
+  const META = ['cards', 'steps', 'stats', 'buttons', 'media', 'image'];
 %>
 
-<div class="admin-topbar">
+<div class="admin-topbar page-editor-top">
   <div>
     <h1><%= pageTitle %></h1>
     <p class="admin-subtitle"><%= P('pill') %></p>
@@ -15,33 +20,50 @@
 <% if (errorList.length) { %>
   <div class="form-alert error">
     <strong><%= P('errorsTitle') %></strong>
-    <ul class="form-error-list"><% errorList.forEach(function (e) { %><li><%= e %></li><% }) %></ul>
+    <%# The first number in each message is the section's position and the second (if any) the item's, so the editor can open and mark them %>
+    <ul class="form-error-list"><% errorList.forEach(function (e) { const n = e.match(/\d+/g) || []; %><li<% if (n[0]) { %> data-error-section="<%= n[0] %>"<% } %><% if (n[1]) { %> data-error-item="<%= n[1] %>"<% } %>><%= e %></li><% }) %></ul>
   </div>
 <% } %>
 
-<form method="POST" action="/admin/trang/<%= slug %>" enctype="multipart/form-data" data-page-form>
+<form method="POST" action="/admin/trang/<%= slug %>" enctype="multipart/form-data" data-page-form
+      <% META.forEach(function (k) { %> data-meta-<%= k %>="<%= P('meta_' + k) %>"<% }) %>
+      data-untitled="<%= P('untitled') %>" data-item-empty="<%= P('itemEmpty') %>" data-removed-section="<%= P('removedSection') %>" data-removed-item="<%= P('removedItem') %>" data-removed-media="<%= P('removedMedia') %>">
   <p class="admin-hint page-banner-note"><%- include('partials/icon', { name: 'settings', size: 16 }) %>
     <span><%= P('bannerNote', { title: pageTitle }) %> <a href="/admin/cai-dat?tab=banners#banner-<%= slug %>" data-banner-link><%= P('bannerLink') %> →</a></span>
   </p>
 
   <section class="page-sections">
-    <h2 class="admin-panel-title"><%= P('tabSections') %> <span class="admin-tab-count" data-section-count><%= (page.sections || []).length %></span></h2>
-    <p class="admin-hint"><%- include('partials/icon', { name: 'grip', size: 16 }) %><span><%= P('sectionsHint') %></span></p>
-    <div class="row-list" id="sectionRows" data-section-list>
+    <div class="page-sections-head">
+      <h2 class="admin-panel-title"><%= P('tabSections') %> <span class="admin-tab-count" data-section-count><%= (page.sections || []).length %></span></h2>
+      <p class="page-sections-hint"><%= P('sectionsHintShort') %></p>
+    </div>
+    <div class="page-outline" id="sectionRows" data-section-list>
       <% (page.sections || []).forEach(function (s) { %><%- include('partials/page-section', { s }) %><% }) %>
     </div>
-    <button type="button" class="btn btn-ghost" data-add-section>+ <%= P('addSection') %></button>
+
+    <div class="page-add">
+      <button type="button" class="btn btn-ghost page-add-btn" data-add-section aria-expanded="false" aria-controls="typePicker"><%- include('partials/icon', { name: 'plus', size: 18 }) %> <%= P('addSection') %></button>
+      <div class="type-picker" id="typePicker" data-type-picker hidden>
+        <p class="type-picker-title"><%= P('pickType') %></p>
+        <div class="type-picker-grid">
+          <% KINDS.forEach(function (k) { %>
+            <button type="button" class="type-tile" data-add-kind="<%= k %>">
+              <span class="type-tile-icon"><%- include('partials/icon', { name: KIND_ICONS[k], size: 22 }) %></span>
+              <span class="type-tile-name"><%= P('kind_' + k) %></span>
+              <span class="type-tile-desc"><%= P('kindDesc_' + k) %></span>
+            </button>
+          <% }) %>
+        </div>
+      </div>
+    </div>
     <template id="tpl-page-section"><%- include('partials/page-section', { s: {} }) %></template>
     <template id="tpl-page-item"><%- include('partials/page-item', { it: {} }) %></template>
   </section>
 
   <div class="form-actions page-form-actions">
+    <span class="page-unsaved" data-unsaved hidden><%= P('unsaved') %></span>
     <button class="btn btn-primary" type="submit"><%= P('save') %></button>
   </div>
-</form>
-
-<form method="POST" action="/admin/trang/<%= slug %>/mac-dinh" class="page-reset" data-confirm="<%= P('resetConfirm') %>" data-confirm-title="<%= P('reset') %>">
-  <button class="btn btn-danger-ghost btn-sm" type="submit"><%- include('partials/icon', { name: 'rotate-ccw', size: 15 }) %> <%= P('reset') %></button>
 </form>
 
 <%- include('partials/view-page-fab', { href: '/giai-phap/' + slug, label: t('admin.viewPage.item', { name: pageTitle }) }) %>

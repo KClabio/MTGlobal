@@ -14,7 +14,7 @@ await suite(async (b) => {
   await part(b, 'password eye', async () => {
     const EMAIL = `zztest-eye-${stamp}@example.com`;
     const r0 = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: 'ZZ Eye', email: EMAIL, password: 'secret1', confirmPassword: 'secret1' }) });
-    check('test account created', r0.status === 302);
+    check('test account created', r0.status === 303);
     const posted = [];
     b.on('Network.requestWillBeSent', (p) => { if (p.request.method === 'POST') posted.push({ url: p.request.url, body: p.request.postData || '' }); });
     const nav = (p) => b.nav(p, 400);
@@ -140,9 +140,11 @@ await suite(async (b) => {
       check('Article VI: original title + Vietnamese body', has(r.text, '<h1>MTG ra mat Robot leo cau thang the he 3</h1>') && has(r.text, 'Noi dung tin tuc'));
 
       r = await req('/dang-ky', { method: 'POST', body: form({ name: 'Test Người Dùng', email: EMAIL, password: 'oldpass1', confirmPassword: 'oldpass1' }) });
-      check('register test account', r.status === 302, r.status);
+      check('register test account (then the login page, not logged in yet)', r.status === 303 && r.location === '/dang-nhap', r.status);
+      r = await req('/dang-nhap', { method: 'POST', body: form({ email: EMAIL, password: 'oldpass1' }) });
       r = await req('/ho-so', { lang: 'vi' });
       check('VI: button "Cập nhật", password card, initials', has(r.text, '>Cập nhật</button>') && has(r.text, 'Đổi mật khẩu') && has(r.text, 'avatar-fallback" aria-hidden="true">TD<') && has(r.text, 'Chưa có giới thiệu.'));
+      check('two-letter picture: no "Xóa ảnh" button, no Google note', !has(r.text, 'data-avatar-delete') && !has(r.text, 'data-google-note') && has(r.text, 'id="currentPassword"'));
       r = await req('/ho-so', { lang: 'en' });
       check('EN: button "Update", English labels', has(r.text, '>Update</button>') && has(r.text, 'Change password') && has(r.text, 'Member since') && has(r.text, 'No bio yet.'));
       r = await req('/ho-so', { method: 'POST', lang: 'en', body: multipart({ name: '  ', phone: '0912', bio: 'keep me' }) });
@@ -182,8 +184,11 @@ await suite(async (b) => {
       const secondAvatar = avatarSrc(r.text);
       if (secondAvatar) created.add(secondAvatar);
       check('replacing avatar removes the old file', !!secondAvatar && secondAvatar !== firstAvatar && !existsSync(PUBLIC + firstAvatar) && existsSync(PUBLIC + secondAvatar));
-      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Người Kiểm Thử', removeAvatar: '1' }) });
-      check('remove photo: initials back, file deleted', r.status === 200 && !avatarSrc(r.text) && has(r.text, 'aria-hidden="true">NT<') && !existsSync(PUBLIC + secondAvatar));
+      check('own photo: "Xóa ảnh" button (its own form) and the confirm box', has(r.text, 'form="avatar-remove"') && has(r.text, 'action="/ho-so/anh-dai-dien/xoa"') && has(r.text, 'Xóa ảnh đại diện?'));
+      r = await req('/ho-so/anh-dai-dien/xoa', { method: 'POST' });
+      check('"Xóa ảnh": "Đã xóa ảnh đại diện.", initials back, file deleted, no button any more', r.status === 200 && has(r.text, 'Đã xóa ảnh đại diện.') && !avatarSrc(r.text) && has(r.text, 'aria-hidden="true">NT<') && !existsSync(PUBLIC + secondAvatar) && !has(r.text, 'data-avatar-delete'));
+      r = await req('/ho-so', { method: 'POST', body: multipart({ name: 'Người Kiểm Thử' }) });
+      check('saving the profile afterwards keeps the two letters', r.status === 200 && !avatarSrc(r.text));
       // Password change
       const pw = (o, lang = 'vi') => req('/ho-so/mat-khau', { method: 'POST', lang, body: form(o) });
       r = await pw({ currentPassword: 'wrong', newPassword: 'newpass1', confirmPassword: 'newpass1' });
@@ -202,8 +207,8 @@ await suite(async (b) => {
       sid = null;
       r = await req('/dang-nhap', { method: 'POST', body: form({ email: EMAIL, password: 'oldpass1' }) });
       check('old password no longer works', r.status === 400);
-      r = await req('/dang-nhap', { method: 'POST', body: form({ email: EMAIL, password: 'newpass1', redirectTo: '/ho-so' }) });
-      check('login with new password works', r.status === 302 && r.location === '/ho-so', r);
+      r = await req('/dang-nhap', { method: 'POST', body: form({ email: EMAIL, password: 'newpass1', redirectTo: 'https://evil.example/' }) });
+      check('login with new password works and lands on Trang chủ (a redirectTo field is ignored)', r.status === 303 && r.location === '/', r);
     } finally {
       for (const url of created) if (existsSync(PUBLIC + url)) unlinkSync(PUBLIC + url);
     }
@@ -281,9 +286,157 @@ await suite(async (b) => {
         await chooseFile(smallPath);
         const s2 = await state();
         check(`[${lang}] small file previews and clears the error`, s2.error === null && s2.files === 1 && s2.previewTag === 'IMG' && s2.previewSrc === 'blob:', s2);
+        check(`[${lang}] "Bỏ ảnh vừa chọn" appears for the chosen photo`, await ev(`!document.querySelector('[data-avatar-drop]').hidden`));
+        await ev(`document.querySelector('[data-avatar-drop]').click()`);
+        const s3 = await state();
+        check(`[${lang}] … and drops it: two letters back, no file chosen, button gone`, s3.files === 0 && s3.previewTag === 'DIV' && (await ev(`document.querySelector('[data-avatar-drop]').hidden`)), s3);
       }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  await part(b, '"Xóa ảnh" in the browser (asks first)', async () => {
+    const user = await createUser('avdelete', 'customer');
+    const fd = new FormData();
+    fd.append('name', 'ZZ Ảnh Xóa');
+    fd.append('avatar', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkaPhfDwAEhgHBtcs1RQAAAABJRU5ErkJggg==', 'base64')], { type: 'image/png' }), 'me.png');
+    await fetch(BASE + '/ho-so', { method: 'POST', body: fd, headers: { cookie: `connect.sid=${user.sid}` } });
+    const saved = (await (await db()).collection('users').findOne({ _id: user.id })).avatar;
+    check('test photo uploaded', !!saved && existsSync(PUBLIC + saved), saved);
+    await b.login(user.sid);
+    await b.nav('/ho-so', 400);
+    const dialogOpen = () => ev(`document.querySelector('[data-avatar-confirm]').open`);
+    check('"Xóa ảnh" shown next to "Chọn ảnh"', await ev(`(() => { const d = document.querySelector('[data-avatar-delete]'); return !!d && !d.hidden && d.getBoundingClientRect().width > 0 && d.textContent.trim() === 'Xóa ảnh'; })()`));
+    await b.clickAt('[data-avatar-delete]'); await sleep(200);
+    check('clicking it asks "Xóa ảnh đại diện?" first (nothing sent yet)', (await dialogOpen()) && (await ev(`location.pathname`)) === '/ho-so' && (await ev(`document.activeElement.hasAttribute('data-confirm-cancel')`)));
+    await b.shot('avatar-delete-confirm');
+    await b.clickAt('[data-confirm-cancel]'); await sleep(200);
+    check('"Hủy" closes the box and keeps the photo', !(await dialogOpen()) && (await ev(`document.querySelector('[data-avatar-preview]').tagName`)) === 'IMG');
+    await b.clickAt('[data-avatar-delete]'); await sleep(200);
+    const l = b.waitLoad(); await b.clickAt('[data-confirm-ok]'); await l; await sleep(300);
+    const after = await ev(`({ msg: (document.querySelector('.form-alert.success') || {}).textContent, initials: (document.querySelector('.avatar-lg.avatar-fallback') || {}).textContent, del: !!document.querySelector('[data-avatar-delete]') })`);
+    check('"Xóa ảnh" confirmed: "Đã xóa ảnh đại diện.", the two letters (ZX), no button', after.msg === 'Đã xóa ảnh đại diện.' && after.initials === 'ZX' && !after.del, after);
+    check('… and the photo file is deleted', !existsSync(PUBLIC + saved));
+    await b.shot('avatar-deleted');
+  });
+
+  await part(b, 'sign-up checks, then login, then Trang chủ', async () => {
+    const d = await db();
+    const post = async (path, fields, lang = 'vi') => {
+      const res = await fetch(BASE + path, { method: 'POST', redirect: 'manual', headers: { cookie: `lang=${lang}` }, body: new URLSearchParams(fields) });
+      return { status: res.status, location: res.headers.get('location'), text: await res.text() };
+    };
+    const errorsIn = (html) => Object.fromEntries([...html.matchAll(/data-error-for="(\w+)">([^<]*)</g)].map((m) => [m[1], m[2].replace(/&#39;/g, "'")]));
+    const ok = { name: 'ZZ Signup', email: `zztest-signup-${stamp}@example.com`, phone: '', schoolOrCompany: '', password: 'secret1', confirmPassword: 'secret1' };
+
+    // Server checks (the browser checks are bypassed here)
+    let r = await post('/dang-ky', { name: ' ', email: '', password: '', confirmPassword: '' });
+    let e = errorsIn(r.text);
+    check('server: empty form refused, one message per required box (name, email, password, confirmation)', r.status === 400 && e.name === 'Vui lòng nhập họ và tên.' && e.email === 'Vui lòng nhập email.' && e.password === 'Vui lòng nhập mật khẩu.' && e.confirmPassword === 'Vui lòng nhập lại mật khẩu.' && !e.phone, e);
+    r = await post('/dang-ky', { ...ok, email: 'not-an-email', phone: '12ab', password: 'abc', confirmPassword: 'abd' });
+    e = errorsIn(r.text);
+    check('server: bad email, bad phone, short password, mismatched confirmation each named', r.status === 400 && e.email === 'Email không hợp lệ.' && e.phone === 'Số điện thoại không hợp lệ.' && e.password === 'Mật khẩu cần tối thiểu 6 ký tự.' && e.confirmPassword === 'Mật khẩu xác nhận không khớp.', e);
+    check('server: what was typed is kept (name, email, phone)', r.text.includes('value="ZZ Signup"') && r.text.includes('value="not-an-email"') && r.text.includes('value="12ab"'));
+    r = await post('/dang-ky', { ...ok, password: 'secret1', confirmPassword: 'secret2' }, 'en');
+    check('server: messages in English on the English site', r.status === 400 && errorsIn(r.text).confirmPassword === "The passwords don't match.", errorsIn(r.text));
+    check('server: nothing was saved by the refused sign-ups', !(await d.collection('users').findOne({ email: ok.email })));
+    r = await post('/dang-ky', ok);
+    check('server: name + email + password is enough (phone and school are optional) → login page, not logged in', r.status === 303 && r.location === '/dang-nhap', r.status);
+    r = await post('/dang-ky', { ...ok, email: ok.email.toUpperCase() });
+    check('server: an email already registered is refused (on the email box)', r.status === 400 && /đã được đăng ký/.test(errorsIn(r.text).email || ''), errorsIn(r.text));
+
+    // Browser: the form checks before sending
+    await b.clearCookie('connect.sid');
+    let posts = 0;
+    b.on('Network.requestWillBeSent', (p) => { if (p.request.method === 'POST' && p.request.url.endsWith('/dang-ky')) posts++; });
+    await b.nav('/dang-ky', 300);
+    check('the optional boxes say so; the password box has a hint', await ev(`!!(document.querySelector('label[for="regPhone"] .form-optional') && document.querySelector('label[for="regSchool"] .form-optional') && document.querySelector('[data-hint-for="password"]'))`));
+    await ev(`document.querySelector('[data-register-form] button[type=submit]').click()`); await sleep(300);
+    let st = await ev(`({ errors: [...document.querySelectorAll('[data-register-form] [data-error-for]')].map((x) => x.getAttribute('data-error-for')), focus: document.activeElement && document.activeElement.name, path: location.pathname })`);
+    check('browser: empty form not sent; name, email, password and confirmation marked; cursor in "Họ và tên"', posts === 0 && JSON.stringify(st.errors) === JSON.stringify(['name', 'email', 'password', 'confirmPassword']) && st.focus === 'name' && st.path === '/dang-ky', { posts, st });
+    const typeIn = async (id, text) => { await ev(`(() => { const i = document.getElementById('${id}'); i.focus(); i.select(); })()`); await send('Input.insertText', { text }); };
+    await typeIn('regName', 'ZZ Signup Browser');
+    check('browser: the name error goes away while typing', await ev(`!document.querySelector('[data-error-for="name"]') && !document.getElementById('regName').classList.contains('is-invalid')`));
+    await typeIn('regEmail', 'abc@'); await ev(`document.getElementById('regEmail').blur()`);
+    check('browser: a wrong email is named on leaving the box', (await ev(`(document.querySelector('[data-error-for="email"]') || {}).textContent`)) === 'Email không hợp lệ.');
+    // The line under "Mật khẩu" says while typing how many characters are still needed
+    const lengthLine = () => ev(`(() => { const p = document.querySelector('[data-password-length]'); return { text: p.textContent, short: p.classList.contains('is-short'), ok: p.classList.contains('is-ok'), shown: !p.hidden }; })()`);
+    await typeIn('regPassword', 'abc');
+    let len = await lengthLine();
+    check('password "abc": "Còn thiếu 3 ký tự (tối thiểu 6)." while typing', len.text === 'Còn thiếu 3 ký tự (tối thiểu 6).' && len.short && len.shown, len);
+    await ev(`document.getElementById('regPassword').blur()`);
+    check('… and leaving the box with 3 characters names the rule in red', (await ev(`(document.querySelector('[data-error-for="password"]') || {}).textContent`)) === 'Mật khẩu cần tối thiểu 6 ký tự.');
+    await ev(`document.getElementById('regPassword').focus()`); await send('Input.insertText', { text: 'def' });
+    len = await lengthLine();
+    check('6 characters: "Đủ độ dài ✓" in green, the red message gone', len.text === 'Đủ độ dài ✓' && len.ok && len.shown && !(await ev(`!!document.querySelector('[data-error-for="password"]')`)), len);
+    await typeIn('regPassword', 'secret1');
+    await typeIn('regConfirm', 'secret');
+    check('browser: the confirmation says at once when it does not match', (await ev(`(document.querySelector('[data-error-for="confirmPassword"]') || {}).textContent`)) === 'Mật khẩu xác nhận không khớp.');
+    await send('Input.insertText', { text: '1' });
+    check('… and when it does', await ev(`!document.querySelector('[data-error-for="confirmPassword"]') && (document.querySelector('[data-ok-for="confirmPassword"]') || {}).textContent === 'Mật khẩu xác nhận khớp.'`));
+    await b.shot('signup-checks');
+    const browserEmail = `zztest-signup2-${stamp}@example.com`;
+    await typeIn('regEmail', browserEmail);
+    let l = b.waitLoad(); await ev(`document.querySelector('[data-register-form] button[type=submit]').click()`); await l; await sleep(300);
+    st = await ev(`({ path: location.pathname, note: (document.querySelector('[data-registered]') || {}).textContent, email: document.getElementById('loginEmail').value, focus: document.activeElement && document.activeElement.id, loggedIn: !!document.querySelector('.user-menu') })`);
+    check('sign-up → the login page: welcome note, new email filled in, cursor in the password box, not logged in yet',
+      st.path === '/dang-nhap' && /Đăng ký thành công/.test(st.note || '') && st.email === browserEmail && st.focus === 'loginPassword' && !st.loggedIn, st);
+    await b.nav('/dang-nhap', 200);
+    check('the welcome note shows once only', !(await ev(`!!document.querySelector('[data-registered]')`)));
+    await typeIn('loginEmail', browserEmail); await typeIn('loginPassword', 'secret1');
+    await b.reducedMotion(false); // normal speed first (this PC has "reduced motion" on); the admin login below checks it on
+    l = b.waitLoad(); await ev(`document.querySelector('form[action="/dang-nhap"]').requestSubmit()`); await l; await sleep(300);
+    check('logging in → Trang chủ, logged in', await ev(`location.pathname === '/' && !!document.querySelector('.user-menu')`));
+    const toast = () => ev(`(() => { const x = document.querySelector('[data-site-toast]'); if (!x) return null; const r = x.getBoundingClientRect(); return { text: x.textContent.replace(/\\s+/g, ' ').trim(), role: x.getAttribute('role'), visible: r.width > 0 && +getComputedStyle(x).opacity > 0.5, belowHeader: r.top >= document.querySelector('.site-header').getBoundingClientRect().bottom }; })()`);
+    let tt = await toast();
+    check('a notice says "Đăng nhập thành công. Xin chào, ZZ Signup Browser!" under the header', tt && tt.visible && tt.role === 'status' && tt.belowHeader && /^Đăng nhập thành công\. Xin chào, ZZ Signup Browser!/.test(tt.text), tt);
+    await b.shot('login-notice');
+    // After ~4 s it slides out to the right, off the screen (not a blink), then is removed
+    const box = () => ev(`(() => { const x = document.querySelector('[data-site-toast]'); if (!x) return null; const r = x.getBoundingClientRect(); const cs = getComputedStyle(x);
+      return { left: Math.round(r.left), top: Math.round(r.top), leaving: x.classList.contains('is-leaving'), anim: cs.animationName, dur: parseFloat(cs.animationDuration) }; })()`);
+    const start = await box();
+    let leaving = null;
+    for (let i = 0; i < 150 && !leaving; i++) { await sleep(40); const x = await box(); if (x && x.leaving) leaving = x; }
+    await sleep(Math.round((leaving ? leaving.dur : 0.5) * 1000 * 0.45));
+    const mid = await box();
+    check('after a few seconds it slides out to the right: still on the way, already moved', !!leaving && leaving.anim === 'site-toast-out' && leaving.dur >= 0.5 && mid && mid.left > start.left + 20, { start, leaving, mid });
+    await b.shot('login-notice-leaving');
+    await sleep(900);
+    check('… and is gone once off the screen', (await toast()) === null);
+    await b.nav('/', 200);
+    check('reloading Trang chủ doesn\'t show it again', (await toast()) === null);
+
+    // Every role lands on Trang chủ; a logged-out visitor sees no "Quản trị" / "Yêu cầu của tôi"
+    const admin = await createUser('flow-admin', 'admin');
+    await b.clearCookie('connect.sid');
+    await b.nav('/', 200);
+    check('logged out: no "Quản trị" or "Yêu cầu của tôi" link anywhere on the page', await ev(`!document.querySelector('a[href="/admin"], a[href^="/admin/"], a[href="/tai-khoan"]')`));
+    await b.nav('/admin', 200);
+    check('opening /admin logged out → the login page', (await ev('location.pathname')) === '/dang-nhap');
+    await typeIn('loginEmail', admin.email); await typeIn('loginPassword', admin.password);
+    // This time on a phone, with "reduced motion" on (as on the owner's PC)
+    await b.viewport(390, 800); await b.reducedMotion(true);
+    l = b.waitLoad(); await ev(`document.querySelector('form[action="/dang-nhap"]').requestSubmit()`); await l; await sleep(300);
+    check('an admin logging in also lands on Trang chủ, with "Quản trị" in their name menu', await ev(`location.pathname === '/' && !!document.querySelector('.user-menu a[href="/admin"]')`));
+    tt = await toast();
+    check('the admin gets the notice too', tt && /Đăng nhập thành công/.test(tt.text), tt);
+    const phoneStart = await box();
+    check('phone: the notice sits at the bottom of the screen', phoneStart && phoneStart.top > 400, phoneStart);
+    await b.hover('[data-site-toast]');
+    await sleep(4600);
+    const held = await box();
+    check('while the pointer is on it, it stays (no countdown)', held && !held.leaving, held);
+    await ev(`document.querySelector('[data-site-toast-close]').click()`); await sleep(30);
+    const out = await box();
+    check('× starts the slide at once; with reduced motion it still lasts a visible while (≥ 0.35 s)', out && out.leaving && out.anim === 'site-toast-out' && out.dur >= 0.35, out);
+    await sleep(Math.round(out.dur * 1000 * 0.5));
+    const outMid = await box();
+    check('phone: it slides down, off the bottom of the screen', outMid && outMid.top > phoneStart.top + 15, { phoneStart, outMid });
+    await b.shot('login-notice-phone-leaving');
+    await sleep(800);
+    check('… then it is gone', (await toast()) === null);
+    await b.viewport(1280, 900); await send('Emulation.setEmulatedMedia', { features: [] }); // back to the PC's own setting
+    await b.clearCookie('connect.sid');
   });
 });

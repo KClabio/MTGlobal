@@ -21,8 +21,13 @@ export async function createUser(tag, role = 'admin') {
   const email = `zztest-${tag}-${STAMP}@example.com`;
   const password = 'secret1';
   const res = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: `ZZ ${tag}`, email, password, confirmPassword: password }) });
-  const cookie = res.headers.getSetCookie().find((c) => c.startsWith('connect.sid='));
-  if (!cookie) throw new Error(`register failed for ${email} (HTTP ${res.status})`);
+  if (res.status !== 303) throw new Error(`register failed for ${email} (HTTP ${res.status})`);
+  // Signing up doesn't log in: log in like a visitor would
+  const login = await fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ email, password }) });
+  const cookie = login.headers.getSetCookie().find((c) => c.startsWith('connect.sid='));
+  if (!cookie) throw new Error(`login failed for ${email} (HTTP ${login.status})`);
+  // Open Trang chủ once: it uses up the "Đăng nhập thành công" notice, which would otherwise cover the account menu
+  await fetch(BASE + '/', { headers: { cookie: cookie.split(';')[0], accept: 'text/html' } });
   const d = await db();
   const user = await d.collection('users').findOne({ email });
   users.push(user._id);

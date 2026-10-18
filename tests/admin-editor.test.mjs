@@ -71,7 +71,7 @@ await suite(async (b) => {
       const r = await fetch(BASE + p, { headers: { cookie: `connect.sid=${cust.sid}` }, redirect: 'manual' });
       check(`customer gets 403 on ${p}`, r.status === 403, r.status);
     }
-    const custPost = await fetch(BASE + '/admin/trang/workshop/mac-dinh', { method: 'POST', headers: { cookie: `connect.sid=${cust.sid}` }, redirect: 'manual' });
+    const custPost = await fetch(BASE + '/admin/cai-dat/khoi-phuc', { method: 'POST', body: new URLSearchParams({ pages: 'workshop' }), headers: { cookie: `connect.sid=${cust.sid}` }, redirect: 'manual' });
     check('customer cannot reset a page (403)', custPost.status === 403, custPost.status);
   });
 
@@ -87,17 +87,29 @@ await suite(async (b) => {
       check('editor has no banner fields (they live in Cài đặt chung)', !(await ev("!!document.querySelector('#subtitleVi')")));
       const before = await ev(`[...document.querySelectorAll('[data-section-list] > [data-section]')].map(s => s.getAttribute('data-kind'))`);
       check('editor lists the 4 workshop sections with the right types', JSON.stringify(before) === '["text","cards","gallery","buttons"]', before);
+      check('all sections start closed: one short line each', await ev(`[...document.querySelectorAll('[data-section-list] > [data-section]')].every((s) => !s.classList.contains('is-open') && s.querySelector('.ps-body').hidden)`));
+      // Shown for its type = not hidden by data-kinds / data-item-kinds (sections are closed, so not on screen yet)
       const vis = await ev(`(() => { const s = document.querySelectorAll('[data-section-list] > [data-section]');
-        const shown = (sec, sel) => { const el = sec.querySelector(sel); return !!el && el.getClientRects().length > 0; };
+        const shown = (sec, sel) => { const el = sec.querySelector(sel); return !!el && !el.closest('[data-kinds][hidden], [data-item-kinds][hidden]'); };
         return { cardsMedia: shown(s[1], '[data-media-list]'), cardsItems: shown(s[1], '[data-item-list]'), galleryItems: shown(s[2], '[data-item-list]'), galleryMedia: shown(s[2], '[data-media-list]'), num: s[2].querySelector('[data-row-num]').textContent,
           itemLabel: s[1].querySelector('[data-item] [data-item-label]').textContent,
-          buttonsHide: ['[data-field="columns"]', '[data-field="titleVi"]', '[data-field="subtitleVi"]', '[data-field="textVi"]', '[data-media-list]'].every(sel => !shown(s[3], sel)), buttonsUrl: shown(s[3], '[data-item-field="url"]') }; })()`);
-      check('fields follow the section type (cards: items, no media; gallery: media, no items); rows numbered', !vis.cardsMedia && vis.cardsItems && !vis.galleryItems && vis.galleryMedia && vis.num === '3' && vis.itemLabel === 'Thẻ' && vis.buttonsHide && vis.buttonsUrl, vis);
+          buttonsHide: ['[data-field="titleVi"]', '[data-field="subtitleVi"]', '[data-field="textVi"]', '[data-media-list]', '[data-add-item]', '[data-item] [data-remove-item]', '[data-item] [data-move]', '[data-item] .item-drag'].every(sel => !shown(s[3], sel)),
+          buttonsLabel: shown(s[3], '[data-item] [data-item-field="titleVi"]') && shown(s[3], '[data-item] [data-item-field="titleEn"]'),
+          linkHidden: [...s[3].querySelectorAll('[data-item-field="url"], [data-item-field="primary"]')].every((i) => i.type === 'hidden'),
+          textNoButtons: !shown(s[0], '[data-item-list]'),
+          noSettings: !document.querySelector('.ps-options, [data-lang-switch], [data-section] select') }; })()`);
+      check('fields follow the section type (cards: items, no media; gallery: media, no items); rows numbered', !vis.cardsMedia && vis.cardsItems && !vis.galleryItems && vis.galleryMedia && vis.num === '3' && vis.itemLabel === 'Thẻ', vis);
+      check('buttons: only their wording (VI + EN) can be changed: no link, no "main button", no add / move / delete', vis.buttonsHide && vis.buttonsLabel && vis.linkHidden, vis);
+      check('a text section has no button area; no "Tuỳ chọn hiển thị", no language switch, no dropdowns', vis.textNoButtons && vis.noSettings, vis);
       await setVal('[data-section-list] > [data-section]:nth-child(2) [data-item] [data-item-field="titleVi"]', 'Lắp ráp & chế tạo ZZ');
-      // Add a steps section with two steps
+      // Add a steps section with two steps, through the type picker
       await click('[data-add-section]');
       await sleep(300);
-      await ev(`(() => { const s = document.querySelector('[data-section-list] > [data-section]:last-child'); const k = s.querySelector('[data-section-kind]'); k.value = 'steps'; k.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+      check('"Thêm mục mới" opens the type picker with 5 types (no "Nút bấm")', await ev(`!document.querySelector('[data-type-picker]').hidden && document.querySelectorAll('[data-type-picker] [data-add-kind]').length === 5 && !document.querySelector('[data-add-kind="buttons"]')`));
+      await click('[data-type-picker] [data-add-kind="steps"]');
+      await sleep(300);
+      const added = await ev(`(() => { const s = document.querySelector('[data-section-list] > [data-section]:last-child'); return { kind: s.getAttribute('data-kind'), open: s.classList.contains('is-open'), others: document.querySelectorAll('[data-section].is-open').length, picker: document.querySelector('[data-type-picker]').hidden, focus: document.activeElement && document.activeElement.getAttribute('data-field') }; })()`);
+      check('picked "Các bước": new section added open (the only open one), picker closed, title box focused', added.kind === 'steps' && added.open && added.others === 1 && added.picker && added.focus === 'titleVi', added);
       await setVal('[data-section-list] > [data-section]:last-child [data-field="titleVi"]', 'ZZ Quy trình workshop');
       await setVal('[data-section-list] > [data-section]:last-child [data-field="titleEn"]', 'ZZ Workshop flow');
       for (const [vi, en] of [['ZZ Bước một', 'ZZ Step one'], ['ZZ Bước hai', 'ZZ Step two']]) {
@@ -111,15 +123,20 @@ await suite(async (b) => {
       // Move the new section to the top (same DOM move the drag performs)
       await ev(`(() => { const l = document.querySelector('[data-section-list]'); l.insertBefore(l.lastElementChild, l.firstElementChild); return true; })()`);
       await sleep(150);
-      check('"attach to section above" is hidden for the first section only', await ev(`(() => { const s = [...document.querySelectorAll('[data-section-list] > [data-section]')]; return s[0].querySelector('.page-continued').hidden && !s[1].querySelector('.page-continued').hidden; })()`));
-      // Gallery: real drag of the 2nd media item above the 1st
+      const side = await ev(`(() => { const s = document.querySelector('[data-section-list] > [data-section]:first-child'); const r = (sel) => s.querySelector(sel).getBoundingClientRect();
+        const vi = r('[data-field="titleVi"]'), en = r('[data-field="titleEn"]'), ivi = r('[data-item].is-open [data-item-field="titleVi"]'), ien = r('[data-item].is-open [data-item-field="titleEn"]');
+        return { section: Math.abs(vi.top - en.top) < 2 && vi.right < en.left, item: Math.abs(ivi.top - ien.top) < 2 && ivi.right < ien.left, cont: s.querySelector('[data-field="continued"]').value }; })()`);
+      check('Vietnamese box on the left, English on the right (section and step); a new section is not joined to the one above', side.section && side.item && side.cont === '0', side);
+      // Gallery: open it (the steps section closes), then a real drag of the 2nd photo tile onto the 1st
       const gallerySel = '[data-section-list] > [data-section][data-kind="gallery"]';
+      await click(`${gallerySel} .ps-summary`); await sleep(300);
+      check('opening the gallery closes the other section', await ev(`document.querySelectorAll('[data-section].is-open').length === 1 && document.querySelector('${gallerySel}').classList.contains('is-open')`));
       const mediaBefore = await ev(`[...document.querySelectorAll('${gallerySel} [data-media] [data-media-field="src"]')].map(i => i.value)`);
-      const pts = await ev(`(() => { const m = document.querySelectorAll('${gallerySel} [data-media]'); m[1].scrollIntoView({ block: 'center' }); const h = m[1].querySelector('.media-drag').getBoundingClientRect(); const t = m[0].getBoundingClientRect(); return { x: h.left + h.width / 2, y: h.top + h.height / 2, ty: t.top + 10 }; })()`);
+      const pts = await ev(`(() => { const m = document.querySelectorAll('${gallerySel} [data-media]'); m[1].scrollIntoView({ block: 'center' }); const h = m[1].querySelector('.media-drag').getBoundingClientRect(); const t = m[0].getBoundingClientRect(); return { x: h.left + h.width / 2, y: h.top + h.height / 2, tx: h.left + h.width / 2, ty: t.top + t.height * 0.3 }; })()`);
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x, y: pts.y });
       await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pts.x, y: pts.y, button: 'left', buttons: 1, clickCount: 1 });
-      for (let i = 1; i <= 10; i++) { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x + 10, y: pts.y + ((pts.ty - pts.y) * i) / 10, button: 'left', buttons: 1 }); await sleep(30); }
-      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pts.x + 10, y: pts.ty, button: 'left', buttons: 0, clickCount: 1 });
+      for (let i = 1; i <= 10; i++) { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x + ((pts.tx - pts.x) * i) / 10, y: pts.y + ((pts.ty - pts.y) * i) / 10, button: 'left', buttons: 1 }); await sleep(30); }
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pts.tx, y: pts.ty, button: 'left', buttons: 0, clickCount: 1 });
       await sleep(300);
       const mediaAfterDrag = await ev(`[...document.querySelectorAll('${gallerySel} [data-media] [data-media-field="src"]')].map(i => i.value)`);
       check('dragging a photo reorders the gallery', mediaAfterDrag[0] === mediaBefore[1] && mediaAfterDrag[1] === mediaBefore[0], { mediaBefore, mediaAfterDrag });
@@ -166,27 +183,45 @@ await suite(async (b) => {
       check('public page: every image decodes and both videos (incl. the uploaded one) load', loaded.broken.length === 0 && loaded.vids === 2 && loaded.badVids === 0, loaded);
       // Validation
       await nav('/admin/trang/workshop');
-      await click('[data-add-section]'); await sleep(200);
-      await ev(`(() => { const s = document.querySelector('[data-section-list] > [data-section]:last-child'); const k = s.querySelector('[data-section-kind]'); k.value = 'cards'; k.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
-      await click('[data-add-section]'); await sleep(200);
-      await ev(`(() => { const s = document.querySelector('[data-section-list] > [data-section]:last-child'); const k = s.querySelector('[data-section-kind]'); k.value = 'buttons'; k.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+      await click('[data-add-section]'); await sleep(200); await click('[data-add-kind="cards"]'); await sleep(200);
+      await click('[data-add-section]'); await sleep(200); await click('[data-add-kind="steps"]'); await sleep(200);
+      await setVal('[data-section-list] > [data-section]:last-child [data-field="titleVi"]', 'ZZ Các bước');
       await click('[data-section-list] > [data-section]:last-child [data-add-item]'); await sleep(100);
-      await setVal('[data-section-list] > [data-section]:last-child [data-item] [data-item-field="titleVi"]', 'ZZ Nút xấu');
-      await setVal('[data-section-list] > [data-section]:last-child [data-item] [data-item-field="url"]', 'javascript:alert(1)');
+      await setVal('[data-section-list] > [data-section]:last-child [data-item] [data-item-field="textVi"]', 'ZZ Bước không có tiêu đề');
       const savedBefore = JSON.stringify(await workshopDoc());
       l = b.waitLoad(); await click('.page-form-actions button[type="submit"]'); await l; await sleep(400);
-      const err = await ev(`(() => ({ alert: (document.querySelector('.form-alert.error') || {}).textContent || '', toastErr: document.getElementById('adminToast').classList.contains('is-error'), sections: document.querySelectorAll('[data-section-list] > [data-section]').length, firstTitle: document.querySelector('[data-section-list] > [data-section]:last-child [data-item] [data-item-field="titleVi"]').value }))()`);
-      check('invalid save: red error lists the empty section and the bad link', err.toastErr && /Mục 6: chưa có tiêu đề/.test(err.alert) && /Mục 7, nút 1: liên kết/.test(err.alert), err);
-      check('invalid save keeps what was typed (7 sections, the button text) and saves nothing', err.sections === 7 && err.firstTitle === 'ZZ Nút xấu' && JSON.stringify(await workshopDoc()) === savedBefore, { sections: err.sections });
-      // Reset to defaults through the confirm dialog
+      const err = await ev(`(() => ({ alert: (document.querySelector('.form-alert.error') || {}).textContent || '', toastErr: document.getElementById('adminToast').classList.contains('is-error'), sections: document.querySelectorAll('[data-section-list] > [data-section]').length, typed: document.querySelector('[data-section-list] > [data-section]:last-child [data-item] [data-item-field="textVi"]').value }))()`);
+      check('invalid save: red error lists the empty section and the step without a title', err.toastErr && /Mục 6: chưa có tiêu đề/.test(err.alert) && /Mục 7, dòng 1: vui lòng nhập tiêu đề/.test(err.alert), err);
+      check('invalid save keeps what was typed (7 sections, the step text) and saves nothing', err.sections === 7 && err.typed === 'ZZ Bước không có tiêu đề' && JSON.stringify(await workshopDoc()) === savedBefore, { sections: err.sections });
+      const marked = await ev(`[...document.querySelectorAll('[data-section-list] > [data-section]')].map((s, i) => (i + 1) + (s.classList.contains('has-error') ? '!' : '') + (s.classList.contains('is-open') ? 'o' : ''))`);
+      check('the sections named in the errors are marked, and the first of them is open', marked[5] === '6!o' && marked[6] === '7!' && marked.slice(0, 5).every((x) => /^\d$/.test(x)), marked);
+      const badStep = await ev(`(() => { const it = document.querySelector('[data-section-list] > [data-section]:nth-child(7) [data-item]'); return { err: it.classList.contains('has-error'), open: it.classList.contains('is-open') && !it.querySelector('.pi-body').hidden }; })()`);
+      check('"Mục 7, dòng 1": that step is marked and already open inside its section', badStep.err && badStep.open, badStep);
+      // Reset to defaults: no longer in the page editor, but in Cài đặt chung → Khôi phục mặc định, through the confirm dialog
       await nav('/admin/trang/workshop');
-      await click('.page-reset button[type="submit"]'); await sleep(450);
+      check('the page editor has no "Khôi phục nội dung mặc định" button any more', await ev(`!document.querySelector('form[action*="mac-dinh"]') && !/Khôi phục nội dung mặc định/.test(document.querySelector('.admin-main, main, body').textContent)`));
+      const otherBefore = (await d.collection('solutionpages').findOne({ slug: 'dao-tao' })).updatedAt;
+      await nav('/admin/cai-dat?tab=reset');
+      const resetTab = () => ev(`(() => { const btn = document.querySelector('[data-reset-submit]'); return { open: !document.getElementById('panel-reset').hidden, saveBar: !document.querySelector('[data-save-bar]').hidden && getComputedStyle(document.querySelector('[data-save-bar]')).display !== 'none',
+        rows: [...document.querySelectorAll('[data-reset-page]')].map((x) => x.value), disabled: btn.disabled, picked: document.querySelector('[data-reset-picked]').textContent }; })()`);
+      let rt = await resetTab();
+      check('Cài đặt chung → "Khôi phục mặc định" tab: one box per Giải pháp page, button off until a page is ticked, no "Lưu cài đặt" bar',
+        rt.open && !rt.saveBar && JSON.stringify(rt.rows) === JSON.stringify(['stem-lab', 'workshop', 'dao-tao', 'tap-huan']) && rt.disabled && rt.picked === '', rt);
+      await click('[data-reset-page][value="workshop"]'); await sleep(100);
+      rt = await resetTab();
+      check('ticking "Workshop trải nghiệm STEM" turns the button on ("Đã chọn 1 trang")', !rt.disabled && rt.picked === 'Đã chọn 1 trang', rt);
+      await b.shot('settings-reset-tab');
+      await click('[data-reset-submit]'); await sleep(450);
       const dlg = await ev(`(() => { const o = document.getElementById('confirmDialog'); return { open: !o.hidden, title: o.querySelector('.confirm-title').textContent, text: o.querySelector('.confirm-text').textContent }; })()`);
-      check('reset asks first in the custom dialog with its own title', dlg.open && dlg.title === 'Khôi phục nội dung mặc định' && /Khôi phục trang này/.test(dlg.text), dlg);
+      check('reset asks first in the custom dialog, naming the page', dlg.open && dlg.title === 'Khôi phục nội dung mặc định' && /“Workshop trải nghiệm STEM”/.test(dlg.text), dlg);
       l = b.waitLoad(); await click('#confirmDialog .confirm-ok'); await l; await sleep(400);
       docNow = await workshopDoc();
-      check('reset: default content back (4 sections), green toast', docNow.sections.map((s) => s.kind).join() === 'text,cards,gallery,buttons'
-        && await ev(`!document.getElementById('adminToast').classList.contains('is-error') && /khôi phục/i.test(document.getElementById('adminToast').textContent)`));
+      check('reset: default content back (4 sections), green toast naming the page, back on the same tab', docNow.sections.map((s) => s.kind).join() === 'text,cards,gallery,buttons'
+        && await ev(`!document.getElementById('adminToast').classList.contains('is-error') && /khôi phục/i.test(document.getElementById('adminToast').textContent) && /Workshop/.test(document.getElementById('adminToast').textContent) && !document.getElementById('panel-reset').hidden`));
+      check('reset: the pages that were not ticked are untouched', String((await d.collection('solutionpages').findOne({ slug: 'dao-tao' })).updatedAt) === String(otherBefore));
+      const none = await fetch(BASE + '/admin/cai-dat/khoi-phuc', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ pages: 'not-a-page' }), headers: { cookie: `connect.sid=${admin.sid}` } });
+      check('nothing (or an unknown page) ticked: nothing reset, back to the tab', none.status === 302 && none.headers.get('location') === '/admin/cai-dat?tab=reset');
+      await adminGet('/admin/cai-dat?tab=reset'); // shows (and clears) its red notice
       check('reset deleted the uploaded test files, kept shipped assets', uploaded.every((u) => !existsSync(PUB + u)) && existsSync(PUB + removedSrc), uploaded.filter((u) => existsSync(PUB + u)));
       await nav('/admin/du-an');
       await click('form[data-confirm] button[type="submit"]'); await sleep(400);
@@ -202,27 +237,152 @@ await suite(async (b) => {
     }
   });
 
+  await part(b, 'page editor: outline, VI | EN side by side, undo, ▲▼, unsaved changes', async () => {
+    const workshop = () => d.collection('solutionpages').findOne({ slug: 'workshop' });
+    const S = (n) => `[data-section-list] > [data-section]:nth-child(${n})`;
+    const kinds = () => ev(`[...document.querySelectorAll('[data-section-list] > [data-section]')].map((s) => s.getAttribute('data-kind')).join()`);
+    const toastNow = () => ev(`(() => { const t = document.getElementById('adminToast'); const a = t.querySelector('.toast-action'); return { shown: !t.hidden, text: t.querySelector('.toast-text').textContent, action: a.hidden ? '' : a.textContent }; })()`);
+    try {
+      await signIn();
+      await b.reducedMotion();
+      await nav('/admin/trang/workshop');
+      const sum = await ev(`[...document.querySelectorAll('[data-section-list] > [data-section]')].map((s) => s.querySelector('[data-kind-label]').textContent + '|' + s.querySelector('[data-summary-title]').textContent + '|' + s.querySelector('[data-summary-meta]').textContent)`);
+      check('closed sections show their type, title (or the start of the text) and what they hold', sum[0].startsWith('Đoạn văn|Trải nghiệm STEM là một') && /^Thẻ thông tin\|.+\|3 thẻ$/.test(sum[1]) && sum[2] === 'Ảnh & video|Hình ảnh workshop|4 ảnh/video' && /^Nút bấm\|.+\|2 nút$/.test(sum[3]), sum);
+      check('nothing changed yet: no "unsaved" marker, leaving is not held up', await ev(`(() => { const e = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(e); return document.querySelector('[data-unsaved]').hidden && !e.defaultPrevented; })()`));
+      await click(`${S(2)} .ps-summary`);
+      check('reduced motion: the section opens straight away', await ev(`document.querySelector('${S(2)}').classList.contains('is-open')`));
+      // Cards fold inside the section: one line each, one open at a time
+      const itemState = (n) => ev(`[...document.querySelectorAll('${S(n)} [data-item]')].map((it) => (it.classList.contains('is-open') && !it.querySelector('.pi-body').hidden ? 'o:' : '-:') + it.querySelector('[data-item-summary]').textContent)`);
+      let cardsNow = await itemState(2);
+      check('cards start closed, each line shows its title', cardsNow.length === 3 && cardsNow.every((x) => x.startsWith('-:') && x.length > 3), cardsNow);
+      await click(`${S(2)} [data-item]:nth-child(1) .pi-summary`);
+      await click(`${S(2)} [data-item]:nth-child(2) [data-item-toggle].pi-edit`);
+      cardsNow = await itemState(2);
+      check('opening card 2 closes card 1 (one open at a time)', cardsNow.map((x) => x[0]).join('') === '-o-', cardsNow);
+      await click(`${S(2)} [data-item]:nth-child(1) .pi-summary`);
+      const both = await ev(`(() => { const s = document.querySelector('${S(2)}'); const on = (sel) => !!s.querySelector(sel).offsetParent; return ['[data-field="titleVi"]', '[data-field="titleEn"]', '[data-item] [data-item-field="titleVi"]', '[data-item] [data-item-field="titleEn"]', '[data-item] [data-item-field="textVi"]', '[data-item] [data-item-field="textEn"]'].every(on); })()`);
+      check('Vietnamese and English boxes both show (section and open card)', both);
+      await setVal(`${S(2)} [data-item] [data-item-field="titleEn"]`, '');
+      let en = await ev(`({ ph: document.querySelector('${S(2)} [data-item] [data-item-field="titleEn"]').placeholder, vi: document.querySelector('${S(2)} [data-item] [data-item-field="titleVi"]').value, flag: !document.querySelector('${S(2)} [data-flag-en]').hidden, unsaved: !document.querySelector('[data-unsaved]').hidden })`);
+      check('an empty English box shows the Vietnamese text as a hint; the section is flagged EN; "unsaved" shows', en.ph === en.vi && en.vi && en.flag && en.unsaved, en);
+      check('with unsaved changes, leaving the page asks first', await ev(`(() => { const e = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; })()`));
+      check('… and the card line has its own EN mark', await ev(`!document.querySelector('${S(2)} [data-item]:nth-child(1) [data-item-flag-en]').hidden && document.querySelector('${S(2)} [data-item]:nth-child(2) [data-item-flag-en]').hidden`));
+      await click(`${S(2)} [data-item] [data-item-field="titleEn"]`); await b.type('ZZ Build');
+      en = await ev(`({ flag: !document.querySelector('${S(2)} [data-flag-en]').hidden, item: !document.querySelector('${S(2)} [data-item] [data-item-flag-en]').hidden, line: document.querySelector('${S(2)} [data-item] [data-item-summary]').textContent, vi: document.querySelector('${S(2)} [data-item] [data-item-field="titleVi"]').value })`);
+      check('filling it in clears the flags; the card line keeps showing the Vietnamese title', !en.flag && !en.item && en.line === en.vi, en);
+      // A closed section still shows its EN mark
+      const btnEn = await ev(`document.querySelector('${S(4)} [data-item] [data-item-field="titleEn"]').value`);
+      await setVal(`${S(4)} [data-item] [data-item-field="titleEn"]`, '');
+      check('a closed section still shows the EN mark', await ev(`!document.querySelector('${S(4)}').classList.contains('is-open') && !document.querySelector('${S(4)} [data-flag-en]').hidden`));
+      await setVal(`${S(4)} [data-item] [data-item-field="titleEn"]`, btnEn);
+      // Button lines show only the wording (the link is the developer's)
+      const btnLine = await ev(`document.querySelector('${S(4)} [data-item] [data-item-summary]').textContent`);
+      check('button lines show only the wording, not the link', btnLine && !btnLine.includes('→') && !btnLine.includes('/'), btnLine);
+      // "+ Thêm thẻ": the new card opens (the others close) with its box focused
+      await click(`${S(2)} [data-add-item]`); await sleep(100);
+      const added = await ev(`(() => { const its = [...document.querySelectorAll('${S(2)} [data-item]')]; const last = its.at(-1); return { n: its.length, open: its.map((it) => it.classList.contains('is-open') ? 'o' : '-').join(''), focus: document.activeElement === last.querySelector('[data-item-field="titleVi"]'), line: last.querySelector('[data-item-summary]').textContent }; })()`);
+      check('"+ Thêm thẻ" adds an open, focused card; the others close; empty line says so', added.n === 4 && added.open === '---o' && added.focus && added.line === '(chưa có nội dung)', added);
+      await click(`${S(2)} [data-item]:nth-child(4) [data-remove-item]`); await sleep(150);
+      // Undo a deleted section
+      const galleryName = await ev(`document.querySelector('${S(3)} [data-summary-title]').textContent`);
+      await click(`${S(3)} [data-remove-section]`); await sleep(200);
+      let t = await toastNow();
+      check('deleting a section: it goes, and the notification names it as shown, with "Hoàn tác"', (await kinds()) === 'text,cards,buttons' && t.shown && galleryName && t.text.includes(galleryName) && t.action === 'Hoàn tác', { t, galleryName });
+      await click('#adminToast .toast-action'); await sleep(200);
+      check('"Hoàn tác" puts it back in its place', (await kinds()) === 'text,cards,gallery,buttons');
+      // ▲ / ▼ for sections and items
+      await click(`${S(1)} .ps-tools [data-move="down"]`);
+      const moved = await ev(`(() => { const s = [...document.querySelectorAll('[data-section-list] > [data-section]')]; return { kinds: s.map((x) => x.getAttribute('data-kind')).join(), nums: s.map((x) => x.querySelector('[data-row-num]').textContent).join(), upFirst: s[0].querySelector('.ps-tools [data-move="up"]').disabled, downLast: s[3].querySelector('.ps-tools [data-move="down"]').disabled }; })()`);
+      check('▼ moves a section down; numbers follow; ▲ off on the first, ▼ off on the last', moved.kinds === 'cards,text,gallery,buttons' && moved.nums === '1,2,3,4' && moved.upFirst && moved.downLast, moved);
+      const items = () => ev(`[...document.querySelectorAll('${S(1)} [data-item] [data-item-field="titleVi"]')].map((i) => i.value)`);
+      const itemsBefore = await items();
+      await click(`${S(1)} [data-item]:nth-child(2) [data-move="up"]`);
+      const itemsAfter = await items();
+      check('▲ on a card swaps it with the one above', itemsAfter[0] === itemsBefore[1] && itemsAfter[1] === itemsBefore[0], { itemsBefore, itemsAfter });
+      await click(`${S(1)} [data-item]:nth-child(3) [data-remove-item]`); await sleep(150);
+      t = await toastNow();
+      check('deleting a card: gone, with "Hoàn tác"', (await items()).length === 2 && t.action === 'Hoàn tác', t);
+      await click('#adminToast .toast-action'); await sleep(150);
+      check('… and undo brings it back last', JSON.stringify(await items()) === JSON.stringify(itemsAfter));
+      // Phone width: an open section fits, VI above EN
+      await b.viewport(390, 844); await sleep(200);
+      await click(`${S(1)} [data-item]:nth-child(1) .pi-summary`); await sleep(100);
+      const phone = await ev(`(() => { const it = document.querySelector('${S(1)} [data-item]:nth-child(1)'); const vi = it.querySelector('[data-item-field="titleVi"]').getBoundingClientRect(), en = it.querySelector('[data-item-field="titleEn"]').getBoundingClientRect(); return { stacked: en.top > vi.bottom, overflow: document.documentElement.scrollWidth - innerWidth }; })()`);
+      check('390px: an open section with an open card fits the screen; English goes under Vietnamese', phone.stacked && phone.overflow <= 1, phone);
+      await b.viewport(1280, 900);
+      // Delete the gallery for real, then save: what was done in English is kept with the Vietnamese
+      await click(`${S(3)} [data-remove-section]`); await sleep(150);
+      { const l = b.waitLoad(); await click('.page-form-actions button[type="submit"]'); await l; await sleep(400); }
+      const doc = await workshop();
+      const cards = doc.sections[0];
+      check('saved: new order, gallery gone, swapped cards, English edit next to the Vietnamese', doc.sections.map((s) => s.kind).join() === 'cards,text,buttons' && cards.items.map((i) => i.titleVi).join('|') === itemsAfter.join('|')
+        && cards.items.find((i) => i.titleEn === 'ZZ Build')?.titleVi === itemsBefore[0], doc.sections.map((s) => s.kind));
+      const btns = doc.sections[2].items;
+      check('saved: the buttons keep their links and main button (set by the developer)', btns.length === 2 && btns.every((x) => /^\//.test(x.url)) && btns.some((x) => x.primary), btns);
+    } finally {
+      await b.reducedMotion(false);
+      await fetch(BASE + '/admin/cai-dat/khoi-phuc', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ pages: 'workshop' }), headers: { cookie: `connect.sid=${admin.sid}` } });
+    }
+  });
+
   await part(b, 'section display options (STEM Lab editor)', async () => {
     const before = await d.collection('solutionpages').findOne({ slug: 'stem-lab' });
     try {
       await signIn();
       await nav('/admin/trang/stem-lab');
-      const ed = await ev(`[...document.querySelectorAll('[data-section]')].map((s) => s.querySelector('[data-field="kind"]').value + ':' + s.querySelector('[data-field="display"]').value)`);
-      check('editor shows the display option of each section', ed[3] === 'cards:collapsed' && ed[7] === 'cards:compact' && ed[8] === 'gallery:tabs', ed);
-      const opts = await ev(`(() => { const s = document.querySelectorAll('[data-section]')[8]; const visible = () => [...s.querySelectorAll('[data-field="display"] option')].filter((o) => !o.hidden).map((o) => o.value);
-        const g = visible(); const k = s.querySelector('[data-field="kind"]'); k.value = 'cards'; k.dispatchEvent(new Event('change', { bubbles: true })); const c = visible(); const after = s.querySelector('[data-field="display"]').value;
-        k.value = 'gallery'; k.dispatchEvent(new Event('change', { bubbles: true })); s.querySelector('[data-field="display"]').value = 'tabs'; return { g, c, after }; })()`);
-      check('only the styles a type supports are offered; switching type drops an unsupported one', JSON.stringify(opts.g) === '["","collapsed","tabs"]' && JSON.stringify(opts.c) === '["","collapsed","compact"]' && opts.after === '', opts);
+      const ed = await ev(`[...document.querySelectorAll('[data-section-list] > [data-section]')].map((s) => s.querySelector('[data-field="kind"]').value + ':' + s.querySelector('[data-field="display"]').value)`);
+      // Compared with the page as it is now (the owner may have edited it), not with the original order
+      const want = before.sections.map((s) => s.kind + ':' + (s.display || ''));
+      check('editor carries each section\'s type and display setting', JSON.stringify(ed) === JSON.stringify(want) && ed.some((x) => /:(collapsed|compact|tabs)$/.test(x)), { ed, want });
+      check('display settings are kept as hidden values, not shown to the admin', await ev(`[...document.querySelectorAll('[data-section-list] [data-field="kind"], [data-section-list] [data-field="display"], [data-section-list] [data-field="columns"], [data-section-list] [data-field="ratio"], [data-section-list] [data-field^="nav"], [data-section-list] [data-field="continued"]')].every((i) => i.type === 'hidden')`));
+      // Photos: one row each (number, preview, VI | EN captions side by side), a count in the header, no "Hiện trọn ảnh" box
+      const tabsSel = '[data-section-list] > [data-section][data-kind="gallery"]:has([data-field="display"][value="tabs"])';
+      await click(`${tabsSel} .ps-summary`); await sleep(300);
+      const media = await ev(`(() => { const s = document.querySelector('${tabsSel}'); const rows = [...s.querySelectorAll('[data-media]')];
+        const vi = rows[0].querySelector('[data-media-field="captionVi"]').getBoundingClientRect(), en = rows[0].querySelector('[data-media-field="captionEn"]').getBoundingClientRect(), th = rows[0].querySelector('.page-media-thumb').getBoundingClientRect();
+        return { n: rows.length, nums: rows.map((r) => r.querySelector('[data-media-num]').textContent).join(), count: s.querySelector('[data-media-count]').textContent, title: getComputedStyle(s.querySelector('[data-media-title]')).fontSize,
+          side: Math.abs(vi.top - en.top) < 2 && vi.right < en.left && th.right < vi.left, thumb: Math.round(th.width), wholeCaption: rows.every((r) => { const c = r.querySelector('[data-media-field="captionVi"]'); return c.scrollHeight <= c.clientHeight + 2; }),
+          checkbox: s.querySelectorAll('[data-media] input[type="checkbox"]').length, contain: rows.map((r) => r.querySelector('[data-media-field="contain"]')).every((h) => h && h.type === 'hidden') }; })()`);
+      check('photos: one row each, numbered, captions VI | EN side by side next to a large preview, whole caption visible', media.n > 1 && media.nums === Array.from({ length: media.n }, (_, i) => i + 1).join() && media.side && media.thumb >= 170 && media.wholeCaption, media);
+      check(`photos: header says "${media.count}" with a larger title (${media.title})`, media.count === `${media.n} ảnh` && parseFloat(media.title) >= 16, media);
+      check('photos: no "Hiện trọn ảnh" box; that setting travels as a hidden value', media.checkbox === 0 && media.contain, media);
+      await click(`${tabsSel} [data-media]:first-child [data-media-field="captionVi"]`);
+      await b.key('End', 'End', 35); await b.key('Enter', 'Enter', 13);
+      check('a caption stays one line (Enter adds nothing)', !(await ev(`document.querySelector('${tabsSel} [data-media] [data-media-field="captionVi"]').value.includes('\\n')`)));
+      await b.shot('editor-media-rows');
       { const l = b.waitLoad(); await ev(`document.querySelector('[data-page-form]').requestSubmit()`); await l; await sleep(300); }
       const stored = await d.collection('solutionpages').findOne({ slug: 'stem-lab' });
-      check('saving the page keeps the display options', stored.sections.map((s) => s.display || '-').join(',') === '-,-,-,collapsed,-,-,-,compact,tabs,-,-,-,-', stored.sections.map((s) => s.display));
-      check('saving the page keeps the short menu names', stored.sections.map((s) => s.navVi).filter(Boolean).join('|') === 'Vì sao cần Lab STEM|Lab STEM là gì|Quy mô & phân khu|Mẫu thiết kế|Lợi ích|Triển khai' && stored.sections[2].navEn === 'Why a STEM Lab', stored.sections.map((s) => s.navVi));
+      const pick = (doc) => doc.sections.map((s) => [s.display, s.columns, s.ratio, s.continued, s.navVi, s.navEn].map(String).join('/'));
+      check('saving the page keeps the display options (style, columns, picture shape, joined)', JSON.stringify(pick(stored)) === JSON.stringify(pick(before)), { now: pick(stored), before: pick(before) });
+      check('saving the page keeps the short menu names', stored.sections.some((s) => s.navVi) && JSON.stringify(stored.sections.map((s) => s.navVi + '|' + s.navEn)) === JSON.stringify(before.sections.map((s) => s.navVi + '|' + s.navEn)));
+      check('saving without changes stores exactly the same page (every section, item, photo, both languages)', JSON.stringify(stored.sections) === JSON.stringify(before.sections));
       const bogus = await fetch(BASE + '/admin/trang/stem-lab', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}` },
         body: new URLSearchParams({ 'sections[0][uid]': 'zzbogus1', 'sections[0][kind]': 'text', 'sections[0][titleVi]': 'x', 'sections[0][display]': 'constructor' }) });
       const afterBogus = await d.collection('solutionpages').findOne({ slug: 'stem-lab' });
       check('a made-up display value is ignored (no crash)', bogus.status === 302 && afterBogus.sections.length === 1 && afterBogus.sections[0].display === '', { status: bogus.status, d: afterBogus.sections[0] && afterBogus.sections[0].display });
     } finally {
       await d.collection('solutionpages').replaceOne({ _id: before._id }, before); // put the real page back straight away
+    }
+  });
+
+  await part(b, 'developer link under numbers (Tập huấn editor)', async () => {
+    const before = await d.collection('solutionpages').findOne({ slug: 'tap-huan' });
+    try {
+      await signIn();
+      await nav('/admin/trang/tap-huan');
+      const vexSel = '[data-section-list] > [data-section][data-kind="stats"]';
+      const ed = await ev(`(() => { const s = [...document.querySelectorAll('${vexSel}')].find((x) => /VEX/.test(x.querySelector('[data-field="titleVi"]').value)); const items = [...s.querySelectorAll('[data-item]')];
+        return { all: items.length, hidden: items.filter((it) => it.hidden && it.hasAttribute('data-link-item')).length, meta: s.querySelector('[data-summary-meta]').textContent, note: (s.querySelector('.page-link-note') || {}).textContent || '' }; })()`);
+      check('the VEX numbers: the "Khám phá VEX Robotics" button is kept but hidden; the line counts only the 4 numbers; a note names the link',
+        ed.all === 5 && ed.hidden === 1 && /^4 /.test(ed.meta) && /Khám phá VEX Robotics/.test(ed.note) && /vexrobotics\.com/.test(ed.note), ed);
+      { const l = b.waitLoad(); await ev(`document.querySelector('[data-page-form]').requestSubmit()`); await l; await sleep(300); }
+      const stored = await d.collection('solutionpages').findOne({ slug: 'tap-huan' });
+      // (Compared item by item: an older saved page also gains empty fields added since, which is harmless)
+      const items = (doc) => JSON.stringify(doc.sections.map((x) => x.items || []));
+      const vexItems = (doc) => doc.sections.find((x) => x.kind === 'stats' && /VEX/.test(x.titleVi)).items;
+      check('saving keeps the link button exactly (label, address, main button) and every other item', items(stored) === items(before) && vexItems(stored).at(-1).url === 'https://www.vexrobotics.com/' && vexItems(stored).at(-1).primary === true, vexItems(stored).at(-1));
+    } finally {
+      await d.collection('solutionpages').replaceOne({ _id: before._id }, before);
     }
   });
 
@@ -252,13 +412,37 @@ await suite(async (b) => {
       let l = b.waitLoad(); await click('[data-banner-link]'); await l; await sleep(500);
       const landed = await ev(`({ tabOpen: !document.querySelector('[data-panel="banners"]').hidden, active: document.querySelector('[data-tab="banners"]').classList.contains('is-active'), target: document.querySelector(':target') && document.querySelector(':target').id, inView: (() => { const r = document.getElementById('banner-workshop').getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; })(),
         placeholder: document.querySelector('#bannerVi_workshop').placeholder, groups: [...document.querySelectorAll('.banner-group-title')].map(h => h.textContent.trim()) })`);
-      check('lands on Banners tab, Workshop card targeted and in view, default shown as placeholder', landed.tabOpen && landed.active && landed.target === 'banner-workshop' && landed.inView && landed.placeholder === BANNERS.find((x) => x.key === 'workshop').defaultVi, landed);
-      check('banner cards grouped like the website menu', JSON.stringify(landed.groups) === JSON.stringify(['Robotics thông minh', 'Giải pháp', 'Dịch vụ', 'Tin tức', 'Về MTG', 'Liên hệ']), landed.groups);
+      check('lands on Banners tab, Workshop row targeted and in view, default shown as placeholder', landed.tabOpen && landed.active && landed.target === 'banner-workshop' && landed.inView && landed.placeholder === BANNERS.find((x) => x.key === 'workshop').defaultVi, landed);
+      check('banner rows grouped like the website menu', JSON.stringify(landed.groups) === JSON.stringify(['Robotics thông minh', 'Giải pháp', 'Dịch vụ', 'Tin tức', 'Về MTG', 'Liên hệ']), landed.groups);
+      const rowsNow = () => ev(`[...document.querySelectorAll('[data-banner-row]')].map((r) => ({ key: r.id.slice(7), open: r.classList.contains('is-open'), editor: !r.querySelector('.banner-editor').hidden,
+        badges: [...r.querySelectorAll('[data-badge]')].filter((x) => !x.hidden).map((x) => x.dataset.badge).join(), line: r.querySelector('[data-banner-summary]').textContent, live: r.querySelector('[data-banner-live-line]').textContent }))`);
+      let rows = await rowsNow();
+      check(`one row per page (${BANNERS.length}); only the Workshop row is open; all show "Mặc định" and today's line`, rows.length === BANNERS.length && rows.filter((r) => r.open && r.editor).map((r) => r.key).join() === 'workshop'
+        && rows.every((r) => r.badges === 'default') && rows.find((r) => r.key === 'workshop').line === BANNERS.find((x) => x.key === 'workshop').defaultVi, rows.filter((r) => r.open || r.badges !== 'default'));
+      // Opening another row closes this one; typing updates the preview, the row line and the badge
+      await click('#banner-dao-tao [data-banner-toggle]'); await sleep(150);
+      await click('#bannerVi_dao-tao'); await b.type('ZZ thử');
+      rows = await rowsNow();
+      const dt = rows.find((r) => r.key === 'dao-tao');
+      check('one row open at a time; typing updates the live preview, the row line and the badge', rows.filter((r) => r.open).map((r) => r.key).join() === 'dao-tao' && dt.live === 'ZZ thử' && dt.line === 'ZZ thử' && dt.badges === 'custom', dt);
+      check('"Dùng câu mặc định" shows only when a line is typed', await ev(`!document.querySelector('#banner-dao-tao [data-banner-default]').hidden && document.querySelector('#banner-workshop [data-banner-default]').hidden`));
+      await click('#banner-dao-tao [data-banner-default]');
+      const cleared = (await rowsNow()).find((r) => r.key === 'dao-tao');
+      check('"Dùng câu mặc định" empties the box: default line and badge back', (await ev(`document.querySelector('#bannerVi_dao-tao').value`)) === '' && cleared.line === BANNERS.find((x) => x.key === 'dao-tao').defaultVi && cleared.badges === 'default', cleared);
+      const bannerSide = await ev(`(() => { const vi = document.querySelector('#bannerVi_dao-tao').getBoundingClientRect(), en = document.querySelector('#bannerEn_dao-tao').getBoundingClientRect(); return { side: Math.abs(vi.top - en.top) < 2 && vi.right < en.left, switch: !!document.querySelector('[data-lang-switch]') }; })()`);
+      check('banner: Vietnamese box on the left, English on the right, no language switch', bannerSide.side && !bannerSide.switch, bannerSide);
+      await click('#bannerEn_dao-tao'); await sleep(100);
+      const enView = await ev(`({ live: document.querySelector('#banner-dao-tao [data-banner-live-line]').textContent, title: [...document.querySelectorAll('#banner-dao-tao [data-live-title]')].filter((x) => !x.hidden).map((x) => x.textContent).join(), line: document.querySelector('#banner-dao-tao [data-banner-summary]').textContent })`);
+      check('typing in the English box: the preview shows English; the row line stays Vietnamese', enView.live === BANNERS.find((x) => x.key === 'dao-tao').defaultEn && enView.title === 'STEM training' && enView.line === BANNERS.find((x) => x.key === 'dao-tao').defaultVi, enView);
+      await click('#banner-workshop [data-banner-toggle]'); await sleep(150);
       // Workshop: text + image; Services: image
       await setVal('#bannerVi_workshop', 'ZZ Banner workshop mới');
       await setVal('#bannerEn_workshop', 'ZZ New workshop banner');
       await setFiles('#banner_workshop', [PHOTO]);
       await setFiles('#banner_services', [PHOTO2]);
+      await sleep(200);
+      const picked = await ev(`({ thumb: document.querySelector('#banner-services [data-banner-thumb]').style.getPropertyValue('--hero-image'), badges: [...document.querySelectorAll('#banner-services [data-badge]')].filter((x) => !x.hidden).map((x) => x.dataset.badge).join(), name: document.querySelector('#banner-services [data-banner-file-name]').textContent })`);
+      check('a picked image shows at once in the row (thumbnail, "Có ảnh", file name)', /^url\('blob:/.test(picked.thumb) && picked.badges === 'default,image' && picked.name === 'giao-luu-clb-stem.jpg', picked);
       const t1 = await save();
       check('save banners → green toast, back on the Banners tab', t1.shown && !t1.error && t1.url === '/admin/cai-dat?tab=banners', t1);
       let st = await getSettings();
@@ -276,6 +460,9 @@ await suite(async (b) => {
       check('banner background image actually loads', bgOk.w > 0, bgOk);
       // Clear the text + remove the image → default back, file deleted
       await nav('/admin/cai-dat?tab=banners');
+      const savedRow = (await rowsNow()).find((r) => r.key === 'workshop');
+      check('after saving, the Workshop row shows "Đã sửa" + "Có ảnh" and the new line', savedRow.badges === 'custom,image' && savedRow.line === 'ZZ Banner workshop mới' && !savedRow.open, savedRow);
+      await click('#banner-workshop [data-banner-toggle]'); await sleep(150);
       await setVal('#bannerVi_workshop', ''); await setVal('#bannerEn_workshop', '');
       await click('input[name="removeBanner_workshop"]');
       await save();

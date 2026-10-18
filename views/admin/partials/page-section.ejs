@@ -1,99 +1,109 @@
 <%
-  // One section card in the solution-page editor. s: saved section ({} for the template of a new one).
-  // Fields carry data-field / data-item-field / data-media-field; public/js/admin.js gives them their
-  // sections[i][…] names in on-screen order just before the form is sent.
+  // One section in the solution-page editor. s: saved section ({} for the template of a new one).
+  // Closed, it is one outline line (number, type, title, "6 thẻ"); "Sửa" opens it. Only the boxes the type uses
+  // are shown, Vietnamese on the left and English on the right. Buttons, links and display settings (type, columns,
+  // display style, picture shape, short menu name, "joined to the section above") are set by the developer: they
+  // travel as hidden fields so a save keeps them. Fields carry data-field / data-item-field / data-media-field;
+  // public/js/admin.js gives them their sections[i][…] names in on-screen order just before the form is sent.
   const sec = s || {};
   const P = (key, vars) => t('admin.pages.' + key, vars);
   const kind = sec.kind || 'text';
   const KINDS = ['text', 'cards', 'steps', 'gallery', 'stats', 'buttons'];
-  const RATIOS = [['16/9', 'ratio_169'], ['4/3', 'ratio_43'], ['3/2', 'ratio_32'], ['1/1', 'ratio_11'], ['3/4', 'ratio_34']];
+  const KIND_ICONS = { text: 'align-left', cards: 'layout-grid', steps: 'list-ordered', gallery: 'image', stats: 'hash', buttons: 'mouse-pointer' };
   const uidValue = sec.uid || '';
+  const pill = (L) => '<span class="lang-pill">' + L.toUpperCase() + '</span>';
 %>
-<div class="row-card page-section" data-row data-section data-kind="<%= kind %>"
+<div class="page-section" data-row data-section data-kind="<%= kind %>"
+     <% KINDS.forEach(function (k) { %> data-kind-name-<%= k %>="<%= P('kind_' + k) %>"<% }) %>
      data-item-label-text="<%= P('item_text') %>" data-item-label-cards="<%= P('item_cards') %>" data-item-label-steps="<%= P('item_steps') %>" data-item-label-stats="<%= P('item_stats') %>" data-item-label-buttons="<%= P('item_buttons') %>">
   <input type="hidden" data-field="uid" value="<%= uidValue %>">
-  <div class="row-card-head">
-    <button type="button" class="drag-handle row-drag section-drag" aria-label="<%= P('dragSection') %>" title="<%= P('dragSection') %>"><%- include('icon', { name: 'grip', size: 18 }) %></button>
-    <span class="row-card-title"><%= P('section') %> <span data-row-num></span> · <span data-kind-label><%= P('kind_' + kind) %></span></span>
-    <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
+  <input type="hidden" data-field="kind" data-section-kind value="<%= kind %>">
+  <input type="hidden" data-field="columns" value="<%= sec.columns === 3 ? '3' : '2' %>">
+  <input type="hidden" data-field="display" value="<%= sec.display || '' %>">
+  <input type="hidden" data-field="ratio" value="<%= sec.ratio || '4/3' %>">
+  <input type="hidden" data-field="navVi" value="<%= sec.navVi || '' %>">
+  <input type="hidden" data-field="navEn" value="<%= sec.navEn || '' %>">
+  <input type="hidden" data-field="continued" value="<%= sec.continued ? '1' : '0' %>">
+
+  <div class="ps-head">
+    <button type="button" class="drag-handle section-drag" aria-label="<%= P('dragSection') %>" title="<%= P('dragSection') %>"><%- include('icon', { name: 'grip', size: 18 }) %></button>
+    <span class="ps-num" data-row-num></span>
+    <button type="button" class="ps-summary" data-section-toggle aria-expanded="false">
+      <span class="ps-kind"><span class="ps-kind-icon" aria-hidden="true"><% KINDS.forEach(function (k) { %><%- include('icon', { name: KIND_ICONS[k], size: 16, cls: 'kind-icon kind-icon-' + k }) %><% }) %></span><span data-kind-label><%= P('kind_' + kind) %></span></span>
+      <span class="ps-title" data-summary-title></span>
+      <span class="ps-meta" data-summary-meta></span>
+      <span class="ps-flag ps-flag-continued" data-flag-continued hidden title="<%= P('continued') %>"><%= P('continuedShort') %></span>
+      <span class="ps-flag ps-flag-en" data-flag-en hidden title="<%= P('enMissing') %>">EN</span>
+      <span class="ps-flag ps-flag-error" data-flag-error hidden><%= P('hasError') %></span>
+    </button>
+    <div class="ps-tools">
+      <button type="button" class="icon-btn" data-move="up" aria-label="<%= P('moveUp') %>" title="<%= P('moveUp') %>"><%- include('icon', { name: 'arrow-up', size: 16 }) %></button>
+      <button type="button" class="icon-btn" data-move="down" aria-label="<%= P('moveDown') %>" title="<%= P('moveDown') %>"><%- include('icon', { name: 'arrow-down', size: 16 }) %></button>
+      <button type="button" class="btn btn-ghost btn-sm ps-edit" data-section-toggle><span data-when="closed"><%- include('icon', { name: 'pencil', size: 14 }) %> <%= t('admin.common.edit') %></span><span data-when="open"><%= P('done') %></span></button>
+      <button type="button" class="icon-btn icon-btn-danger" data-remove-section aria-label="<%= P('removeSection') %>" title="<%= P('removeSection') %>"><%- include('icon', { name: 'trash', size: 16 }) %></button>
+    </div>
   </div>
 
-  <div class="form-row">
-    <div class="form-group">
-      <label><%= P('kind') %></label>
-      <select class="form-control" data-field="kind" data-section-kind>
-        <% KINDS.forEach(function (k) { %><option value="<%= k %>" <%= kind === k ? 'selected' : '' %>><%= P('kind_' + k) %></option><% }) %>
-      </select>
+  <div class="ps-body" hidden>
+    <div class="bi-row" data-kinds="text cards steps gallery stats">
+      <% ['vi', 'en'].forEach(function (l) { const L = l === 'en' ? 'En' : 'Vi'; %>
+        <div class="form-group">
+          <label><%= P('fTitle') %> <%- pill(l) %></label>
+          <input class="form-control" data-field="title<%= L %>" value="<%= sec['title' + L] || '' %>">
+        </div>
+      <% }) %>
     </div>
-    <div class="form-group" data-kinds="cards gallery">
-      <label><%= P('columns') %></label>
-      <select class="form-control" data-field="columns">
-        <option value="2" <%= sec.columns !== 3 ? 'selected' : '' %>><%= P('columns2') %></option>
-        <option value="3" <%= sec.columns === 3 ? 'selected' : '' %>><%= P('columns3') %></option>
-      </select>
+    <div class="bi-row" data-kinds="cards steps gallery stats">
+      <% ['vi', 'en'].forEach(function (l) { const L = l === 'en' ? 'En' : 'Vi'; %>
+        <div class="form-group">
+          <label><%= P('fSubtitle') %> <%- pill(l) %> <span class="form-optional"><%= P('optional') %></span></label>
+          <textarea class="form-control" data-field="subtitle<%= L %>" rows="2"><%= sec['subtitle' + L] || '' %></textarea>
+        </div>
+      <% }) %>
     </div>
-    <div class="form-group" data-kinds="text cards steps gallery">
-      <label><%= P('display') %></label>
-      <select class="form-control" data-field="display">
-        <option value="" <%= !sec.display ? 'selected' : '' %>><%= P('display_') %></option>
-        <option value="collapsed" data-kinds="text cards steps gallery" <%= sec.display === 'collapsed' ? 'selected' : '' %>><%= P('display_collapsed') %></option>
-        <option value="compact" data-kinds="cards" <%= sec.display === 'compact' ? 'selected' : '' %>><%= P('display_compact') %></option>
-        <option value="tabs" data-kinds="gallery" <%= sec.display === 'tabs' ? 'selected' : '' %>><%= P('display_tabs') %></option>
-      </select>
+    <div class="bi-row" data-kinds="text cards steps gallery">
+      <% ['vi', 'en'].forEach(function (l) { const L = l === 'en' ? 'En' : 'Vi'; %>
+        <div class="form-group">
+          <label><%= P('fText') %> <%- pill(l) %></label>
+          <textarea class="form-control" data-field="text<%= L %>" rows="5"><%= sec['text' + L] || '' %></textarea>
+        </div>
+      <% }) %>
     </div>
-  </div>
-  <span class="checkbox-row page-continued" data-mirror-wrap>
-    <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror <%= sec.continued ? 'checked' : '' %>> <%= P('continued') %></label>
-    <input type="hidden" data-field="continued" value="<%= sec.continued ? '1' : '0' %>">
-  </span>
+    <p class="form-hint ps-plain-hint" data-kinds="text cards steps gallery"><%= P('plainHintShort') %></p>
 
-  <div class="form-row" data-kinds="text cards steps gallery stats">
-    <div class="form-group"><label><%= P('titleVi') %></label><input class="form-control" data-field="titleVi" value="<%= sec.titleVi || '' %>"></div>
-    <div class="form-group"><label><%= P('titleEn') %></label><input class="form-control" data-field="titleEn" value="<%= sec.titleEn || '' %>"></div>
-  </div>
-  <div class="form-row" data-kinds="text cards steps gallery">
-    <div class="form-group"><label><%= P('navVi') %></label><input class="form-control" data-field="navVi" maxlength="40" value="<%= sec.navVi || '' %>" placeholder="<%= P('navPlaceholder') %>"></div>
-    <div class="form-group"><label><%= P('navEn') %></label><input class="form-control" data-field="navEn" maxlength="40" value="<%= sec.navEn || '' %>" placeholder="<%= P('navPlaceholder') %>"></div>
-  </div>
-  <div class="form-row" data-kinds="cards steps gallery stats">
-    <div class="form-group"><label><%= P('subtitleSecVi') %></label><textarea class="form-control" data-field="subtitleVi" rows="2"><%= sec.subtitleVi || '' %></textarea></div>
-    <div class="form-group"><label><%= P('subtitleSecEn') %></label><textarea class="form-control" data-field="subtitleEn" rows="2"><%= sec.subtitleEn || '' %></textarea></div>
-  </div>
-  <div class="form-row" data-kinds="text cards steps gallery">
-    <div class="form-group"><label><%= P('textVi') %></label><textarea class="form-control" data-field="textVi" rows="5"><%= sec.textVi || '' %></textarea></div>
-    <div class="form-group"><label><%= P('textEn') %></label><textarea class="form-control" data-field="textEn" rows="5"><%= sec.textEn || '' %></textarea></div>
-  </div>
-  <div data-kinds="text cards steps gallery"><%- include('plain-text-hint') %></div>
+    <!-- Repeatable items: cards / steps / statistics, and the wording of buttons (a text section's buttons stay hidden) -->
+    <div class="page-subsection" data-kinds="cards steps stats buttons">
+      <h4 class="page-subsection-title" data-items-title
+          data-label-cards="<%= P('items_cards') %>" data-label-steps="<%= P('items_steps') %>" data-label-stats="<%= P('items_stats') %>" data-label-buttons="<%= P('items_buttons') %>"><%= P('items_' + (['cards', 'steps', 'stats', 'buttons'].includes(kind) ? kind : 'cards')) %></h4>
+      <p class="form-hint page-buttons-note" data-kinds="buttons"><%= P('buttonsNote') %></p>
+      <% if (kind === 'stats') { (sec.items || []).filter(function (it) { return it.url; }).forEach(function (it) { %>
+        <p class="form-hint page-link-note"><%- include('icon', { name: 'external-link', size: 14 }) %> <span><%= t('admin.pages.linkNote', { label: it.titleVi || it.titleEn, url: it.url.replace(/^https?:\/\//, '').replace(/\/$/, '') }) %></span></p>
+      <% }) } %>
+      <div class="page-items" data-item-list>
+        <% (sec.items || []).forEach(function (it) { %><%- include('page-item', { it }) %><% }) %>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" data-add-item data-kinds="cards steps stats"
+              data-label-cards="+ <%= P('addItem_cards') %>" data-label-steps="+ <%= P('addItem_steps') %>" data-label-stats="+ <%= P('addItem_stats') %>">+ <%= P('addItem_' + (['cards', 'steps', 'stats'].includes(kind) ? kind : 'cards')) %></button>
+    </div>
 
-  <!-- Repeatable items: cards / steps / statistics / buttons -->
-  <div class="page-subsection" data-kinds="text cards steps stats buttons">
-    <h4 class="page-subsection-title" data-items-title
-        data-label-text="<%= P('items_text') %>" data-label-cards="<%= P('items_cards') %>" data-label-steps="<%= P('items_steps') %>" data-label-stats="<%= P('items_stats') %>" data-label-buttons="<%= P('items_buttons') %>"><%= P('items_' + (KINDS.includes(kind) && kind !== 'gallery' ? kind : 'cards')) %></h4>
-    <div class="row-list page-items" data-item-list>
-      <% (sec.items || []).forEach(function (it) { %><%- include('page-item', { it }) %><% }) %>
-    </div>
-    <button type="button" class="btn btn-ghost btn-sm" data-add-item
-            data-label-text="+ <%= P('addItem_text') %>" data-label-cards="+ <%= P('addItem_cards') %>" data-label-steps="+ <%= P('addItem_steps') %>" data-label-stats="+ <%= P('addItem_stats') %>" data-label-buttons="+ <%= P('addItem_buttons') %>">+ <%= P('addItem_' + (kind === 'gallery' ? 'cards' : kind)) %></button>
-  </div>
-
-  <!-- Photos & videos (gallery; one picture next to a text section) -->
-  <div class="page-subsection" data-kinds="text gallery">
-    <h4 class="page-subsection-title" data-media-title data-label-text="<%= P('mediaText') %>" data-label-gallery="<%= P('media') %>"><%= kind === 'text' ? P('mediaText') : P('media') %></h4>
-    <div class="form-group" data-kinds="gallery text" style="max-width:260px;">
-      <label><%= P('ratio') %></label>
-      <select class="form-control" data-field="ratio">
-        <% RATIOS.forEach(function (r) { %><option value="<%= r[0] %>" <%= (sec.ratio || '4/3') === r[0] ? 'selected' : '' %>><%= P(r[1]) %></option><% }) %>
-      </select>
-    </div>
-    <div class="page-media-list" data-media-list>
-      <% (sec.media || []).forEach(function (m) { %><%- include('page-media', { m }) %><% }) %>
-    </div>
-    <div class="page-media-add">
-      <label class="btn btn-ghost btn-sm page-media-pick"><%- include('icon', { name: 'image', size: 16 }) %> <%= P('addMedia') %>
-        <input type="file" class="visually-hidden-file" data-media-input multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
-      </label>
-      <p class="form-hint"><%= P('addMediaHint') %></p>
+    <!-- Photos & videos (gallery; one picture next to a text section): a header with the count and "add", then one row
+         per picture with its captions side by side -->
+    <div class="page-subsection page-media-box" data-kinds="text gallery">
+      <div class="page-media-head">
+        <span class="page-media-head-icon" aria-hidden="true"><%- include('icon', { name: 'image', size: 20 }) %></span>
+        <div class="page-media-head-text">
+          <h4 class="page-media-title" data-media-title data-label-text="<%= P('mediaText') %>" data-label-gallery="<%= P('media') %>"><%= kind === 'text' ? P('mediaText') : P('media') %></h4>
+          <p class="page-media-count" data-media-count data-photos="<%= P('countPhotos') %>" data-videos="<%= P('countVideos') %>" data-none="<%= P('countNone') %>"></p>
+        </div>
+        <label class="btn btn-primary btn-sm page-media-pick"><%- include('icon', { name: 'plus', size: 16 }) %> <%= P('addMedia') %>
+          <input type="file" class="visually-hidden-file" data-media-input multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
+        </label>
+      </div>
+      <p class="form-hint page-media-hint"><%= P('addMediaHint') %></p>
       <div class="page-media-pending" data-media-pending hidden><strong><%= P('newFiles') %></strong> <span data-media-pending-list></span></div>
+      <div class="page-media-list" data-media-list>
+        <% (sec.media || []).forEach(function (m) { %><%- include('page-media', { m }) %><% }) %>
+      </div>
     </div>
   </div>
 </div>

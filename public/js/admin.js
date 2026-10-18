@@ -5,30 +5,84 @@
   // ---- Notifications: green (success) / red (error), with icon, close button and auto-hide ----
   var toast = document.getElementById('adminToast');
   var toastTimer = null;
+  var toastAction = null; // { label, run }: an optional button in the notification ("Hoàn tác")
   var ICONS = {
     success: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>',
     error: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>',
   };
+  var toastStay = 4000;
+  var toastHideTimer = null; // hides it once it has slid off the screen
   function hideToast() {
     if (!toast) return;
-    toast.classList.remove('is-visible');
+    toast.classList.remove('is-visible'); // slides out (admin.css)
+    toastAction = null;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toast.hidden = true; }, 250);
+    clearTimeout(toastHideTimer);
+    toastHideTimer = setTimeout(function () { toast.hidden = true; }, 1000); // in case transitionend doesn't come
   }
-  function showToast(text, type) {
+  function toastGone(e) {
+    if (e.target !== toast || e.propertyName !== 'transform' || toast.classList.contains('is-visible')) return; // shown again meanwhile
+    clearTimeout(toastHideTimer);
+    toast.hidden = true;
+  }
+  // The countdown waits while the pointer is on the notification or one of its buttons has focus ("Hoàn tác")
+  function holdToast() { clearTimeout(toastTimer); }
+  function resumeToast() {
+    if (!toast.classList.contains('is-visible') || toast.matches(':hover') || toast.contains(document.activeElement)) return;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, toastStay);
+  }
+  // On a page with a Save bar, the notification sits just above the bar wherever it is (it is only pinned to the
+  // bottom of the window once the page is scrolled), so Save stays clickable while a notification shows
+  var saveBar = document.querySelector('.page-form-actions');
+  function placeToast() {
+    if (!toast || !saveBar || toast.hidden) return;
+    toast.style.bottom = '';
+    var top = saveBar.getBoundingClientRect().top;
+    var base = parseFloat(getComputedStyle(toast).bottom) || 20;
+    if (top < window.innerHeight) toast.style.bottom = Math.max(base, window.innerHeight - top + 12) + 'px';
+  }
+  if (saveBar) {
+    window.addEventListener('scroll', placeToast, { passive: true });
+    window.addEventListener('resize', placeToast);
+  }
+
+  function showToast(text, type, action) {
     if (!toast || !text) return;
     var isError = type === 'error';
+    var actionBtn = toast.querySelector('.toast-action');
+    toastAction = action || null;
+    if (actionBtn) {
+      actionBtn.hidden = !action;
+      actionBtn.textContent = action ? action.label : '';
+    }
     toast.querySelector('.toast-text').textContent = text;
     toast.querySelector('.toast-icon').innerHTML = ICONS[isError ? 'error' : 'success'];
     toast.classList.toggle('is-error', isError);
     toast.setAttribute('role', isError ? 'alert' : 'status');
+    clearTimeout(toastHideTimer);
+    var wasHidden = toast.hidden;
     toast.hidden = false;
+    placeToast();
     clearTimeout(toastTimer);
-    requestAnimationFrame(function () { toast.classList.add('is-visible'); });
-    toastTimer = setTimeout(hideToast, isError ? 7000 : 4000);
+    if (wasHidden) void toast.offsetWidth; // start the slide-in from off the screen
+    toast.classList.add('is-visible'); // already showing: only the text changes, no second slide
+    toastStay = isError || action ? 7000 : 4000;
+    toastTimer = setTimeout(hideToast, toastStay);
   }
   if (toast) {
+    toast.addEventListener('transitionend', toastGone);
+    toast.addEventListener('mouseenter', holdToast);
+    toast.addEventListener('mouseleave', resumeToast);
+    toast.addEventListener('focusin', holdToast);
+    toast.addEventListener('focusout', function () { setTimeout(resumeToast, 0); });
     toast.querySelector('.toast-close').addEventListener('click', hideToast);
+    var toastActionBtn = toast.querySelector('.toast-action');
+    if (toastActionBtn) toastActionBtn.addEventListener('click', function () {
+      var action = toastAction;
+      hideToast();
+      if (action) action.run();
+    });
     // Message from the server (previous action's result, or a form error)
     if (toast.dataset.text) showToast(toast.dataset.text, toast.dataset.type);
   }
@@ -36,7 +90,7 @@
   // ---- Charts follow the mouse only: a click never focuses (and so never pins) a column, slice or row.
   // They stay reachable with Tab, and keyboard focus still shows the same highlight and tooltip. ----
   var keyFocus = function (el) { try { return el.matches(':focus-visible'); } catch (err) { return true; } };
-  document.querySelectorAll('.chart-col, .pie-slice, .hbar-row').forEach(function (el) {
+  document.querySelectorAll('.chart-col, .pie-slice, .hbar-row, .legend-row[data-drill]').forEach(function (el) {
     el.addEventListener('mousedown', function (e) { e.preventDefault(); });
   });
 
@@ -80,7 +134,7 @@
     col.addEventListener('blur', off);
   });
 
-  // ---- Status pie: a slice and its legend row highlight together; the slice slides out, the others dim ----
+  // ---- Pies: a slice and its legend row highlight together; the slice slides out, the others dim ----
   document.querySelectorAll('[data-pie]').forEach(function (wrap) {
     var pie = wrap.querySelector('.pie');
     var setHot = function (key) {
@@ -95,6 +149,73 @@
       el.addEventListener('blur', function () { setHot(null); });
     });
   });
+
+  // ---- Interest pie: a group's slice (or legend row) opens that group's own pie; "← Tất cả mục quan tâm" (or Esc)
+  // goes back. The opened slice grows out while the others fade, then the new pie plays the same opening as on load ----
+  var interestPanel = document.querySelector('[data-interest-panel]');
+  if (interestPanel) {
+    var pieViews = Array.prototype.slice.call(interestPanel.querySelectorAll('[data-pie-view]'));
+    var pieView = function (name) { return interestPanel.querySelector('[data-pie-view="' + name + '"]'); };
+    var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
+    var zoomMs = Math.round(160 + 140 * anim); // matches .pie-slice.is-zooming in admin.css
+    var pieBusy = false;
+    var openedKey = null;
+    var showPie = function (name) {
+      pieViews.forEach(function (v) { v.hidden = v.getAttribute('data-pie-view') !== name; });
+      var wrap = pieView(name);
+      var svg = wrap.querySelector('.pie');
+      wrap.querySelectorAll('.is-hot, .is-zooming').forEach(function (el) { el.classList.remove('is-hot', 'is-zooming'); });
+      svg.classList.remove('has-hot', 'is-leaving', 'chart-anim');
+      void svg.getBoundingClientRect(); // restart the opening animation (sweep + grow)
+      svg.classList.add('chart-anim');
+      if (tip) tip.hidden = true;
+    };
+    var drillInto = function (key) {
+      if (pieBusy || !pieView(key)) return;
+      pieBusy = true;
+      openedKey = key;
+      var pie = pieView('top').querySelector('.pie');
+      var slice = pie.querySelector('.pie-slice[data-key="' + key + '"]');
+      pie.classList.add('is-leaving');
+      if (slice) slice.classList.add('is-zooming');
+      setTimeout(function () {
+        showPie(key);
+        pieView(key).querySelector('[data-pie-back]').focus();
+        pieBusy = false;
+      }, zoomMs);
+    };
+    var backToTop = function () {
+      if (pieBusy || !pieView('top').hidden) return;
+      showPie('top');
+      var slice = openedKey && pieView('top').querySelector('.pie-slice[data-key="' + openedKey + '"]');
+      if (slice) slice.focus({ preventScroll: true });
+    };
+    interestPanel.querySelectorAll('[data-drill]').forEach(function (el) {
+      el.addEventListener('click', function () { drillInto(el.getAttribute('data-drill')); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); drillInto(el.getAttribute('data-drill')); }
+      });
+    });
+    interestPanel.querySelectorAll('[data-pie-back]').forEach(function (btn) { btn.addEventListener('click', backToTop); });
+    interestPanel.addEventListener('keydown', function (e) { if (e.key === 'Escape') backToTop(); });
+  }
+
+  // ---- Pie panel tabs ("Theo mục quan tâm" / "Thiết bị, học liệu, Robot STEM"): the same tabs as Cài đặt chung;
+  // switching replays the opening (sweep + grow) of the pie now shown. An opened interest group stays open. ----
+  var piePanel = document.querySelector('[data-pie-panel]');
+  if (piePanel) {
+    piePanel.addEventListener('tabchange', function (e) {
+      var panel = piePanel.querySelector('[data-panel="' + e.detail + '"]');
+      var wrap = panel && Array.prototype.filter.call(panel.querySelectorAll('[data-pie]'), function (w) { return !w.hidden; })[0];
+      var svg = wrap && wrap.querySelector('.pie');
+      if (!svg) return;
+      svg.classList.remove('chart-anim');
+      void svg.getBoundingClientRect();
+      svg.classList.add('chart-anim');
+      if (tip) tip.hidden = true;
+    });
+    initTabs(piePanel);
+  }
 
   // ---- Forms with data-confirm (deleting items/users) ask first in a centred dialog ----
   var confirmBox = document.getElementById('confirmDialog');
@@ -207,6 +328,7 @@
         tab.tabIndex = on ? 0 : -1;
       });
       panels.forEach(function (panel) { panel.hidden = panel.getAttribute('data-panel') !== key; });
+      form.dispatchEvent(new CustomEvent('tabchange', { detail: key }));
     }
     tabs.forEach(function (tab, i) {
       tab.addEventListener('click', function () { openTab(tab.getAttribute('data-tab')); });
@@ -223,19 +345,141 @@
 
   // ---- Plain tabbed forms (Cài đặt chung): remember the open tab so saving comes back to it ----
   document.querySelectorAll('[data-tabbed-form]').forEach(function (form) {
-    initTabs(form);
     var current = form.querySelector('[data-current-tab]');
-    form.querySelectorAll('[data-tab]').forEach(function (tab) {
-      tab.addEventListener('click', function () { current.value = tab.getAttribute('data-tab'); });
+    var saveBar = form.querySelector('[data-save-bar]');
+    // "Khôi phục mặc định" has its own button, so "Lưu cài đặt" is hidden there
+    form.addEventListener('tabchange', function (e) {
+      current.value = e.detail;
+      if (saveBar) saveBar.hidden = e.detail === 'reset';
     });
-    // A link to one banner (#banner-workshop) lands on the Banners tab with that card in view
-    if (location.hash.indexOf('#banner-') === 0) {
-      var card = document.getElementById(location.hash.slice(1));
-      if (card) {
-        var tabBtn = form.querySelector('[data-tab="banners"]');
-        if (tabBtn) tabBtn.click();
-        card.scrollIntoView({ block: 'center' });
-      }
+    initTabs(form);
+    // A link to one banner (#banner-workshop) lands on the Banners tab (the banner list then opens that row)
+    if (location.hash.indexOf('#banner-') === 0 && document.getElementById(location.hash.slice(1))) {
+      var tabBtn = form.querySelector('[data-tab="banners"]');
+      if (tabBtn) tabBtn.click();
+    }
+  });
+
+  // ---- Người dùng: clicking a profile photo shows it larger; ×, Escape or a click outside closes it ----
+  var avatarDialog = document.querySelector('[data-avatar-dialog]');
+  if (avatarDialog && avatarDialog.showModal) {
+    var avatarOpener = null;
+    document.querySelectorAll('[data-avatar-view]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        avatarOpener = btn;
+        var img = avatarDialog.querySelector('[data-avatar-img]');
+        img.src = btn.getAttribute('data-src');
+        img.alt = btn.getAttribute('aria-label');
+        avatarDialog.querySelector('[data-avatar-name]').textContent = btn.getAttribute('data-name');
+        avatarDialog.querySelector('[data-avatar-email]').textContent = btn.getAttribute('data-email');
+        avatarDialog.showModal();
+      });
+    });
+    avatarDialog.querySelector('[data-avatar-close]').addEventListener('click', function () { avatarDialog.close(); });
+    avatarDialog.addEventListener('click', function (e) { if (e.target === avatarDialog) avatarDialog.close(); }); // the dimmed backdrop
+    avatarDialog.addEventListener('close', function () { if (avatarOpener) avatarOpener.focus(); });
+  }
+
+  // ---- Cài đặt chung → Khôi phục mặc định: tick pages, then one button (enabled once a page is ticked) asks to confirm ----
+  document.querySelectorAll('[data-reset-pages]').forEach(function (card) {
+    var boxes = Array.prototype.slice.call(card.querySelectorAll('[data-reset-page]'));
+    var all = card.querySelector('[data-reset-all]');
+    var button = card.querySelector('[data-reset-submit]');
+    var picked = card.querySelector('[data-reset-picked]');
+    var resetForm = document.getElementById(button.getAttribute('form'));
+    function update() {
+      var chosen = boxes.filter(function (b) { return b.checked; });
+      var names = chosen.map(function (b) { return '“' + b.getAttribute('data-name') + '”'; }).join(', ');
+      button.disabled = !chosen.length;
+      all.checked = chosen.length === boxes.length;
+      all.indeterminate = chosen.length > 0 && chosen.length < boxes.length;
+      picked.textContent = chosen.length ? card.getAttribute('data-picked').replace('{n}', chosen.length) : '';
+      boxes.forEach(function (b) { b.closest('.reset-row').classList.toggle('is-picked', b.checked); });
+      resetForm.setAttribute('data-confirm', card.getAttribute(chosen.length > 1 ? 'data-confirm-many' : 'data-confirm-one')
+        .replace('{n}', chosen.length).replace('{names}', names));
+    }
+    all.addEventListener('change', function () {
+      boxes.forEach(function (b) { b.checked = all.checked; });
+      update();
+    });
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+    update();
+  });
+
+  // ---- Cài đặt chung → Banner các trang: one short row per page; "Sửa" opens it (one at a time) with a live preview ----
+  // The row line shows the Vietnamese line; the preview shows the language of the box being typed in (Vietnamese first).
+  document.querySelectorAll('[data-banner-list]').forEach(function (listEl) {
+    var rows = Array.prototype.slice.call(listEl.querySelectorAll('[data-banner-row]'));
+    function textBox(row, lang) { return row.querySelector('[data-banner-text="' + lang + '"]'); }
+    function lineFor(row, lang) { return textBox(row, lang).value.trim() || row.getAttribute('data-default-' + lang); }
+
+    // Row summary, badges and the preview follow what is typed or picked
+    function update(row) {
+      var lang = row._lang || 'vi';
+      var ownVi = textBox(row, 'vi').value.trim();
+      var custom = !!(ownVi || textBox(row, 'en').value.trim());
+      var summary = row.querySelector('[data-banner-summary]');
+      summary.textContent = lineFor(row, 'vi') || I18N.bannerNoLine;
+      summary.classList.toggle('is-default', !ownVi);
+      row.querySelector('[data-banner-live-line]').textContent = lineFor(row, lang);
+      row.querySelectorAll('[data-live-title]').forEach(function (el) { el.hidden = el.getAttribute('data-live-title') !== lang; });
+      var file = row.querySelector('[data-banner-file]');
+      var remove = row.querySelector('[data-banner-remove]');
+      var image = file._preview || (remove && remove.checked ? '' : row.getAttribute('data-saved-image'));
+      [row.querySelector('[data-banner-live]'), row.querySelector('[data-banner-thumb]')].forEach(function (el) {
+        if (image) el.style.setProperty('--hero-image', "url('" + image + "')"); else el.style.removeProperty('--hero-image');
+      });
+      row.querySelector('[data-badge="default"]').hidden = custom;
+      row.querySelector('[data-badge="custom"]').hidden = !custom;
+      row.querySelector('[data-badge="image"]').hidden = !image;
+      file.closest('.page-media-pick').classList.toggle('has-image', !!image);
+      row.querySelector('[data-banner-default]').hidden = !custom;
+    }
+
+    // Opens one row and closes the others; clicking the open row's head closes it
+    function toggle(row, focus) {
+      var opening = !row.classList.contains('is-open');
+      rows.forEach(function (other) {
+        var on = other === row && opening;
+        other.classList.toggle('is-open', on);
+        other.querySelector('[data-banner-toggle]').setAttribute('aria-expanded', on ? 'true' : 'false');
+        other.querySelector('.banner-editor').hidden = !on;
+      });
+      if (opening && focus) textBox(row, 'vi').focus({ preventScroll: true });
+    }
+
+    rows.forEach(function (row) {
+      update(row);
+      row.querySelector('[data-banner-toggle]').addEventListener('click', function () { toggle(row, true); });
+      row.addEventListener('input', function () { update(row); });
+      row.addEventListener('focusin', function (e) {
+        var box = e.target.closest('[data-banner-text]');
+        if (box && row._lang !== box.getAttribute('data-banner-text')) { row._lang = box.getAttribute('data-banner-text'); update(row); }
+      });
+      row.addEventListener('change', function (e) {
+        var file = e.target.closest('[data-banner-file]');
+        if (file) {
+          if (file._preview) URL.revokeObjectURL(file._preview);
+          var picked = file.files && file.files[0];
+          file._preview = picked ? URL.createObjectURL(picked) : '';
+          row.querySelector('[data-banner-file-name]').textContent = picked ? picked.name : '';
+        }
+        update(row);
+      });
+      // Both lines back to the default text
+      row.querySelector('[data-banner-default]').addEventListener('click', function () {
+        textBox(row, 'vi').value = '';
+        textBox(row, 'en').value = '';
+        update(row);
+        textBox(row, 'vi').focus();
+      });
+    });
+
+    // A link to one banner (#banner-workshop, from a Giải pháp editor) opens that row
+    var target = location.hash.indexOf('#banner-') === 0 && document.getElementById(location.hash.slice(1));
+    if (target && rows.indexOf(target) !== -1) {
+      toggle(target, false);
+      target.scrollIntoView({ block: 'center' });
     }
   });
 
@@ -296,22 +540,49 @@
     });
   });
 
-  // ---- Solution-page editor: sections (type, nested items, photos/videos), all reorderable by drag ----
+  // ---- Solution-page editor: an outline of sections; one opens at a time. Sections, items and photos reorder by
+  // drag or ▲/▼ and are removed with an undo; Vietnamese and English boxes sit side by side ----
   document.querySelectorAll('[data-page-form]').forEach(function (form) {
-    initTabs(form);
     var list = form.querySelector('[data-section-list]');
     var badge = form.querySelector('[data-section-count]');
     var tplSection = document.getElementById('tpl-page-section');
     var tplItem = document.getElementById('tpl-page-item');
-    var sortableOpts = { animation: 150, forceFallback: true, fallbackOnBody: true, ghostClass: 'sortable-ghost' };
+    var picker = form.querySelector('[data-type-picker]');
+    var addBtn = form.querySelector('[data-add-section]');
+    var unsaved = form.querySelector('[data-unsaved]');
+    var sortableOpts = { animation: 150, forceFallback: true, fallbackOnBody: true, ghostClass: 'sortable-ghost', onEnd: function () { markDirty(); } };
+    var dirty = false;
+    var sending = false;
     function children(parent, selector) {
       return Array.prototype.filter.call(parent.children, function (el) { return el.matches(selector); });
     }
     function sectionsOnScreen() { return children(list, '[data-section]'); }
+    // The items the admin sees (not the developer's hidden link buttons)
+    function itemsOf(section) { return children(section.querySelector('[data-item-list]'), '[data-item]:not([data-link-item])'); }
     function setText(el, text) { if (el && el.textContent !== String(text)) el.textContent = text; }
+    function val(scope, sel) { var el = scope.querySelector(sel); return el ? el.value.trim() : ''; }
+    function own(section, sel) { // the section's own field, not one inside its items or photos
+      var el = section.querySelector(sel);
+      return el && el.closest('[data-section]') === section ? el : null;
+    }
+
+    function markDirty() {
+      dirty = true;
+      if (unsaved) unsaved.hidden = false;
+    }
+    window.addEventListener('beforeunload', function (e) {
+      if (!dirty || sending) return;
+      e.preventDefault();
+      e.returnValue = I18N.leave || '';
+    });
 
     // Each item is labelled after its section's type ("Thẻ 2", "Bước 3"…)
     function applyItemKind(item, kind, section) {
+      // A link button in a numbers section (e.g. "Khám phá VEX Robotics") is set by the developer: kept, not shown
+      if (kind === 'stats' && item.querySelector('[data-item-field="url"]').value) {
+        item.hidden = true;
+        item.setAttribute('data-link-item', '');
+      }
       item.querySelectorAll('[data-item-kinds]').forEach(function (el) {
         el.hidden = el.getAttribute('data-item-kinds').split(' ').indexOf(kind) === -1;
       });
@@ -322,18 +593,14 @@
       setText(item.querySelector('[data-item-label]'), section.getAttribute('data-item-label-' + kind) || '');
     }
 
-    // Show only the fields the chosen section type uses
+    // Show only the fields the section's type uses (the type itself is set by the developer, or picked when adding)
     function applyKind(section) {
-      var select = section.querySelector('[data-section-kind]');
-      var kind = select.value;
+      var kind = section.querySelector('[data-section-kind]').value;
       section.setAttribute('data-kind', kind);
-      setText(section.querySelector('[data-kind-label]'), select.options[select.selectedIndex].text);
+      setText(section.querySelector('[data-kind-label]'), section.getAttribute('data-kind-name-' + kind) || kind);
       section.querySelectorAll('[data-kinds]').forEach(function (el) {
         el.hidden = el.getAttribute('data-kinds').split(' ').indexOf(kind) === -1;
       });
-      // A display style the new type doesn't offer falls back to "normal"
-      var display = section.querySelector('[data-field="display"]');
-      if (display && display.selectedIndex > 0 && display.options[display.selectedIndex].hidden) display.value = '';
       ['[data-items-title]', '[data-add-item]', '[data-media-title]'].forEach(function (sel) {
         var el = section.querySelector(sel);
         if (el && el.getAttribute('data-label-' + kind)) setText(el, el.getAttribute('data-label-' + kind));
@@ -341,27 +608,165 @@
       section.querySelectorAll('[data-item]').forEach(function (item) { applyItemKind(item, kind, section); });
     }
 
+    // English boxes show the Vietnamese text as a grey hint
+    function syncHints(scope) {
+      scope.querySelectorAll('[data-field$="En"], [data-item-field$="En"], [data-media-field$="En"]').forEach(function (en) {
+        var attr = en.hasAttribute('data-field') ? 'data-field' : en.hasAttribute('data-item-field') ? 'data-item-field' : 'data-media-field';
+        var name = en.getAttribute(attr);
+        var holder = en.closest(attr === 'data-field' ? '[data-section]' : attr === 'data-item-field' ? '[data-item]' : '[data-media]');
+        var vi = holder && holder.querySelector('[' + attr + '="' + name.slice(0, -2) + 'Vi"]');
+        if (!vi) return;
+        if (en._hint === undefined) en._hint = en.getAttribute('placeholder') || '';
+        en.placeholder = vi.value.trim() || en._hint;
+      });
+    }
+
+    // A box filled in Vietnamese but empty in English, in a section or one item (only boxes its type uses;
+    // a closed section or item still counts)
+    function missingEnglish(scope) {
+      return Array.prototype.some.call(scope.querySelectorAll('[data-field$="Vi"], [data-item-field$="Vi"], [data-media-field$="Vi"]'), function (vi) {
+        if (!vi.value.trim() || vi.closest('[data-kinds][hidden], [data-item-kinds][hidden], [data-link-item]')) return false;
+        var attr = vi.hasAttribute('data-field') ? 'data-field' : vi.hasAttribute('data-item-field') ? 'data-item-field' : 'data-media-field';
+        var name = vi.getAttribute(attr);
+        if (name === 'navVi') return false; // optional: the title is used when it is empty
+        var holder = vi.closest(attr === 'data-field' ? '[data-section]' : attr === 'data-item-field' ? '[data-item]' : '[data-media]');
+        var en = holder.querySelector('[' + attr + '="' + name.slice(0, -2) + 'En"]');
+        return en && !en.value.trim();
+      });
+    }
+
+    // The closed section's line: the Vietnamese title (else the English one), and what it holds
+    function summarise(section) {
+      var L = 'Vi', O = 'En';
+      var kind = section.getAttribute('data-kind');
+      var items = itemsOf(section);
+      var media = children(section.querySelector('[data-media-list]'), '[data-media]').length;
+      var pending = section.querySelector('[data-media-input]').files.length;
+      var title = val(section, '[data-field="title' + L + '"]') || val(section, '[data-field="title' + O + '"]');
+      if (kind === 'buttons' || (!title && items.length && kind !== 'text')) { // a text section's buttons are not shown
+        title = items.map(function (it) { return val(it, '[data-item-field="title' + L + '"]') || val(it, '[data-item-field="title' + O + '"]'); }).filter(Boolean).join(' · ');
+      }
+      // No title: the start of the text, in grey
+      var excerpt = title ? '' : (val(section, '[data-field="text' + L + '"]') || val(section, '[data-field="text' + O + '"]')).split('\n')[0].slice(0, 120);
+      var titleEl = section.querySelector('[data-summary-title]');
+      setText(titleEl, title || excerpt || form.getAttribute('data-untitled'));
+      titleEl.classList.toggle('is-excerpt', !title && !!excerpt);
+      titleEl.classList.toggle('is-empty', !title && !excerpt);
+      var meta = [];
+      var itemKind = { cards: 'cards', steps: 'steps', stats: 'stats', buttons: 'buttons' }[kind];
+      if (itemKind && items.length) meta.push(form.getAttribute('data-meta-' + itemKind).replace('{n}', items.length));
+      if ((kind === 'gallery' || kind === 'text') && media + pending) meta.push(form.getAttribute('data-meta-' + (kind === 'text' ? 'image' : 'media')).replace('{n}', media + pending));
+      setText(section.querySelector('[data-summary-meta]'), meta.join(' · '));
+      items.forEach(function (item) { summariseItem(item, kind); });
+      section.querySelector('[data-flag-en]').hidden = !missingEnglish(section);
+      section.querySelector('[data-flag-continued]').hidden = !(section.previousElementSibling && own(section, '[data-field="continued"]').value === '1');
+    }
+
+    // A closed item's line (Vietnamese, else English): "Lắp ráp & chế tạo" (cards, steps, buttons), "120+ · trường học" (numbers)
+    function summariseItem(item, kind) {
+      var L = 'Vi', O = 'En';
+      var title = val(item, '[data-item-field="title' + L + '"]') || val(item, '[data-item-field="title' + O + '"]');
+      var text = (val(item, '[data-item-field="text' + L + '"]') || val(item, '[data-item-field="text' + O + '"]')).split('\n')[0];
+      var hasText = kind === 'cards' || kind === 'steps';
+      var line = kind === 'stats' ? [title, text].filter(Boolean).join(' · ') : title || (hasText ? text.slice(0, 120) : '');
+      var el = item.querySelector('[data-item-summary]');
+      setText(el, line || form.getAttribute('data-item-empty'));
+      el.classList.toggle('is-excerpt', hasText && !title && !!text);
+      el.classList.toggle('is-empty', !line);
+      item.querySelector('[data-item-flag-en]').hidden = !missingEnglish(item);
+    }
+
+    // Opens one item and closes the others in the same section; clicking the open one again closes it
+    function toggleItem(item, open) {
+      var opening = open === undefined ? !item.classList.contains('is-open') : open;
+      children(item.parentNode, '[data-item]').forEach(function (other) {
+        var on = other === item && opening;
+        if (other.classList.contains('is-open') === on) return;
+        other.classList.toggle('is-open', on);
+        other.querySelector('.pi-body').hidden = !on;
+        other.querySelectorAll('[data-item-toggle]').forEach(function (b) { b.setAttribute('aria-expanded', on ? 'true' : 'false'); });
+      });
+    }
+
+    function summariseAll() {
+      sectionsOnScreen().forEach(summarise);
+    }
+
+    // Opens one section and closes the others; clicking the open one again closes it
+    function toggleSection(section, open) {
+      var opening = open === undefined ? !section.classList.contains('is-open') : open;
+      sectionsOnScreen().forEach(function (other) {
+        var on = other === section && opening;
+        if (other.classList.contains('is-open') === on) return;
+        other.classList.toggle('is-open', on);
+        other.querySelector('.ps-body').hidden = !on;
+        other.querySelectorAll('[data-section-toggle]').forEach(function (b) { b.setAttribute('aria-expanded', on ? 'true' : 'false'); });
+      });
+      if (opening) {
+        var r = section.getBoundingClientRect();
+        if (r.top < 0 || r.top > window.innerHeight - 120) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    }
+
     function initSection(section) {
       var uid = section.querySelector('[data-field="uid"]');
       if (!uid.value) uid.value = 's' + Math.random().toString(36).slice(2, 10);
       applyKind(section);
+      syncHints(section);
       if (window.Sortable) {
         window.Sortable.create(section.querySelector('[data-item-list]'), Object.assign({ handle: '.item-drag' }, sortableOpts));
         window.Sortable.create(section.querySelector('[data-media-list]'), Object.assign({ handle: '.media-drag' }, sortableOpts));
       }
     }
 
-    // Numbers, the tab count, and "attach to the section above" (not offered for the first section)
+    // Numbers, the section count, ▲/▼ at the ends, and "attach to the section above" (not for the first section)
     function refresh() {
       var sections = sectionsOnScreen();
       sections.forEach(function (section, i) {
         setText(section.querySelector('[data-row-num]'), i + 1);
-        section.querySelector('.page-continued').hidden = i === 0;
-        children(section.querySelector('[data-item-list]'), '[data-item]').forEach(function (item, j) {
+        section.querySelector('.ps-tools [data-move="up"]').disabled = i === 0;
+        section.querySelector('.ps-tools [data-move="down"]').disabled = i === sections.length - 1;
+        var items = itemsOf(section);
+        items.forEach(function (item, j) {
           setText(item.querySelector('[data-row-num]'), j + 1);
+          item.querySelector('[data-move="up"]').disabled = j === 0;
+          item.querySelector('[data-move="down"]').disabled = j === items.length - 1;
         });
+        // Photos: their number on the preview, and "6 ảnh · 1 video" in the header
+        var photos = 0, videos = 0;
+        children(section.querySelector('[data-media-list]'), '[data-media]').forEach(function (media, k) {
+          setText(media.querySelector('[data-media-num]'), k + 1);
+          if (media.querySelector('[data-media-field="type"]').value === 'video') videos++; else photos++;
+        });
+        var count = section.querySelector('[data-media-count]');
+        var parts = [];
+        if (photos) parts.push(count.getAttribute('data-photos').replace('{n}', photos));
+        if (videos) parts.push(count.getAttribute('data-videos').replace('{n}', videos));
+        setText(count, parts.join(' · ') || count.getAttribute('data-none'));
       });
       setText(badge, sections.length);
+      summariseAll();
+    }
+
+    // Take an element off the page, with "Hoàn tác" in the notification to put it back where it was
+    function removeWithUndo(el, message) {
+      var parent = el.parentNode;
+      var next = el.nextElementSibling;
+      el.remove();
+      markDirty();
+      showToast(message, 'success', {
+        label: I18N.undo,
+        run: function () {
+          parent.insertBefore(el, next && next.parentNode === parent ? next : null);
+          var focusable = el.querySelector('[data-section-toggle], [data-item-toggle], input:not([type="hidden"])');
+          if (focusable) focusable.focus();
+        },
+      });
+    }
+
+    function closePicker() {
+      picker.hidden = true;
+      addBtn.setAttribute('aria-expanded', 'false');
     }
 
     sectionsOnScreen().forEach(initSection);
@@ -369,33 +774,118 @@
     new MutationObserver(refresh).observe(list, { childList: true, subtree: true });
     if (window.Sortable) window.Sortable.create(list, Object.assign({ handle: '.section-drag', draggable: '[data-section]' }, sortableOpts));
 
+    // After a failed save, mark the sections and items the messages name; open the first section, and every named item
+    var firstError = null;
+    document.querySelectorAll('[data-error-section]').forEach(function (li) {
+      var s = sectionsOnScreen()[+li.getAttribute('data-error-section') - 1];
+      if (!s) return;
+      s.classList.add('has-error');
+      s.querySelector('[data-flag-error]').hidden = false;
+      var item = li.hasAttribute('data-error-item') ? children(s.querySelector('[data-item-list]'), '[data-item]')[+li.getAttribute('data-error-item') - 1] : null;
+      if (item) { item.classList.add('has-error'); toggleItem(item, true); }
+      if (!firstError) firstError = s;
+    });
+    if (firstError) toggleSection(firstError, true);
+
     form.addEventListener('click', function (e) {
       if (e.target.closest('[data-add-section]')) {
-        list.appendChild(tplSection.content.cloneNode(true));
-        var section = list.lastElementChild;
-        initSection(section);
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        section.querySelector('[data-section-kind]').focus();
+        var show = picker.hidden;
+        picker.hidden = !show;
+        addBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
+        if (show) {
+          picker.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          picker.querySelector('[data-add-kind]').focus({ preventScroll: true });
+        }
         return;
       }
+      var addKind = e.target.closest('[data-add-kind]');
+      if (addKind) {
+        closePicker();
+        list.appendChild(tplSection.content.cloneNode(true));
+        var section = list.lastElementChild;
+        section.querySelector('[data-section-kind]').value = addKind.getAttribute('data-add-kind');
+        initSection(section);
+        refresh();
+        markDirty();
+        toggleSection(section, true);
+        var first = section.querySelector('.ps-body input:not([type="hidden"]):not([type="checkbox"]), .ps-body textarea');
+        var visible = Array.prototype.filter.call(section.querySelectorAll('.ps-body input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]), .ps-body textarea'), function (el) { return el.offsetParent !== null; })[0];
+        if (visible || first) (visible || first).focus({ preventScroll: true });
+        return;
+      }
+      var toggle = e.target.closest('[data-section-toggle]');
+      if (toggle) { toggleSection(toggle.closest('[data-section]')); return; }
+      var itemToggle = e.target.closest('[data-item-toggle]');
+      if (itemToggle) { toggleItem(itemToggle.closest('[data-item]')); return; }
+      var move = e.target.closest('[data-move]');
+      if (move) {
+        var row = move.closest('[data-item]') || move.closest('[data-section]');
+        var up = move.getAttribute('data-move') === 'up';
+        var sibling = up ? row.previousElementSibling : row.nextElementSibling;
+        if (!sibling) return;
+        row.parentNode.insertBefore(row, up ? sibling : sibling.nextElementSibling);
+        move.focus();
+        markDirty();
+        return;
+      }
+      var removeSection = e.target.closest('[data-remove-section]');
+      if (removeSection) {
+        var sec = removeSection.closest('[data-section]');
+        removeWithUndo(sec, form.getAttribute('data-removed-section').replace('{name}', sec.querySelector('[data-summary-title]').textContent));
+        return;
+      }
+      var removeItem = e.target.closest('[data-remove-item]');
+      if (removeItem) { removeWithUndo(removeItem.closest('[data-item]'), form.getAttribute('data-removed-item')); return; }
+      var removeMedia = e.target.closest('[data-remove-media]');
+      if (removeMedia) { removeWithUndo(removeMedia.closest('[data-media]'), form.getAttribute('data-removed-media')); return; }
       var addItem = e.target.closest('[data-add-item]');
       if (addItem) {
         var sectionEl = addItem.closest('[data-section]');
         var items = sectionEl.querySelector('[data-item-list]');
-        items.appendChild(tplItem.content.cloneNode(true));
-        applyItemKind(items.lastElementChild, sectionEl.getAttribute('data-kind'), sectionEl);
-        items.lastElementChild.querySelector('input').focus();
-        return;
+        // New items go after the visible ones (before a hidden link button), so their numbers match the saved order
+        var fresh = tplItem.content.firstElementChild.cloneNode(true);
+        items.insertBefore(fresh, children(items, '[data-link-item]')[0] || null);
+        applyItemKind(fresh, sectionEl.getAttribute('data-kind'), sectionEl);
+        toggleItem(fresh, true);
+        markDirty();
+        var box = fresh.querySelector('.pi-body input');
+        if (box) box.focus();
       }
-      var removeMedia = e.target.closest('[data-remove-media]');
-      if (removeMedia) removeMedia.closest('[data-media]').remove();
+    });
+
+    // The type picker closes with Escape or a click elsewhere
+    form.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !picker.hidden) { closePicker(); addBtn.focus(); }
+    });
+    document.addEventListener('click', function (e) {
+      if (!picker.hidden && !e.target.closest('.page-add')) closePicker();
+    });
+
+    // Captions are one line each: Enter does nothing, pasted line breaks become spaces; the box grows with the text
+    var growsByItself = window.CSS && CSS.supports && CSS.supports('field-sizing', 'content');
+    function fitCaption(box) {
+      if (growsByItself) return;
+      box.style.height = 'auto';
+      box.style.height = box.scrollHeight + 2 + 'px';
+    }
+    form.querySelectorAll('[data-one-line]').forEach(fitCaption);
+    form.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.matches('[data-one-line]')) e.preventDefault();
+    });
+
+    form.addEventListener('input', function (e) {
+      if (e.target.matches('[data-one-line]')) {
+        if (/[\r\n]/.test(e.target.value)) e.target.value = e.target.value.replace(/\s*[\r\n]+\s*/g, ' ');
+        fitCaption(e.target);
+      }
+      markDirty();
+      var section = e.target.closest('[data-section]');
+      if (section) { syncHints(section); summarise(section); }
+      summariseAll();
     });
 
     form.addEventListener('change', function (e) {
-      var box = e.target.closest('[data-mirror]');
-      if (box) box.closest('[data-mirror-wrap]').querySelector('input[type="hidden"]').value = box.checked ? '1' : '0';
-      var kindSelect = e.target.closest('[data-section-kind]');
-      if (kindSelect) applyKind(kindSelect.closest('[data-section]'));
+      markDirty();
       // Picked files are listed until the page is saved
       var input = e.target.closest('[data-media-input]');
       if (input) {
@@ -404,10 +894,12 @@
         pending.hidden = !names.length;
         pending.querySelector('[data-media-pending-list]').textContent = names.join(', ');
       }
+      summariseAll();
     });
 
     // Give every field its sections[i][…] name in the on-screen order, then send
     form.addEventListener('submit', function () {
+      sending = true;
       sectionsOnScreen().forEach(function (section, i) {
         var base = 'sections[' + i + ']';
         section.querySelectorAll('[data-field]').forEach(function (field) {
@@ -560,7 +1052,7 @@
     if (listTypes.indexOf(type) === -1) listTypes.push(type);
   });
   listTypes.forEach(function (type) {
-    var tbody = document.querySelector('tbody[data-sortable="' + type + '"]');
+    var tbody = document.querySelector('tbody[data-sortable="' + type + '"], tbody[data-list="' + type + '"]');
     if (!tbody) return;
     var box = document.querySelector('[data-list-search="' + type + '"]');
     var chips = document.querySelector('[data-list-filter="' + type + '"]');
@@ -584,8 +1076,8 @@
       var url = new URL(window.location.href);
       if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
-      // ...and through the admin VI/EN switch
-      document.querySelectorAll('a[href*="alang="]').forEach(function (a) {
+      // ...and through the admin VI/EN switch and the links marked data-keep-query (request status tabs)
+      document.querySelectorAll('a[href*="alang="], a[data-keep-query]').forEach(function (a) {
         var link = new URL(a.href);
         if (value) link.searchParams.set(key, value); else link.searchParams.delete(key);
         a.href = link.pathname + link.search;

@@ -6,6 +6,8 @@
   const v = typeof values !== 'undefined' && values ? values : user;
   const nameParts = (user.name || '').trim().split(/\s+/).filter(Boolean);
   const initials = ((nameParts[0] || '?')[0] + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')).toUpperCase();
+  const fromGoogle = !!user.googleId; // name, email and photo come from Google (routes/auth.js)
+  const hasPassword = !!user.passwordHash;
   const memberSince = user.createdAt ? new Date(user.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN', { month: 'long', year: 'numeric' }) : '';
 %>
 
@@ -22,6 +24,7 @@
         <% } %>
         <h2 class="profile-name"><%= user.name %></h2>
         <p class="profile-email"><%= user.email %></p>
+        <% if (fromGoogle) { %><p class="profile-google-linked" data-google-linked><%- include('partials/google-logo', { size: 14 }) %> <%= t('profile.googleLinked') %></p><% } %>
         <% if (memberSince) { %><p class="profile-meta"><%= t('profile.memberSince') %> <%= memberSince %></p><% } %>
         <%# Role: view only (changed by an owner in Admin → Người dùng); same badge as that list %>
         <div class="profile-bio profile-role">
@@ -44,7 +47,8 @@
       <div class="profile-forms">
         <div class="form-card">
           <h2 class="form-card-title"><%= t('profile.infoTitle') %></h2>
-          <% if (pState.success) { %><div class="form-alert success"><%= t('profile.updated') %></div><% } %>
+          <% if (pState.success) { %><div class="form-alert success"><%= pState.message || t('profile.updated') %></div><% } %>
+          <% if (fromGoogle) { %><p class="profile-google-note" data-google-note><%- include('partials/google-logo', { size: 16 }) %><span><%= t('profile.googleNote') %></span></p><% } %>
           <% if (pState.error) { %><div class="form-alert error"><%= pState.error %></div><% } %>
           <form method="POST" action="/ho-so" enctype="multipart/form-data">
             <div class="form-group">
@@ -56,20 +60,32 @@
                   <div class="avatar-sm avatar-fallback" data-avatar-preview><%= initials %></div>
                 <% } %>
                 <div>
-                  <label class="btn btn-ghost btn-sm avatar-choose">
-                    <%= t('profile.chooseAvatar') %>
-                    <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" data-avatar-input data-max-bytes="<%= avatarMaxBytes %>" data-size-error="<%= t('profile.errAvatarSize') %>" hidden>
-                  </label>
+                  <div class="avatar-actions">
+                    <label class="btn btn-ghost btn-sm avatar-choose">
+                      <%= t('profile.chooseAvatar') %>
+                      <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" data-avatar-input data-max-bytes="<%= avatarMaxBytes %>" data-size-error="<%= t('profile.errAvatarSize') %>" hidden>
+                    </label>
+                    <%# A photo chosen but not saved yet: drop it again (main.js) %>
+                    <button type="button" class="btn btn-ghost btn-sm avatar-drop" data-avatar-drop hidden><%= t('profile.dropChosen') %></button>
+                    <%# Only for an own or Google photo, not for the two letters; its own form below (forms can't nest) %>
+                    <% if (user.avatar) { %>
+                      <button type="submit" form="avatar-remove" class="btn btn-ghost btn-sm btn-danger-ghost" data-avatar-delete>
+                        <%- include('admin/partials/icon', { name: 'trash', size: 14 }) %> <%= t('profile.deleteAvatar') %>
+                      </button>
+                    <% } %>
+                  </div>
                   <p class="form-hint"><%= t('profile.avatarHint') %></p>
-                  <% if (user.avatar) { %>
-                    <label class="checkbox-row form-hint"><input type="checkbox" name="removeAvatar" value="1"> <%= t('profile.removeAvatar') %></label>
-                  <% } %>
                 </div>
               </div>
             </div>
             <div class="form-group">
               <label><%= t('forms.name') %> *</label>
-              <input class="form-control" type="text" name="name" value="<%= v.name || '' %>" required autocomplete="name">
+              <% if (fromGoogle) { %>
+                <input class="form-control" type="text" value="<%= user.name %>" readonly aria-describedby="nameFromGoogle" data-google-name>
+                <p class="form-hint" id="nameFromGoogle"><%= t('profile.googleNameLocked') %></p>
+              <% } else { %>
+                <input class="form-control" type="text" name="name" value="<%= v.name || '' %>" required autocomplete="name">
+              <% } %>
             </div>
             <div class="form-group">
               <label><%= t('forms.email') %></label>
@@ -92,19 +108,35 @@
             </div>
             <button type="submit" class="btn btn-primary btn-block"><%= t('common.update') %></button>
           </form>
+          <% if (user.avatar) { %>
+            <form id="avatar-remove" method="POST" action="/ho-so/anh-dai-dien/xoa" data-avatar-remove-form></form>
+            <dialog class="profile-confirm" data-avatar-confirm aria-labelledby="avatarConfirmTitle">
+              <h3 id="avatarConfirmTitle"><%= t('profile.deleteAvatarTitle') %></h3>
+              <p><%= t('profile.deleteAvatarText') %></p>
+              <% if (fromGoogle && user.avatarMode !== 'own') { %><p class="form-hint"><%= t('profile.deleteAvatarGoogle') %></p><% } %>
+              <div class="profile-confirm-actions">
+                <button type="button" class="btn btn-ghost" data-confirm-cancel><%= t('common.cancel') %></button>
+                <button type="button" class="btn btn-danger" data-confirm-ok><%- include('admin/partials/icon', { name: 'trash', size: 15 }) %> <%= t('profile.deleteAvatar') %></button>
+              </div>
+            </dialog>
+          <% } %>
         </div>
 
         <div class="form-card">
-          <h2 class="form-card-title"><%= t('profile.passwordTitle') %></h2>
-          <% if (pwState.success) { %><div class="form-alert success"><%= t('profile.passwordChanged') %></div><% } %>
+          <h2 class="form-card-title"><%= t(hasPassword ? 'profile.passwordTitle' : 'profile.setPasswordTitle') %></h2>
+          <% if (pwState.success) { %><div class="form-alert success"><%= pwState.message || t('profile.passwordChanged') %></div><% } %>
+          <% if (!hasPassword) { %><p class="form-hint" style="margin:0 0 16px;" data-set-password><%= t('profile.setPasswordIntro') %></p><% } %>
           <% if (pwState.error) { %><div class="form-alert error"><%= pwState.error %></div><% } %>
           <form method="POST" action="/ho-so/mat-khau">
             <%# Not sent (no name): tells the browser whose saved password to offer for "Mật khẩu hiện tại". The real password is never stored readably, so the site itself cannot fill it. %>
             <input type="email" class="sr-only" autocomplete="username" value="<%= user.email %>" tabindex="-1" aria-hidden="true" readonly>
-            <div class="form-group">
-              <label for="currentPassword"><%= t('profile.currentPassword') %></label>
-              <%- include('partials/password-input', { id: 'currentPassword', name: 'currentPassword', autocomplete: 'current-password' }) %>
-            </div>
+            <%# A Google account without a password sets its first one: nothing to type as "current" %>
+            <% if (hasPassword) { %>
+              <div class="form-group">
+                <label for="currentPassword"><%= t('profile.currentPassword') %></label>
+                <%- include('partials/password-input', { id: 'currentPassword', name: 'currentPassword', autocomplete: 'current-password' }) %>
+              </div>
+            <% } %>
             <div class="form-row">
               <div class="form-group">
                 <label for="newPassword"><%= t('profile.newPassword') %></label>
@@ -116,7 +148,7 @@
               </div>
             </div>
             <p class="form-hint" style="margin:-8px 0 18px;"><%= t('profile.passwordHint') %></p>
-            <button type="submit" class="btn btn-primary btn-block"><%= t('profile.changePassword') %></button>
+            <button type="submit" class="btn btn-primary btn-block"><%= t(hasPassword ? 'profile.changePassword' : 'profile.setPassword') %></button>
           </form>
         </div>
       </div>

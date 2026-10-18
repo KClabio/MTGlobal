@@ -1,13 +1,18 @@
 <%
-  // One photo or video already on a solution page: preview, captions, "show whole image", remove, drag to reorder.
+  // One photo or video already on a solution page, as a row: drag handle, preview with its number, the captions
+  // side by side (Vietnamese | English), remove. "Show the whole image" (contain) is a developer setting: it is kept
+  // as it is, in a hidden field.
   const P = (key) => t('admin.pages.' + key);
+  const pill = (L) => '<span class="lang-pill">' + L.toUpperCase() + '</span>';
 %>
 <div class="page-media" data-media>
   <input type="hidden" data-media-field="src" value="<%= m.src %>">
   <input type="hidden" data-media-field="type" value="<%= m.type %>">
   <input type="hidden" data-media-field="poster" value="<%= m.poster || '' %>">
+  <input type="hidden" data-media-field="contain" value="<%= m.contain ? '1' : '0' %>">
+  <button type="button" class="drag-handle media-drag" aria-label="<%= P('dragMedia') %>" title="<%= P('dragMedia') %>"><%- include('icon', { name: 'grip', size: 16 }) %></button>
   <div class="page-media-thumb">
-    <button type="button" class="drag-handle media-drag" aria-label="<%= P('dragMedia') %>" title="<%= P('dragMedia') %>"><%- include('icon', { name: 'grip', size: 16 }) %></button>
+    <span class="page-media-num" data-media-num aria-hidden="true"></span>
     <% if (m.type === 'video') { %>
       <% if (m.poster) { %><img src="<%= m.poster %>" alt="" loading="lazy"><% } else { %><span class="page-media-video"><%- include('icon', { name: 'video', size: 28 }) %></span><% } %>
       <span class="page-media-badge"><%- include('icon', { name: 'video', size: 12 }) %> <%= P('videoLabel') %></span>
@@ -15,15 +20,13 @@
       <img src="<%= m.src %>" alt="" loading="lazy">
     <% } %>
   </div>
-  <div class="page-media-fields">
-    <input class="form-control" data-media-field="captionVi" value="<%= m.captionVi || '' %>" placeholder="<%= P('captionVi') %>" aria-label="<%= P('captionVi') %>">
-    <input class="form-control" data-media-field="captionEn" value="<%= m.captionEn || '' %>" placeholder="<%= P('captionEn') %>" aria-label="<%= P('captionEn') %>">
-    <div class="page-media-actions">
-      <span class="checkbox-row" data-mirror-wrap>
-        <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror <%= m.contain ? 'checked' : '' %>> <%= P('contain') %></label>
-        <input type="hidden" data-media-field="contain" value="<%= m.contain ? '1' : '0' %>">
-      </span>
-      <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-media><%= P('removeMedia') %></button>
-    </div>
+  <div class="bi-row page-media-fields">
+    <% ['vi', 'en'].forEach(function (l) { const L = l === 'en' ? 'En' : 'Vi'; %>
+      <div class="form-group">
+        <label><%= P('caption') %> <%- pill(l) %></label>
+        <textarea class="form-control page-media-caption" data-media-field="caption<%= L %>" rows="2" data-one-line aria-label="<%= P('caption' + L) %>"><%= m['caption' + L] || '' %></textarea>
+      </div>
+    <% }) %>
   </div>
+  <button type="button" class="icon-btn icon-btn-danger media-remove" data-remove-media aria-label="<%= P('removeMedia') %>" title="<%= P('removeMedia') %>"><%- include('icon', { name: 'trash', size: 16 }) %></button>
 </div>

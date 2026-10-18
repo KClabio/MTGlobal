@@ -66,13 +66,36 @@
 
 /* ---- Giải pháp pages: jump menu, folded sections, "more" in cards, picture tabs ---- */
 /* Jump menu: sticky just under the header (--header-h is measured by public/js/main.js); scrolls sideways on phones */
-.page-jump { position: sticky; top: var(--header-h, 72px); z-index: 40; background: var(--mtg-surface); border-bottom: 1px solid var(--mtg-border); box-shadow: 0 6px 14px -12px rgba(15, 23, 42, .35); }
-.page-jump-list { list-style: none; display: flex; gap: 4px; margin: 0; padding: 10px 0; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.page-jump { position: sticky; top: var(--header-h, 72px); z-index: 40; background: var(--mtg-surface); border-bottom: 1px solid var(--mtg-border); box-shadow: 0 8px 18px -14px rgba(15, 23, 42, .45); }
+@supports (backdrop-filter: blur(1px)) {
+  .page-jump { background: color-mix(in srgb, var(--mtg-surface) 86%, transparent); backdrop-filter: saturate(1.6) blur(12px); }
+}
+/* With JS it is out of sight at the top of the page and slides in under the header once the banner has scrolled away (main.js) */
+.js .page-jump { position: fixed; top: var(--header-h, 72px); left: 0; right: 0; transform: translateY(-100%); opacity: 0; visibility: hidden;
+  transition: transform calc(220ms * var(--anim)) ease, opacity calc(220ms * var(--anim)) ease, visibility 0s linear calc(220ms * var(--anim)); }
+.js .page-jump.is-shown { transform: none; opacity: 1; visibility: visible; transition: transform calc(220ms * var(--anim)) ease, opacity calc(220ms * var(--anim)) ease, visibility 0s; }
+/* "TRÊN TRANG NÀY | (1) … (2) … [(3) …] …": numbered topics. Read ones get a blue number, the one being read is a solid
+   blue pill; the thin bar along the bottom fills as the page is read (--read, 0–1, set by main.js). */
+.page-jump-inner { display: flex; align-items: center; gap: 14px; }
+.page-jump-label { flex: none; padding-right: 14px; border-right: 1px solid var(--mtg-border); color: var(--mtg-muted); font-size: .7rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap; }
+.page-jump-list { flex: 1; min-width: 0; list-style: none; display: flex; gap: 6px; margin: 0; padding: 10px 2px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
 .page-jump-list::-webkit-scrollbar { display: none; }
-.page-jump-link { display: block; padding: 6px 12px; border-radius: 999px; color: var(--mtg-muted); font-size: .86rem; font-weight: 600; white-space: nowrap; text-decoration: none; transition: background-color .15s ease, color .15s ease; }
-.page-jump-link:hover { background: var(--mtg-bg-alt); color: var(--mtg-heading); }
+.page-jump-link { display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px; border-radius: 999px; color: var(--mtg-ink); font-size: .87rem; font-weight: 600; white-space: nowrap; text-decoration: none;
+  transition: background-color calc(180ms * var(--anim)) ease, color calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease; }
+.page-jump-num { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .74rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  transition: background-color calc(180ms * var(--anim)) ease, color calc(180ms * var(--anim)) ease; }
+.page-jump-link:hover { background: var(--mtg-blue-tint); color: var(--mtg-heading); }
 .page-jump-link:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 1px; }
-.page-jump-link.is-current { background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.page-jump-link.is-read .page-jump-num { background: var(--mtg-blue-solid); color: #fff; }
+.page-jump-link.is-current { background: var(--mtg-blue-solid); color: #fff; box-shadow: 0 6px 14px -6px rgba(21, 101, 192, .65); }
+.page-jump-link.is-current .page-jump-num { background: #fff; color: var(--mtg-blue-solid); }
+.page-jump-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; pointer-events: none; }
+.page-jump-progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--mtg-blue-solid), var(--mtg-blue)); transform-origin: 0 50%; transform: scaleX(var(--read, 0)); border-radius: 0 3px 3px 0; }
+/* Phones and narrow windows: no label; the topics scroll sideways and fade at the edges */
+@media (max-width: 760px) {
+  .page-jump-label { display: none; }
+  .page-jump-list { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 28px), transparent); padding-left: 8px; padding-right: 24px; }
+}
 [data-jump-target] { scroll-margin-top: calc(var(--header-h, 72px) + var(--jump-h, 58px)); }
 
 /* A section folded under its title (display "collapsed") */
@@ -158,7 +181,8 @@
 
 /* ---- Process trail ("steps" blocks): one line through numbered stops, with arrows showing the direction ----
    Each stop draws the segment to the next stop (track + fill), so the line is continuous across and down. */
-.process-trail { --node: 50px; --gap: 20px; --line: 6px; --seg: calc(900ms / var(--steps) * var(--anim));
+/* The line always takes 2.4 s from the first stop to the last (also with reduced motion, by the owner's choice) */
+.process-trail { --node: 50px; --gap: 20px; --line: 6px; --seg: calc(2400ms / max(var(--steps) - 1, 1));
   list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(var(--steps), minmax(0, 1fr)); gap: 0 var(--gap); }
 .trail-step { position: relative; text-align: center; }
 .trail-step:not(:last-child)::before, .trail-step:not(:last-child)::after {
@@ -184,6 +208,18 @@
 .js .process-trail.is-drawn .trail-step:not(:last-child)::after { transform: none; }
 .js .process-trail.is-drawn .trail-node, .js .process-trail.is-drawn .trail-body { opacity: 1; transform: none; }
 .js .process-trail.is-drawn .trail-step:not(:last-child) .trail-body::before { opacity: 1; }
+/* Hover: the step under the pointer lights up. main.js adds .is-settled once the reveal is over, so the reveal's
+   per-step delays don't slow the hover down */
+.trail-body { border-radius: var(--mtg-radius-sm); }
+.js .process-trail.is-settled .trail-node, .js .process-trail.is-settled .trail-body { transition-delay: 0s;
+  transition: transform calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease, background-color calc(180ms * var(--anim)) ease; }
+.trail-body h3 { transition: color calc(180ms * var(--anim)) ease; }
+@media (hover: hover) {
+  .process-trail .trail-body { padding: 8px 10px 10px; margin: -8px -10px 0; } /* room for the highlight, without moving the text */
+  .js .process-trail.is-settled .trail-step:hover .trail-node { transform: scale(1.12); box-shadow: 0 8px 22px rgba(21, 101, 192, .35), 0 0 0 5px var(--mtg-surface), 0 0 0 10px var(--mtg-blue-tint); }
+  .js .process-trail.is-settled .trail-step:hover .trail-body { background: var(--mtg-blue-tint); }
+  .process-trail.is-settled .trail-step:hover .trail-body h3 { color: var(--mtg-blue); }
+}
 /* Phones and narrow screens: the trail runs down the left side */
 @media (max-width: 900px) {
   .process-trail { --node: 44px; --gap: 26px; grid-template-columns: 1fr; gap: var(--gap) 0; }

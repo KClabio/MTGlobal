@@ -1,44 +1,70 @@
 <%- include('partials/header', { title: t('forms.registerTitle') + ' - MTG' }) %>
-
+<%
+  // Checked in the browser before sending (public/js/main.js, [data-register-form]) and again on the server (routes/auth.js)
+  const rgErrors = typeof errors !== 'undefined' && errors ? errors : {};
+  const rgInvalid = (key) => (rgErrors[key] ? ' is-invalid' : '');
+  const rgError = (key) => (rgErrors[key] ? '<div class="field-error" data-error-for="' + key + '">' + rgErrors[key].replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])) + '</div>' : '');
+%>
 <section class="section">
   <div class="container" style="max-width:520px;">
     <h1 style="text-align:center;"><%= t('forms.registerTitle') %></h1>
     <div class="form-card">
+      <% const rgForRequest = typeof needLogin !== 'undefined' && needLogin; %>
+      <% if (rgForRequest) { %><div class="form-alert info" data-need-login><%= t('auth.loginToRequest') %></div><% } %>
       <% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
-      <form method="POST" action="/dang-ky">
+      <form method="POST" action="/dang-ky" novalidate data-register-form
+            data-err-name="<%= t('forms.errName') %>"
+            data-err-email-required="<%= t('auth.errEmailRequired') %>"
+            data-err-email="<%= t('forms.errEmail') %>"
+            data-err-phone="<%= t('forms.errPhone') %>"
+            data-err-password-required="<%= t('auth.errPasswordRequired') %>"
+            data-err-password-length="<%= t('auth.errPasswordLength') %>"
+            data-err-confirm-required="<%= t('auth.errConfirmRequired') %>"
+            data-err-password-match="<%= t('auth.errPasswordMatch') %>"
+            data-password-match="<%= t('auth.passwordMatch') %>">
+        <% if (rgForRequest) { %><input type="hidden" name="forRequest" value="1"><% } %>
         <div class="form-group">
-          <label><%= t('forms.name') %> *</label>
-          <input class="form-control" type="text" name="name" value="<%= values.name || '' %>" required>
+          <label for="regName"><%= t('forms.name') %> *</label>
+          <input class="form-control<%= rgInvalid('name') %>" type="text" id="regName" name="name" value="<%= values.name || '' %>" required autocomplete="name">
+          <%- rgError('name') %>
         </div>
         <div class="form-group">
-          <label><%= t('forms.email') %> *</label>
-          <input class="form-control" type="email" name="email" value="<%= values.email || '' %>" required autocomplete="username">
+          <label for="regEmail"><%= t('forms.email') %> *</label>
+          <input class="form-control<%= rgInvalid('email') %>" type="email" id="regEmail" name="email" value="<%= values.email || '' %>" required autocomplete="username">
+          <%- rgError('email') %>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label><%= t('forms.phone') %></label>
-            <input class="form-control" type="text" name="phone" value="<%= values.phone || '' %>">
+            <label for="regPhone"><%= t('forms.phone') %> <span class="form-optional">(<%= t('auth.optional') %>)</span></label>
+            <input class="form-control<%= rgInvalid('phone') %>" type="tel" id="regPhone" name="phone" inputmode="tel" autocomplete="tel" value="<%= values.phone || '' %>">
+            <%- rgError('phone') %>
           </div>
           <div class="form-group">
-            <label><%= t('forms.schoolOrCompany') %></label>
-            <input class="form-control" type="text" name="schoolOrCompany" value="<%= values.schoolOrCompany || '' %>">
+            <label for="regSchool"><%= t('forms.schoolOrCompany') %> <span class="form-optional">(<%= t('auth.optional') %>)</span></label>
+            <input class="form-control" type="text" id="regSchool" name="schoolOrCompany" autocomplete="organization" value="<%= values.schoolOrCompany || '' %>">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="regPassword"><%= t('forms.password') %> *</label>
-            <%- include('partials/password-input', { id: 'regPassword', name: 'password', autocomplete: 'new-password' }) %>
+            <%- include('partials/password-input', { id: 'regPassword', name: 'password', autocomplete: 'new-password', invalid: !!rgErrors.password, minlength: 6 }) %>
+            <%# Says while typing how many characters are still needed (public/js/main.js) %>
+            <p class="form-hint field-hint" data-hint-for="password" data-password-length aria-live="polite"
+               data-default="<%= t('auth.passwordHint') %>" data-short="<%= t('auth.passwordShort') %>" data-ok="<%= t('auth.passwordLongEnough') %>"<%= rgErrors.password ? ' hidden' : '' %>><%= t('auth.passwordHint') %></p>
+            <%- rgError('password') %>
           </div>
           <div class="form-group">
             <label for="regConfirm"><%= t('forms.confirmPassword') %> *</label>
-            <%- include('partials/password-input', { id: 'regConfirm', name: 'confirmPassword', autocomplete: 'new-password' }) %>
+            <%- include('partials/password-input', { id: 'regConfirm', name: 'confirmPassword', autocomplete: 'new-password', invalid: !!rgErrors.confirmPassword }) %>
+            <%- rgError('confirmPassword') %>
           </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block"><%= t('forms.registerTitle') %></button>
       </form>
+      <%- include('partials/google-button', { label: 'auth.googleRegister' }) %>
       <p style="text-align:center; margin-top:16px;">
-        <%= lang === 'en' ? 'Already have an account?' : 'Đã có tài khoản?' %>
-        <a href="/dang-nhap"><%= t('nav.login') %></a>
+        <%= t('auth.haveAccount') %>
+        <a href="/dang-nhap<%= rgForRequest ? '?yeu-cau=1' : '' %>"><%= t('nav.login') %></a>
       </p>
     </div>
   </div>

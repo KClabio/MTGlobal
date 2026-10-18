@@ -59,7 +59,7 @@
           <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
           <% if (ssButtons.length) { %>
             <div class="section-cta is-start">
-              <% ssButtons.forEach(function (it) { %><a class="btn <%= it.primary ? 'btn-primary' : 'btn-ghost' %>" href="<%= it.url %>"><%= pick(it, 'title') %></a><% }) %>
+              <% ssButtons.forEach(function (it) { %><%- include('solution-button', { it }) %><% }) %>
             </div>
           <% } %>
         </div>
@@ -69,7 +69,7 @@
       <% if (ssText) { %><div class="<%= ssTitle ? 'section-text' : 'solution-intro' %>"><%- ssFormat(ssText) %></div><% } %>
       <% if (ssButtons.length) { %>
         <div class="section-cta<%= ssTitle ? ' is-start' : '' %>">
-          <% ssButtons.forEach(function (it) { %><a class="btn <%= it.primary ? 'btn-primary' : 'btn-ghost' %>" href="<%= it.url %>"><%= pick(it, 'title') %></a><% }) %>
+          <% ssButtons.forEach(function (it) { %><%- include('solution-button', { it }) %><% }) %>
         </div>
       <% } %>
     <% } %>
@@ -127,14 +127,20 @@
 
   <% } else if (s.kind === 'stats') { %>
     <div class="stat-grid">
-      <% (s.items || []).forEach(function (it) { %>
+      <% (s.items || []).filter(function (it) { return !it.url; }).forEach(function (it) { %>
         <div class="stat-card"><div class="num"><%= pick(it, 'title') %></div><div><%= pick(it, 'text') %></div></div>
       <% }) %>
     </div>
+    <%# A link button set by the developer, under the numbers (e.g. "Khám phá VEX Robotics") %>
+    <% if (ssButtons.length) { %>
+      <div class="section-cta">
+        <% ssButtons.forEach(function (it) { %><%- include('solution-button', { it }) %><% }) %>
+      </div>
+    <% } %>
 
   <% } else if (s.kind === 'buttons') { %>
     <div class="section-cta">
-      <% ssButtons.forEach(function (it) { %><a class="btn <%= it.primary ? 'btn-primary' : 'btn-ghost' %>" href="<%= it.url %>"><%= pick(it, 'title') %></a><% }) %>
+      <% ssButtons.forEach(function (it) { %><%- include('solution-button', { it }) %><% }) %>
     </div>
   <% } %>
   <% if (ssFold) { %>

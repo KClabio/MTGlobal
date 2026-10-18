@@ -1,6 +1,8 @@
 <%- include('partials/head', { active: 'nguoi-dung' }) %>
 <%
   const ROLE_TAG = { owner: 'tag role-owner', admin: 'tag role-admin', customer: 'tag' };
+  // Initials for people without a profile photo (same rule as the profile page)
+  const initialsOf = (name) => { const parts = String(name || '').trim().split(/\s+/); return ((parts[0] || '?')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase(); };
 %>
 
 <div class="admin-topbar"><h1><%= t('admin.users.title') %></h1></div>
@@ -11,14 +13,32 @@
   <strong><%= t('admin.roles.admin') %></strong> <%= t('admin.users.hintAdmin') %></span>
 </p>
 
+<%# Filter by role (chips, kept in the URL as ?vai-tro=) and search by name / email / organisation: public/js/admin.js %>
+<%- include('partials/list-search', { target: 'users' }) %>
+<%- include('partials/list-filter', { target: 'users', param: 'vai-tro', label: t('admin.users.filterRole'), total: users.length,
+      options: ['owner', 'admin', 'customer'].map(function (r) { return { value: r, label: t('admin.roles.' + r), count: users.filter(function (u) { return u.role === r; }).length }; }) }) %>
+
 <div style="overflow-x:auto;">
 <table class="data-table">
   <thead><tr><th><%= t('admin.users.colName') %></th><th><%= t('admin.users.colEmail') %></th><th><%= t('admin.users.colOrg') %></th><th><%= t('admin.users.colRole') %></th><th><%= t('admin.users.colJoined') %></th><th></th></tr></thead>
-  <tbody>
+  <tbody data-list="users">
     <% users.forEach(function (u) { %>
       <% const isMe = String(u._id) === String(user._id); %>
-      <tr>
-        <td><%= u.name %></td>
+      <tr data-id="<%= u._id %>" data-filter="<%= u.role %>" data-search="<%= [u.name, u.email, u.schoolOrCompany].filter(Boolean).join(' ') %>">
+        <td>
+          <div class="user-cell">
+            <% if (u.avatar) { %>
+              <%# Click to see the photo larger (public/js/admin.js, the dialog below the table) %>
+              <button type="button" class="user-avatar" data-avatar-view data-src="<%= u.avatar %>" data-name="<%= u.name %>" data-email="<%= u.email %>"
+                      aria-label="<%= t('admin.users.viewPhoto', { name: u.name }) %>" title="<%= t('admin.users.viewPhoto', { name: u.name }) %>">
+                <img src="<%= u.avatar %>" alt="" loading="lazy">
+              </button>
+            <% } else { %>
+              <span class="user-avatar user-initials" aria-hidden="true"><%= initialsOf(u.name) %></span>
+            <% } %>
+            <span class="user-name" data-search-name><%= u.name %></span>
+          </div>
+        </td>
         <td><%= u.email %></td>
         <td><%= u.schoolOrCompany || '' %></td>
         <td>
@@ -55,5 +75,13 @@
   </tbody>
 </table>
 </div>
+<p class="empty-note list-search-none" data-list-search-none="users" hidden></p>
+
+<dialog class="avatar-dialog" data-avatar-dialog aria-labelledby="avatarDialogName">
+  <button type="button" class="avatar-dialog-x" data-avatar-close aria-label="<%= t('admin.common.close') %>" title="<%= t('admin.common.close') %>"><%- include('partials/icon', { name: 'x', size: 18 }) %></button>
+  <img class="avatar-dialog-img" src="" alt="" data-avatar-img>
+  <p class="avatar-dialog-name" id="avatarDialogName" data-avatar-name></p>
+  <p class="avatar-dialog-email" data-avatar-email></p>
+</dialog>
 
 <%- include('partials/foot') %>

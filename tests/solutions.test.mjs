@@ -143,8 +143,34 @@ await suite(async (b) => {
 
   await part(b, 'STEM Lab page', async () => {
     await nav('/giai-phap/stem-lab', 500);
-    const jumps = await ev(`[...document.querySelectorAll('.page-jump-link')].map((a) => ({ href: a.getAttribute('href'), text: a.textContent }))`);
-    check('jump menu: 6 topics with their short names', JSON.stringify(jumps.map((j) => j.text)) === JSON.stringify(['Vì sao cần Lab STEM', 'Lab STEM là gì', 'Quy mô & phân khu', 'Mẫu thiết kế', 'Lợi ích', 'Triển khai']), jumps);
+    const jumps = await ev(`[...document.querySelectorAll('.page-jump-link')].map((a) => ({ href: a.getAttribute('href'), text: a.querySelector('.page-jump-text').textContent, num: a.querySelector('.page-jump-num').textContent }))`);
+    check('jump menu: 6 numbered topics with their short names, after a "Trên trang này" label', JSON.stringify(jumps.map((j) => j.num + ' ' + j.text)) === JSON.stringify(['1 Vì sao cần Lab STEM', '2 Lab STEM là gì', '3 Quy mô & phân khu', '4 Mẫu thiết kế', '5 Lợi ích', '6 Triển khai'])
+      && (await ev(`document.querySelector('.page-jump-label').textContent.trim()`)) === 'Trên trang này', jumps);
+    const menuState = () => ev(`(() => { const n = document.querySelector('.page-jump'); const r = n.getBoundingClientRect(); return { shown: n.classList.contains('is-shown'), visible: getComputedStyle(n).visibility === 'visible', top: Math.round(r.top), header: Math.round(document.querySelector('.site-header').getBoundingClientRect().bottom), hidden: n.getAttribute('aria-hidden'), tab: n.querySelector('a').getAttribute('tabindex') }; })()`);
+    let m = await menuState();
+    check('top of the page: the jump menu is out of sight (and out of the keyboard order)', !m.shown && !m.visible && m.hidden === 'true' && m.tab === '-1', m);
+    check('top of the page: the key numbers lead straight into "Vì sao cần phòng Lab STEM?" (no button row between)', await ev(`(() => { const s = [...document.querySelectorAll('main section.section')]; return s[0].querySelector('.stat-grid') && !s[0].querySelector('.section-cta') && /Vì sao cần phòng Lab STEM/.test(s[1].textContent); })()`));
+    await ev(`window.scrollTo(0, document.querySelector('.page-hero').getBoundingClientRect().bottom + scrollY + 50)`); await sleep(500);
+    m = await menuState();
+    check('scrolled past the banner: the menu slides in, stuck under the header', m.shown && m.visible && m.top === m.header && m.hidden === null && m.tab === null, m);
+    // Reading progress: topics above the current one are "read" (blue number), the current one is a solid pill, the bar fills
+    const reading = () => ev(`(() => { const n = document.querySelector('.page-jump'); const links = [...n.querySelectorAll('.page-jump-link')]; const cur = n.querySelector('.is-current');
+      return { read: +n.style.getPropertyValue('--read'), bar: Math.round(n.querySelector('.page-jump-progress > span').getBoundingClientRect().width), state: links.map((a) => a.classList.contains('is-current') ? 'C' : a.classList.contains('is-read') ? 'R' : '-').join(''),
+        pill: cur && getComputedStyle(cur).backgroundColor, pillText: cur && getComputedStyle(cur).color, readNum: (n.querySelector('.is-read .page-jump-num') && getComputedStyle(n.querySelector('.is-read .page-jump-num')).backgroundColor) || null }; })()`);
+    const early = await reading();
+    await ev(`document.getElementById(${JSON.stringify(jumps[3].href.slice(1))}).scrollIntoView({ block: 'start', behavior: 'instant' })`); await sleep(500);
+    const mid = await reading();
+    check('reading progress: the topic being read is a solid blue pill with white text; the ones above it are marked read', mid.state === 'RRRC--' && mid.pill === 'rgb(21, 101, 192)' && mid.pillText === 'rgb(255, 255, 255)' && mid.readNum === 'rgb(21, 101, 192)', mid);
+    check('reading progress: the bar along the menu grows as the page is read', early.read < mid.read && mid.read > 0.3 && mid.read < 0.95 && mid.bar > early.bar, { early, mid });
+    await ev(`window.scrollTo(0, document.documentElement.scrollHeight)`); await sleep(500);
+    const end = await reading();
+    check('… and is full at the end of the page', end.read === 1 && end.state === 'RRRRRC', end);
+    await ev(`document.getElementById(${JSON.stringify(jumps[3].href.slice(1))}).scrollIntoView({ block: 'start', behavior: 'instant' })`); await sleep(400);
+    await shot('jump-menu-reading-1280');
+    await ev(`window.scrollTo(0, 0)`); await sleep(500);
+    m = await menuState();
+    check('back at the top: the menu disappears again', !m.shown && !m.visible, m);
+    await ev(`window.scrollTo(0, 700)`); await sleep(500);
     const stuck = [];
     for (const j of jumps) {
       await b.clickAt(`.page-jump-link[href="${j.href}"]`); await sleep(900);
@@ -192,7 +218,10 @@ await suite(async (b) => {
       const ok = r && r.afterMain && r.links.length === 5 && !r.links.some((l) => l.href === url) && r.links.every((l) => l.href.startsWith('/giai-phap/') && l.text.length > 10) && r.cta.length === 1;
       check(`${url}: ends with "Khám phá thêm" (5 other pages, each with its line) + consultation band`, ok, r);
       if (key === 'workshop') check('workshop: its own button "Đăng ký workshop" is the band\'s button; the old pill row is gone', r.cta[0].startsWith('Đăng ký workshop') && !r.oldRow.length, r);
-      if (key === 'stem-lab') check('stem-lab: old closing pill row gone (only the short row under the key facts stays)', r.oldRow.length === 1 && r.oldRow[0].startsWith('Yêu cầu tư vấn') && r.cta[0] === 'Yêu cầu tư vấn → /lien-he?quan_tam=giai-phap-stem-lab', r);
+      // The band's button opens the contact form on this page's own "Bạn quan tâm đến" choice
+      const topic = { 'stem-lab': 'giai-phap-stem-lab', 'thiet-bi': 'thiet-bi-stem', workshop: 'workshop-stem', 'dao-tao': 'dao-tao-stem', 'du-an': 'giai-phap-stem-lab', 'tap-huan': 'tap-huan-stem' }[key];
+      check(`${url}: the consultation band asks about "${topic}"`, r.cta[0].endsWith(`/lien-he?quan_tam=${topic}`), r.cta);
+      if (key === 'stem-lab') check('stem-lab: no button rows left on the page (the closing row became "Khám phá thêm", the one under the key facts is gone)', r.oldRow.length === 0 && r.cta[0] === 'Yêu cầu tư vấn → /lien-he?quan_tam=giai-phap-stem-lab', r);
     }
     await nav('/giai-phap/stem-lab', 300);
     await ev(`document.querySelector('.next-steps').scrollIntoView({ block: 'start' })`); await sleep(300);
@@ -259,7 +288,12 @@ await suite(async (b) => {
         await b.viewport(width, width === 390 ? 844 : 900);
         await nav(`/giai-phap/${slug}`, 300);
         await ev(`document.querySelector('.process-trail').scrollIntoView({ block: 'center' })`);
-        await sleep(1500);
+        await sleep(1000);
+        if (width === 1280) {
+          const early = await ev(`[...document.querySelectorAll('.process-trail .trail-node')].filter((x) => +getComputedStyle(x).opacity > 0.99).length`);
+          check(`${slug}: after 1 s the trail is still drawing (${early} of ${steps} stops shown)`, early >= 1 && early < steps, early);
+        }
+        await sleep(2300); // the whole trail takes about 2.8 s
         const tr = await ev(`(() => { const t = document.querySelector('.process-trail'); const li = [...t.querySelectorAll('.trail-step')];
           const nodes = li.map((l) => l.querySelector('.trail-node').getBoundingClientRect());
           const segs = li.slice(0, -1).map((l, i) => { const a = getComputedStyle(l, '::after'); const r = l.getBoundingClientRect();
@@ -274,5 +308,47 @@ await suite(async (b) => {
         await shot(`trail-${slug}-${width}`);
       }
     }
+    // Reduced motion: the same ~2.8 s (the owner's choice), then hover lights up a step
+    await b.viewport(1280, 900); await b.reducedMotion();
+    await nav('/giai-phap/tap-huan', 300);
+    await ev(`document.querySelector('.process-trail').scrollIntoView({ block: 'center' })`);
+    await sleep(1000);
+    const slow = await ev(`[...document.querySelectorAll('.process-trail .trail-node')].filter((x) => +getComputedStyle(x).opacity > 0.99).length`);
+    check('reduced motion: the trail still takes its time (not finished after 1 s)', slow < 4, slow);
+    await sleep(2500);
+    check('… and is complete and settled after about 3 s', await ev(`(() => { const t = document.querySelector('.process-trail'); return t.classList.contains('is-settled') && [...t.querySelectorAll('.trail-node')].every((x) => +getComputedStyle(x).opacity > 0.99); })()`));
+    const look = () => ev(`(() => { const s = document.querySelector('.process-trail .trail-step:nth-child(2)'); return { node: getComputedStyle(s.querySelector('.trail-node')).transform, bg: getComputedStyle(s.querySelector('.trail-body')).backgroundColor, title: getComputedStyle(s.querySelector('h3')).color }; })()`);
+    const calm = await look();
+    await b.hover('.process-trail .trail-step:nth-child(2) .trail-body h3'); await sleep(300);
+    const lit = await look();
+    check('hovering a step lights it up (bigger node, tinted text box, blue title)', /^matrix\(1\.1/.test(lit.node) && lit.bg !== calm.bg && lit.title !== calm.title, { calm, lit });
+    await b.mouse('mouseMoved', { x: 5, y: 5 }); await sleep(300);
+    check('… and goes back when the pointer leaves', JSON.stringify(await look()) === JSON.stringify(calm));
+    await shot('trail-hover');
+    // Tập huấn: "Kết nối cùng hệ sinh thái VEX Robotics toàn cầu": number cards light up on hover, and a button opens the VEX website
+    const vex = await ev(`(() => { const block = [...document.querySelectorAll('.solution-block[data-section-kind="stats"]')].find((x) => /VEX Robotics/.test(x.textContent)); const a = block.querySelector('.section-cta a');
+      return { cards: block.querySelectorAll('.stat-card').length, buttons: block.querySelectorAll('.section-cta a').length, text: a.textContent.replace(/\\s+/g, ' ').trim(), href: a.getAttribute('href'), target: a.getAttribute('target'), rel: a.getAttribute('rel'), below: a.getBoundingClientRect().top > block.querySelector('.stat-grid').getBoundingClientRect().bottom }; })()`);
+    check('VEX section: 4 number cards, then a "Khám phá VEX Robotics" button to vexrobotics.com that opens in a new tab', vex.cards === 4 && vex.buttons === 1 && /^Khám phá VEX Robotics ↗/.test(vex.text) && /mở trong thẻ mới/.test(vex.text)
+      && vex.href === 'https://www.vexrobotics.com/' && vex.target === '_blank' && vex.rel === 'noopener' && vex.below, vex);
+    const cardSel = '.solution-block[data-section-kind="stats"]:has(a[href*="vexrobotics"]) .stat-card:nth-child(2)';
+    const cardLook = () => ev(`(() => { const c = document.querySelector('${cardSel}'); return { t: getComputedStyle(c).transform, border: getComputedStyle(c).borderTopColor, num: getComputedStyle(c.querySelector('.num')).transform }; })()`);
+    await b.mouse('mouseMoved', { x: 5, y: 5 }); await sleep(250);
+    const cardCalm = await cardLook();
+    await b.hover(cardSel); await sleep(350);
+    const cardLit = await cardLook();
+    check('VEX section: hovering a number card lifts it, outlines it in blue and enlarges the number', cardLit.t !== cardCalm.t && cardLit.border === 'rgb(21, 101, 192)' && /^matrix\(1\.0[5-9]/.test(cardLit.num), { cardCalm, cardLit });
+    await shot('vex-hover');
+    await b.mouse('mouseMoved', { x: 5, y: 5 }); await sleep(250);
+    // Dịch vụ pages: numbered steps light up on hover too
+    const svc = await d.collection('services').findOne({ 'steps.0': { $exists: true } });
+    if (svc) {
+      await nav(`/dich-vu/${svc.slug}`, 300);
+      await ev(`document.querySelector('.timeline-item').scrollIntoView({ block: 'center' })`);
+      const border = () => ev(`getComputedStyle(document.querySelector('.timeline-item')).borderColor`);
+      const before = await border();
+      await b.hover('.timeline-item'); await sleep(300);
+      check('Dịch vụ: hovering a step highlights it (blue border)', (await border()) !== before);
+    }
+    await b.reducedMotion(false);
   });
 });

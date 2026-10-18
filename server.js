@@ -40,6 +40,9 @@ app.locals.buildSolutionLinks = require('./lib/home-domains').buildSolutionLinks
 app.locals.bannerFor = require('./lib/banners').bannerFor; // page banner line + background (Admin → Cài đặt chung)
 app.locals.LEVELS = require('./lib/project-levels').LEVELS; // school levels of the reference projects
 app.locals.levelFromSchool = require('./lib/project-levels').levelFromSchool;
+app.locals.INTEREST_GROUPS = require('./models/QuoteRequest').INTEREST_GROUPS; // "Bạn quan tâm đến" list (partials/quote-form.ejs)
+app.locals.isProductLine = require('./models/QuoteRequest').isProductLine; // robot name shown with the category (request lists)
+app.locals.googleEnabled = require('./lib/google-auth').isConfigured(); // "Đăng nhập bằng Google" button (login, register)
 if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY);
 
 app.use(express.urlencoded({ extended: true }));
@@ -87,6 +90,15 @@ app.use(loadSiteSettings);
 // Opened from a card in the home page "Lĩnh vực hoạt động" slider: the page banner shows "← Về trang chủ"
 app.use((req, res, next) => {
   res.locals.fromHome = req.method === 'GET' && req.query.from === 'home';
+  next();
+});
+// Right after logging in (routes/auth.js): the next page shows "Đăng nhập thành công" once (partials/footer.ejs)
+app.use((req, res, next) => {
+  res.locals.loginNotice = null;
+  if (req.session && req.session.justLoggedIn && req.method === 'GET' && req.accepts('html') && req.user) {
+    res.locals.loginNotice = req.user.name;
+    delete req.session.justLoggedIn;
+  }
   next();
 });
 

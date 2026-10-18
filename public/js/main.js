@@ -137,13 +137,132 @@
   });
 })();
 
-// Profile page: live avatar preview and bio character counter
+// Sign-up form: the same checks as the server (routes/auth.js), shown under each box on leaving it and on sending;
+// "Xác nhận mật khẩu" says at once whether it matches. Sending is blocked while something is wrong.
+(function () {
+  var PHONE_RE = /^[0-9+()\-.\s]{8,20}$/;
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var PASSWORD_MIN = 6;
+  var FIELDS = ['name', 'email', 'phone', 'password', 'confirmPassword'];
+
+  document.querySelectorAll('[data-register-form]').forEach(function (form) {
+    var d = form.dataset;
+    var input = function (name) { return form.elements[name]; };
+    var value = function (name) { return name === 'password' || name === 'confirmPassword' ? input(name).value : input(name).value.trim(); };
+    var touched = {};
+
+    function problem(name) {
+      var v = value(name);
+      if (name === 'name') return v ? '' : d.errName;
+      if (name === 'email') return !v ? d.errEmailRequired : EMAIL_RE.test(v) ? '' : d.errEmail;
+      if (name === 'phone') return !v || PHONE_RE.test(v) ? '' : d.errPhone;
+      if (name === 'password') return !v ? d.errPasswordRequired : v.length < PASSWORD_MIN ? d.errPasswordLength : '';
+      if (name === 'confirmPassword') return !v ? d.errConfirmRequired : value('password') && v !== value('password') ? d.errPasswordMatch : '';
+      return '';
+    }
+
+    // One message line per box, under the box (and under the eye button for passwords); the hint hides behind an error
+    function show(name, text, ok) {
+      var box = input(name);
+      var group = box.closest('.form-group');
+      var line = group.querySelector('[data-error-for="' + name + '"], [data-ok-for="' + name + '"]');
+      var hint = group.querySelector('[data-hint-for="' + name + '"]');
+      box.classList.toggle('is-invalid', !!text);
+      if (line) line.remove();
+      if (hint) hint.hidden = !!text;
+      if (!text && !ok) return;
+      line = document.createElement('div');
+      line.className = text ? 'field-error' : 'field-ok';
+      line.setAttribute(text ? 'data-error-for' : 'data-ok-for', name);
+      line.textContent = text || ok;
+      group.appendChild(line);
+    }
+
+    function check(name) {
+      var text = problem(name);
+      var ok = name === 'confirmPassword' && !text && value('password') ? d.passwordMatch : '';
+      show(name, text, ok);
+      return !text;
+    }
+
+    // Under "Mật khẩu": how many characters are still needed, then "Đủ độ dài ✓"
+    var lengthLine = form.querySelector('[data-password-length]');
+    function showLength() {
+      var n = value('password').length;
+      lengthLine.classList.toggle('is-short', n > 0 && n < PASSWORD_MIN);
+      lengthLine.classList.toggle('is-ok', n >= PASSWORD_MIN);
+      lengthLine.textContent = !n ? lengthLine.getAttribute('data-default')
+        : n < PASSWORD_MIN ? lengthLine.getAttribute('data-short').replace('{n}', PASSWORD_MIN - n) : lengthLine.getAttribute('data-ok');
+    }
+    if (lengthLine) input('password').addEventListener('input', showLength);
+
+    FIELDS.forEach(function (name) {
+      var box = input(name);
+      box.addEventListener('blur', function () { if (value(name) || touched[name]) { touched[name] = true; check(name); } });
+      box.addEventListener('input', function () {
+        // While typing: errors go away as soon as the box is right; the confirmation is compared at every key
+        if (name === 'confirmPassword' || (name === 'password' && value('confirmPassword'))) {
+          touched.confirmPassword = true;
+          if (value('confirmPassword')) check('confirmPassword');
+        }
+        // The password's own line counts the characters while typing; its red message comes back on leaving the box
+        if (name === 'password') show('password', '');
+        else if (name !== 'confirmPassword' && box.classList.contains('is-invalid')) check(name);
+      });
+    });
+
+    form.addEventListener('submit', function (e) {
+      var wrong = FIELDS.filter(function (name) { touched[name] = true; return !check(name); });
+      if (!wrong.length) return;
+      e.preventDefault();
+      input(wrong[0]).focus();
+    });
+  });
+})();
+
+// "Đăng nhập thành công" (once after logging in): slides out off the screen after a few seconds, or at once with ×.
+// The countdown waits while the pointer is on it or it has keyboard focus, so it doesn't leave while being read.
+(function () {
+  var toast = document.querySelector('[data-site-toast]');
+  if (!toast) return;
+  var STAY = 4000;
+  var timer = null;
+  function leave() {
+    if (toast.classList.contains('is-leaving')) return;
+    clearTimeout(timer);
+    toast.classList.add('is-leaving');
+    toast.addEventListener('animationend', function (e) { if (e.animationName === 'site-toast-out') toast.remove(); });
+    setTimeout(function () { toast.remove(); }, 1200); // in case the animation doesn't run
+  }
+  function wait() { clearTimeout(timer); timer = setTimeout(leave, STAY); }
+  function hold() { clearTimeout(timer); }
+  wait();
+  toast.addEventListener('mouseenter', hold);
+  toast.addEventListener('mouseleave', function () { if (!toast.contains(document.activeElement)) wait(); });
+  toast.addEventListener('focusin', hold);
+  toast.addEventListener('focusout', function () { if (!toast.matches(':hover')) wait(); });
+  toast.querySelector('[data-site-toast-close]').addEventListener('click', leave);
+})();
+
+// Profile page: live avatar preview, "Bỏ ảnh vừa chọn", "Xóa ảnh" (asks first) and bio character counter
 (function () {
   document.querySelectorAll('[data-avatar-input]').forEach(function (input) {
+    var picker = input.closest('.avatar-picker');
+    var saved = input.form.querySelector('[data-avatar-preview]').cloneNode(true); // the photo (or two letters) as saved
+    var drop = picker && picker.querySelector('[data-avatar-drop]');
+    var del = picker && picker.querySelector('[data-avatar-delete]');
+    var chosen = function (on) {
+      if (drop) drop.hidden = !on;
+      if (del) del.hidden = on; // a chosen, unsaved photo is dropped first; "Xóa ảnh" is for the saved one
+    };
+    if (drop) drop.addEventListener('click', function () {
+      input.value = '';
+      input.form.querySelector('[data-avatar-preview]').replaceWith(saved.cloneNode(true));
+      chosen(false);
+    });
     input.addEventListener('change', function () {
       var file = input.files && input.files[0];
       var preview = input.form.querySelector('[data-avatar-preview]');
-      var picker = input.closest('.avatar-picker');
       var oldError = picker && picker.querySelector('[data-avatar-error]');
       if (oldError) oldError.remove();
       if (!file || !preview) return;
@@ -168,10 +287,31 @@
         preview = img;
       }
       preview.src = URL.createObjectURL(file);
-      var remove = input.form.querySelector('[name="removeAvatar"]');
-      if (remove) remove.checked = false; // a new photo replaces the old one
+      chosen(true);
     });
   });
+
+  // "Xóa ảnh" sends its own form (routes/auth.js) after "Xóa ảnh đại diện?"; without JS it simply sends
+  var removeForm = document.querySelector('[data-avatar-remove-form]');
+  var confirmBox = document.querySelector('[data-avatar-confirm]');
+  if (removeForm && confirmBox && typeof confirmBox.showModal === 'function') {
+    removeForm.addEventListener('submit', function (e) {
+      if (removeForm.dataset.confirmed) return;
+      e.preventDefault();
+      confirmBox.showModal();
+      confirmBox.querySelector('[data-confirm-cancel]').focus();
+    });
+    confirmBox.querySelector('[data-confirm-cancel]').addEventListener('click', function () { confirmBox.close(); });
+    confirmBox.querySelector('[data-confirm-ok]').addEventListener('click', function () {
+      removeForm.dataset.confirmed = '1';
+      confirmBox.close();
+      removeForm.submit();
+    });
+    confirmBox.addEventListener('click', function (e) { // a click on the dimmed page around the box closes it
+      var r = confirmBox.getBoundingClientRect();
+      if (e.target === confirmBox && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) confirmBox.close();
+    });
+  }
 
   document.querySelectorAll('[data-count]').forEach(function (field) {
     var counter = document.getElementById(field.getAttribute('data-count'));
@@ -675,32 +815,63 @@ document.addEventListener('contextmenu', function (e) {
   });
 })();
 
-// Giải pháp pages: the jump menu sits under the sticky header and marks the section being read
+// Giải pháp pages: the jump menu marks the section being read. It stays out of sight at the top of the page and
+// slides in under the sticky header once the banner has been scrolled past (pages.css: .js .page-jump / .is-shown).
+// Topics above the one being read are marked as read, and the bar along its bottom shows how much of the page is read.
 (function () {
   var nav = document.querySelector('[data-page-jump]');
   if (!nav) return;
   var header = document.querySelector('.site-header');
+  var hero = document.querySelector('.page-hero');
   var links = Array.prototype.slice.call(nav.querySelectorAll('a[href^="#"]'));
   var targets = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+  var contentEnd = document.querySelector('.next-steps'); // "Khám phá thêm" closes the page's own content
   function measure() {
     document.documentElement.style.setProperty('--header-h', (header ? Math.round(header.getBoundingClientRect().height) : 0) + 'px');
     document.documentElement.style.setProperty('--jump-h', Math.ceil(nav.getBoundingClientRect().height) + 'px');
   }
   var ticking = false;
+  var row = nav.querySelector('.page-jump-list');
+  // Keeps the current link in view inside the menu's own row (scrollIntoView would also scroll the page)
+  function revealLink(a) {
+    if (!row) return;
+    var r = row.getBoundingClientRect(), l = a.getBoundingClientRect();
+    if (l.left < r.left) row.scrollLeft -= r.left - l.left + 8;
+    else if (l.right > r.right) row.scrollLeft += l.right - r.right + 8;
+  }
+  var shown = null;
+  function show(on) {
+    if (shown === on) return;
+    shown = on;
+    nav.classList.toggle('is-shown', on);
+    // Out of sight = out of the keyboard order too
+    if (on) nav.removeAttribute('aria-hidden'); else nav.setAttribute('aria-hidden', 'true');
+    links.forEach(function (a) { if (on) a.removeAttribute('tabindex'); else a.setAttribute('tabindex', '-1'); });
+  }
   function spy() {
     ticking = false;
-    var line = (header ? header.getBoundingClientRect().height : 0) + nav.offsetHeight + 24;
+    var headerH = header ? header.getBoundingClientRect().height : 0;
+    show(!hero || hero.getBoundingClientRect().bottom <= headerH + nav.offsetHeight + 1);
+    var line = headerH + nav.offsetHeight + 24;
     var current = -1;
     targets.forEach(function (el, i) { if (el && el.getBoundingClientRect().top <= line) current = i; });
     // At the very bottom the last section counts as read, even when it is too short to reach the line
     if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) current = targets.length - 1;
     links.forEach(function (a, i) {
+      a.classList.toggle('is-read', i < current);
       var on = i === current;
       if (a.classList.contains('is-current') === on) return;
       a.classList.toggle('is-current', on);
-      if (on) { a.setAttribute('aria-current', 'location'); a.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+      if (on) { a.setAttribute('aria-current', 'location'); revealLink(a); }
       else a.removeAttribute('aria-current');
     });
+    // Reading progress: 0 when the menu appears, 1 when the end of the page's content reaches the bottom of the screen
+    var y = window.scrollY;
+    var start = hero ? hero.getBoundingClientRect().bottom + y - headerH - nav.offsetHeight : 0;
+    var endDoc = contentEnd ? contentEnd.getBoundingClientRect().top + y : document.documentElement.scrollHeight;
+    var end = Math.min(endDoc - window.innerHeight, document.documentElement.scrollHeight - window.innerHeight);
+    var read = end > start ? (y - start) / (end - start) : 1;
+    nav.style.setProperty('--read', Math.max(0, Math.min(1, read)).toFixed(4));
   }
   function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }
   measure();
@@ -721,9 +892,60 @@ document.addEventListener('contextmenu', function (e) {
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
       if (!entry.isIntersecting) return;
-      entry.target.classList.add('is-drawn');
-      io.unobserve(entry.target);
+      var trail = entry.target;
+      trail.classList.add('is-drawn');
+      io.unobserve(trail);
+      // Once every step is shown, hovering a step reacts at once (pages.css: .is-settled)
+      var seg = 2400 / Math.max((parseInt(trail.style.getPropertyValue('--steps'), 10) || 1) - 1, 1);
+      var steps = trail.querySelectorAll('.trail-step').length;
+      setTimeout(function () { trail.classList.add('is-settled'); }, (steps - 1) * seg + 600);
     });
   }, { threshold: 0, rootMargin: '0px 0px -15% 0px' }); // a tall (phone) trail starts once its top is well inside the screen
   trails.forEach(function (t) { io.observe(t); });
+})();
+
+// VI ↔ EN reloads the page in the other language: keep the visitor where they were. Before leaving, note the first
+// content block below the sticky header (and how far down it sits); on arrival scroll that same block back into place.
+// Both languages have the same blocks in the same order; if the count differs, fall back to the same scroll fraction.
+(function () {
+  var KEY = 'mtgLangScroll';
+  var SELECTOR = 'section, h1, h2, h3, p, li, .card, figure, .stat-card, .trail-step, .timeline-item';
+  function blocks() {
+    var main = document.querySelector('main');
+    // Not the jump menu (it is fixed to the top of the window, so it says nothing about the reading position)
+    return main ? Array.prototype.slice.call(main.querySelectorAll(SELECTOR)).filter(function (el) { return el.getClientRects().length && !el.closest('.page-jump'); }) : [];
+  }
+  // Measured from the bottom of the sticky header (the jump menu is left out: it is hidden right after the reload)
+  function topLine() {
+    var header = document.querySelector('.site-header');
+    return header ? header.getBoundingClientRect().bottom : 0;
+  }
+  function scrollable() { return Math.max(document.documentElement.scrollHeight - window.innerHeight, 1); }
+
+  document.addEventListener('click', function (e) {
+    var link = e.target.closest('.lang-switch a');
+    if (!link || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    var line = topLine();
+    var list = blocks();
+    var idx = -1;
+    // The first block that starts below the header (a heading, paragraph, card…), not a big section around it
+    for (var i = 0; i < list.length; i++) { if (list[i].getBoundingClientRect().top >= line) { idx = i; break; } }
+    var saved = { path: location.pathname, count: list.length, idx: idx, ratio: window.scrollY / scrollable(), at: Date.now(),
+      offset: idx >= 0 ? list[idx].getBoundingClientRect().top - line : 0, top: window.scrollY };
+    try { sessionStorage.setItem(KEY, JSON.stringify(saved)); } catch (err) { /* storage unavailable */ }
+  });
+
+  var saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem(KEY) || 'null'); sessionStorage.removeItem(KEY); } catch (err) { /* storage unavailable */ }
+  if (!saved || saved.path !== location.pathname || Date.now() - saved.at > 15000 || location.hash || !saved.top) return;
+  function restore() {
+    var list = blocks();
+    var el = saved.idx >= 0 && list.length === saved.count ? list[saved.idx] : null;
+    var y = el ? window.scrollY + el.getBoundingClientRect().top - topLine() - saved.offset : saved.ratio * scrollable();
+    window.scrollTo({ top: Math.max(0, Math.round(y)), behavior: 'instant' });
+  }
+  restore();
+  // Once more after pictures and fonts have settled (they can change heights above the spot)
+  if (document.readyState === 'complete') requestAnimationFrame(restore);
+  else window.addEventListener('load', function () { requestAnimationFrame(restore); });
 })();

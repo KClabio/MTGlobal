@@ -12,7 +12,9 @@
     if (!nsLinks.some(function (l) { return l.url === path; })) nsLinks.push({ key: path, url: it.url, icon: 'external-link', title: pick(it, 'title'), text: '' });
   });
   let nsCta = nsOwn.filter(function (it) { return it.primary; }).map(function (it) { return { url: it.url, title: pick(it, 'title') }; });
-  if (!nsCta.length) nsCta = [{ url: '/lien-he?quan_tam=giai-phap-stem-lab', title: t('nextSteps.ctaButton') }];
+  // Without its own main button, the band asks for a consultation about this page's topic ("Bạn quan tâm đến" choice)
+  const nsTopic = { 'thiet-bi': 'thiet-bi-stem', workshop: 'workshop-stem', 'dao-tao': 'dao-tao-stem', 'tap-huan': 'tap-huan-stem' }[nsCurrent] || 'giai-phap-stem-lab';
+  if (!nsCta.length) nsCta = [{ url: '/lien-he?quan_tam=' + nsTopic, title: t('nextSteps.ctaButton') }];
 %>
 <section class="section next-steps" aria-labelledby="nextStepsTitle">
   <div class="container">

@@ -61,6 +61,15 @@
 .timeline { display: grid; gap: 20px; }
 .timeline-item { display: flex; gap: 18px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); padding: 20px 24px; }
 .timeline-num { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--mtg-gradient-brand); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+/* Hover: the step under the pointer lights up */
+.timeline-item { transition: border-color calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease, transform calc(180ms * var(--anim)) ease; }
+.timeline-num { transition: transform calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease; }
+.timeline-item h3 { transition: color calc(180ms * var(--anim)) ease; }
+@media (hover: hover) {
+  .timeline-item:hover { border-color: var(--mtg-blue); box-shadow: var(--mtg-shadow); transform: translateY(-2px); }
+  .timeline-item:hover .timeline-num { transform: scale(1.1); box-shadow: 0 0 0 5px var(--mtg-blue-tint); }
+  .timeline-item:hover h3 { color: var(--mtg-blue); }
+}
 
 /* ---- Forms ---- */
 .form-card { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); padding: 32px; box-shadow: var(--mtg-shadow); max-width: 640px; margin: 0 auto; }
@@ -95,6 +104,10 @@ textarea.form-control { resize: vertical; min-height: 110px; }
 .form-control.is-invalid { border-color: var(--mtg-error); }
 .form-control.is-invalid:focus { box-shadow: 0 0 0 3px rgba(192,57,43,.12); }
 .field-error { color: var(--mtg-error); font-size: .8rem; margin-top: 4px; }
+.field-ok { color: var(--mtg-success); font-size: .8rem; margin-top: 4px; font-weight: 600; }
+.form-optional { font-weight: 500; font-size: .8rem; color: var(--mtg-muted); }
+.field-hint.is-short { color: var(--mtg-orange-ink); font-weight: 600; }
+.field-hint.is-ok { color: var(--mtg-success); font-weight: 600; }
 .contact-hint { margin: -8px 0 18px; }
 .form-hint.is-error { color: var(--mtg-error); }
 /* Narrow sidebar forms: one field per row so long labels stay on one line */
@@ -124,6 +137,38 @@ textarea.form-control { resize: vertical; min-height: 110px; }
 .form-alert { padding: 12px 16px; border-radius: var(--mtg-radius-sm); margin-bottom: 18px; font-size: .9rem; }
 .form-alert.error { background: var(--mtg-error-bg); color: var(--mtg-error); border: 1px solid var(--mtg-error-border); }
 .form-alert.success { background: var(--mtg-success-bg); color: var(--mtg-success); border: 1px solid var(--mtg-success-border); }
+.form-alert.info { background: var(--mtg-blue-tint); color: var(--mtg-heading); border: 1px solid var(--mtg-blue); font-weight: 600; }
+/* "Đăng nhập thành công" notice, once after logging in (partials/footer.ejs + main.js): slides in from the right under the
+   header and, after a few seconds (or ×), slides back out off the screen. On phones it sits at the bottom and slides down.
+   The slide stays visible with "reduced motion" too (only shorter): a fixed part plus a part scaled by --anim. */
+.site-toast { --toast-off: translateX(calc(100% + 32px));
+  position: fixed; z-index: 60; top: calc(var(--header-h, 72px) + 14px); right: 18px; max-width: min(380px, calc(100vw - 32px)); display: flex; align-items: center; gap: 12px; padding: 12px 10px 12px 14px;
+  background: var(--mtg-surface); color: var(--mtg-ink); border: 1px solid var(--mtg-success-border); border-left: 4px solid var(--mtg-success); border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow-lg); font-size: .92rem;
+  animation: site-toast-in calc(200ms + 250ms * var(--anim)) cubic-bezier(.22, 1, .36, 1) both; }
+html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, .36, 1) both, site-toast-out 560ms cubic-bezier(.55, 0, .75, .2) 6s forwards; }
+.site-toast.is-leaving { animation: site-toast-out calc(260ms + 300ms * var(--anim)) cubic-bezier(.55, 0, .75, .2) forwards; pointer-events: none; }
+.site-toast-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--mtg-success-bg); color: var(--mtg-success); }
+.site-toast-text strong { color: var(--mtg-heading); }
+.site-toast-x { flex: none; width: 30px; height: 30px; border: none; border-radius: 50%; background: transparent; color: var(--mtg-muted); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.site-toast-x:hover, .site-toast-x:focus-visible { background: var(--mtg-bg-alt); color: var(--mtg-heading); }
+@keyframes site-toast-in { from { opacity: 0; transform: var(--toast-off); } 60% { opacity: 1; } }
+@keyframes site-toast-out { 0% { opacity: 1; transform: none; } 70% { opacity: 1; } 100% { opacity: 0; transform: var(--toast-off); visibility: hidden; } }
+@media (max-width: 640px) {
+  .site-toast { --toast-off: translateY(calc(100% + 24px)); top: auto; bottom: 16px; left: 16px; right: 16px; max-width: none; }
+}
+/* Request form for a logged-out visitor (robot and Dịch vụ pages): a short note and the way to log in */
+/* Thank-you card after sending a request (partials/quote-form.ejs): back to the form, or on to "Yêu cầu của tôi" */
+.request-sent { text-align: center; padding: 8px 0; }
+.request-sent-icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; margin-bottom: 12px; border-radius: 50%; background: var(--mtg-success-bg); color: var(--mtg-success); border: 1px solid var(--mtg-success-border); }
+.request-sent-text { margin: 0 0 18px; font-weight: 600; color: var(--mtg-heading); }
+.request-sent-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.form-card--compact .request-sent-actions { flex-direction: column; }
+.form-actions-row { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.login-needed { text-align: center; }
+.login-needed-icon { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; margin-bottom: 12px; border-radius: 50%; background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.login-needed-title { margin: 0 0 6px; font-size: 1.1rem; color: var(--mtg-heading); }
+.login-needed-text { margin: 0 0 16px; color: var(--mtg-muted); font-size: .92rem; }
+.login-needed-alt { margin: 12px 0 0; font-size: .9rem; color: var(--mtg-muted); }
 .form-hint { font-size: .8rem; color: var(--mtg-muted); margin-top: 4px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; }
 .checkbox-row input { width: auto; }
@@ -165,12 +210,39 @@ textarea.form-control { resize: vertical; min-height: 110px; }
 .avatar-picker { display: flex; align-items: center; gap: 16px; }
 .avatar-picker .form-hint { margin: 6px 0 0; }
 .form-group .avatar-choose { display: inline-flex; margin: 0; cursor: pointer; } /* not the block-level form label style */
-.form-group .avatar-picker .checkbox-row { display: flex; margin: 8px 0 0; font-weight: 500; color: var(--mtg-muted); }
+.avatar-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.avatar-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.avatar-actions [hidden] { display: none; }
+/* "Xóa ảnh" asks first (main.js) */
+.profile-confirm { width: min(420px, calc(100vw - 32px)); padding: 28px 24px 22px; border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius);
+  background: var(--mtg-surface); color: var(--mtg-ink); box-shadow: var(--mtg-shadow-lg); text-align: center; }
+.profile-confirm::backdrop { background: rgba(10, 20, 35, .55); }
+.profile-confirm h3 { margin: 0 0 10px; font-size: 1.15rem; }
+.profile-confirm p { margin: 0 0 10px; }
+.profile-confirm-actions { display: flex; justify-content: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.profile-confirm-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* "Đăng nhập bằng Google" (login, register) and Google accounts on the profile page */
+.auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; color: var(--mtg-muted); font-size: .85rem; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--mtg-border); }
+.btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--mtg-surface); color: var(--mtg-heading); border-color: var(--mtg-border); font-weight: 600; }
+.btn-google:hover { border-color: var(--mtg-blue); color: var(--mtg-heading); box-shadow: var(--mtg-shadow); }
+.google-logo { flex: none; }
+.profile-google-linked { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 6px; padding: 3px 10px; border: 1px solid var(--mtg-border); border-radius: 999px; font-size: .8rem; font-weight: 600; color: var(--mtg-heading); }
+.profile-google-note { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 18px; padding: 10px 14px; border-radius: 10px; background: var(--mtg-blue-tint); color: var(--mtg-heading); font-size: .9rem; }
+.profile-google-note .google-logo { margin-top: 2px; }
+.form-control[readonly] { background: var(--mtg-bg-alt, var(--mtg-surface)); color: var(--mtg-muted); cursor: default; }
 .char-count { text-align: right; font-size: .78rem; color: var(--mtg-muted); margin-top: 4px; }
 
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
-.stat-card { background: var(--mtg-surface); border-radius: var(--mtg-radius); padding: 20px; box-shadow: var(--mtg-shadow); }
-.stat-card .num { font-size: 1.8rem; font-weight: 800; color: var(--mtg-blue); }
+.stat-card { background: var(--mtg-surface); border: 1px solid transparent; border-radius: var(--mtg-radius); padding: 20px; box-shadow: var(--mtg-shadow);
+  transition: transform calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease, border-color calc(180ms * var(--anim)) ease; }
+.stat-card .num { font-size: 1.8rem; font-weight: 800; color: var(--mtg-blue); transform-origin: 0 50%; transition: transform calc(180ms * var(--anim)) ease; }
+/* Hover: the number card under the pointer lifts and lights up */
+@media (hover: hover) {
+  .stat-card:hover { transform: translateY(-3px); border-color: var(--mtg-blue); box-shadow: 0 12px 26px -12px rgba(21, 101, 192, .55); }
+  .stat-card:hover .num { transform: scale(1.08); }
+}
 .data-table { width: 100%; border-collapse: collapse; background: var(--mtg-surface); border-radius: var(--mtg-radius); overflow: hidden; box-shadow: var(--mtg-shadow); }
 .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--mtg-border); font-size: .9rem; }
 .data-table th { background: var(--mtg-bg-alt); font-weight: 700; color: var(--mtg-heading); }
@@ -183,6 +255,15 @@ textarea.form-control { resize: vertical; min-height: 110px; }
 
 .tag.status-da_lien_he { background: var(--mtg-info-tint); color: var(--mtg-info-ink); }
 .tag.status-hoan_tat { background: var(--mtg-done-tint); color: var(--mtg-success); }
+.tag.tag-edited { margin-top: 4px; background: transparent; border: 1px dashed var(--mtg-border); color: var(--mtg-muted); font-weight: 600; white-space: nowrap; }
+/* "Yêu cầu của tôi": the Sửa column, and the row just changed */
+.my-requests-action { white-space: nowrap; text-align: right; }
+.my-requests-action .btn { display: inline-flex; align-items: center; gap: 6px; }
+.my-requests tr.is-just-edited td { background: var(--mtg-success-bg); transition: background calc(1500ms * var(--anim)) ease; }
+.request-edit-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 640px; margin: 0 auto 16px; color: var(--mtg-muted); font-size: .92rem; }
+.request-edit-meta .tag-edited { margin-top: 0; }
+.request-edit-fixed { max-width: 640px; margin: 0 auto 18px; padding: 14px 16px; border: 1px solid var(--mtg-border); border-radius: 10px; background: var(--mtg-bg-alt); }
+.request-edit-fixed .form-hint { margin: 0 0 8px; }
 
 .admin-form-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
 
@@ -199,6 +280,7 @@ textarea.form-control { resize: vertical; min-height: 110px; }
 .request-details dt { color: var(--mtg-muted); }
 .request-details dt::after { content: ':'; }
 .request-details dd { margin: 0; font-weight: 600; color: var(--mtg-heading); }
+.request-product { margin-top: 6px; }
 
 /* ---- Responsive ---- */
 @media (max-width: 960px) {

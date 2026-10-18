@@ -32,13 +32,16 @@
   const showJumps = jumps.length >= 4;
 %>
 <% if (showJumps) { %>
-  <%# Sticky under the header; public/js/main.js marks the section being read %>
+  <%# Appears under the header once the banner is scrolled past. public/js/main.js marks the topic being read (solid
+      pill), the ones already read (blue number), and fills the bar along the bottom as the page is read. %>
   <nav class="page-jump" aria-label="<%= t('solutionPage.onThisPage') %>" data-page-jump>
-    <div class="container">
+    <div class="container page-jump-inner">
+      <span class="page-jump-label" aria-hidden="true"><%= t('solutionPage.onThisPage') %></span>
       <ul class="page-jump-list">
-        <% jumps.forEach(function (j) { %><li><a class="page-jump-link" href="#<%= j.id %>"><%= j.title %></a></li><% }) %>
+        <% jumps.forEach(function (j, n) { %><li><a class="page-jump-link" href="#<%= j.id %>"><span class="page-jump-num" aria-hidden="true"><%= n + 1 %></span><span class="page-jump-text"><%= j.title %></span></a></li><% }) %>
       </ul>
     </div>
+    <span class="page-jump-progress" aria-hidden="true"><span></span></span>
   </nav>
 <% } %>
 <% blocks.forEach(function (block, b) { %>

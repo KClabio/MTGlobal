@@ -389,16 +389,12 @@ router.post('/trang/:slug', wrapUpload(uploadPageMedia, async (req, res) => {
   done(req, res, 'admin.flash.updated', { name: t(SOLUTION_TITLE_KEYS[slug]) }, `/admin/trang/${slug}`);
 }));
 
-router.post('/trang/:slug/mac-dinh', async (req, res) => {
-  const { slug } = req.params;
-  if (!SOLUTION_SLUGS.includes(slug)) return notFound(req, res, '/admin');
-  const page = await getSolutionPage(slug);
-  const before = pageMediaOf(page);
-  const reset = await resetSolutionPage(slug);
-  const after = new Set(pageMediaOf(reset));
+// Back to the default content (Cài đặt chung → Khôi phục mặc định); photos uploaded only for the old content are deleted
+async function restorePageDefaults(slug) {
+  const before = pageMediaOf(await getSolutionPage(slug));
+  const after = new Set(pageMediaOf(await resetSolutionPage(slug)));
   before.filter((url) => !after.has(url)).forEach(removeLocalMedia);
-  done(req, res, 'admin.pages.resetDone', { name: res.locals.t(SOLUTION_TITLE_KEYS[slug]) }, `/admin/trang/${slug}`);
-});
+}
 
 // ---- Partners ----
 router.get('/doi-tac', async (req, res) => {
@@ -544,7 +540,11 @@ router.post('/tin-tuc/:id/xoa', async (req, res) => {
 router.get('/yeu-cau', async (req, res) => {
   const status = QuoteRequest.STATUSES.includes(req.query.status) ? req.query.status : '';
   const requests = await QuoteRequest.find(status ? { status } : {}).sort({ createdAt: -1 }).lean();
-  res.render('admin/requests', { requests, statusFilter: status, statuses: QuoteRequest.STATUSES });
+  // Filter chips: the interests found in this tab, in the contact form's order, with their counts
+  const interests = QuoteRequest.INTERESTED_IN
+    .map((value) => ({ value, count: requests.filter((r) => r.interestedIn === value).length }))
+    .filter((o) => o.count > 0);
+  res.render('admin/requests', { requests, interests, statusFilter: status, statuses: QuoteRequest.STATUSES });
 });
 
 router.post('/yeu-cau/:id/trang-thai', async (req, res) => {
@@ -589,7 +589,7 @@ router.post('/nguoi-dung/:id/vai-tro', async (req, res) => {
   if (!canChangeRole(req.user, target)) return forbidden(res);
   const role = req.body.role === 'admin' ? 'admin' : 'customer';
   await User.updateOne({ _id: target._id }, { role });
-  done(req, res, role === 'admin' ? 'admin.flash.promoted' : 'admin.flash.demoted', { name: target.name }, '/admin/nguoi-dung');
+  done(req, res, role === 'admin' ? 'admin.flash.promoted' : 'admin.flash.demoted', { name: target.name }, safeBack(req, '/admin/nguoi-dung')); // keeps ?vai-tro=
 });
 
 // Owners can delete admins and customers; admins can delete customers only (see lib/roles.js)
@@ -604,7 +604,7 @@ router.post('/nguoi-dung/:id/xoa', async (req, res) => {
   await mongoose.connection.collection('sessions').deleteMany({ session: { $regex: `"userId":"${target._id}"` } });
   removeLocalUpload(target.avatar);
   await User.deleteOne({ _id: target._id });
-  done(req, res, 'admin.flash.userDeleted', { name: target.name }, '/admin/nguoi-dung');
+  done(req, res, 'admin.flash.userDeleted', { name: target.name }, safeBack(req, '/admin/nguoi-dung'));
 });
 
 // ---- Cài đặt chung (site-wide): logo, home hero, page banners ----
@@ -619,16 +619,36 @@ function settingsView(settings) {
   return data;
 }
 
-function renderGeneralSettings(res, { status = 200, settings, tab, error = null }) {
-  const tabs = ['brand', 'home', 'banners'];
+const SETTINGS_TABS = ['brand', 'home', 'banners', 'reset'];
+
+async function renderGeneralSettings(res, { status = 200, settings, tab, error = null }) {
+  // "Khôi phục mặc định" tab: the Giải pháp pages, with when each was last saved (none yet = still the default content)
+  const saved = await SolutionPage.find({}, { slug: 1, updatedAt: 1 }).lean();
+  const resetPages = SOLUTION_SLUGS.map((slug) => {
+    const doc = saved.find((p) => p.slug === slug);
+    return { slug, name: res.locals.t(SOLUTION_TITLE_KEYS[slug]), updatedAt: doc ? doc.updatedAt : null };
+  });
   res.status(status).render('admin/general-settings', {
-    settings, banners: BANNERS, openTab: tabs.includes(tab) ? tab : 'brand', error,
+    settings, banners: BANNERS, openTab: SETTINGS_TABS.includes(tab) ? tab : 'brand', error, resetPages,
     tVi: makeTranslator('vi'), tEn: makeTranslator('en'), // the default texts shown as placeholders
   });
 }
 
 router.get('/cai-dat', async (req, res) => {
-  renderGeneralSettings(res, { settings: settingsView(await loadSettings()), tab: req.query.tab });
+  await renderGeneralSettings(res, { settings: settingsView(await loadSettings()), tab: req.query.tab });
+});
+
+// Cài đặt chung → Khôi phục mặc định: the ticked Giải pháp pages go back to their default content
+router.post('/cai-dat/khoi-phuc', async (req, res) => {
+  const t = res.locals.t;
+  const picked = [].concat(req.body.pages || []).map(String);
+  const slugs = SOLUTION_SLUGS.filter((slug) => picked.includes(slug));
+  if (!slugs.length) {
+    flash(req, 'error', t('admin.general.resetNone'));
+    return res.redirect('/admin/cai-dat?tab=reset');
+  }
+  for (const slug of slugs) await restorePageDefaults(slug);
+  done(req, res, 'admin.general.resetDone', { names: slugs.map((slug) => `“${t(SOLUTION_TITLE_KEYS[slug])}”`).join(', ') }, '/admin/cai-dat?tab=reset');
 });
 
 router.post('/cai-dat', wrapUpload(uploadSettingsImages, async (req, res) => {
@@ -639,7 +659,7 @@ router.post('/cai-dat', wrapUpload(uploadSettingsImages, async (req, res) => {
   if (req.uploadError) {
     // The upload stopped part-way, so the rest of the form may be incomplete: keep the saved settings
     Object.values(files).flat().forEach((file) => removeLocalUpload(fileUrl(file)));
-    return renderGeneralSettings(res, { status: 400, settings: settingsView(settings), tab: body.tab, error: uploadErrorText(req, t) });
+    return await renderGeneralSettings(res, { status: 400, settings: settingsView(settings), tab: body.tab, error: uploadErrorText(req, t) });
   }
   const replaced = []; // old images to delete once the new settings are saved
   const swap = (oldUrl, newUrl) => { if (oldUrl && oldUrl !== newUrl) replaced.push(oldUrl); return newUrl; };
@@ -671,7 +691,7 @@ router.post('/cai-dat', wrapUpload(uploadSettingsImages, async (req, res) => {
   await settings.save();
   replaced.forEach(removeLocalUpload);
   clearSiteSettingsCache();
-  const tab = ['brand', 'home', 'banners'].includes(body.tab) ? body.tab : 'brand';
+  const tab = SETTINGS_TABS.includes(body.tab) ? body.tab : 'brand';
   done(req, res, 'admin.flash.settingsSaved', {}, `/admin/cai-dat?tab=${tab}`);
 }));
 

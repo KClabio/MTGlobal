@@ -173,8 +173,9 @@ await suite(async (b) => {
     let t = await ev(`(() => { const t = document.getElementById('adminToast'); const cs = getComputedStyle(t); return { visible: !t.hidden && t.classList.contains('is-visible'), bg: cs.backgroundColor, role: t.getAttribute('role'), icon: !!t.querySelector('.toast-icon svg'), text: t.querySelector('.toast-text').textContent }; })()`);
     check('red toast for a failed save (error colour, alert role, icon, message)', t.visible && t.bg === 'rgb(192, 57, 43)' && t.role === 'alert' && t.icon && /bắt buộc/.test(t.text), t);
     await click('#adminToast .toast-close');
-    await sleep(400);
-    check('close button hides the toast', await ev(`document.getElementById('adminToast').hidden`));
+    await b.mouse('mouseMoved', { x: 5, y: 450 }); // off the notification, so the next one isn't held by the pointer
+    await sleep(900);
+    check('close button hides the toast (after sliding out)', await ev(`document.getElementById('adminToast').hidden`));
     // green toast after saving the services order with the keyboard
     await nav('/admin/dich-vu');
     await ev(`document.querySelector('tbody[data-sortable] .drag-handle').focus()`);
@@ -185,6 +186,42 @@ await suite(async (b) => {
     await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowUp', code: 'ArrowUp', windowsVirtualKeyCode: 38 }); // put it back
     await sleep(5000);
     check('green toast hides by itself after ~4s', await ev(`document.getElementById('adminToast').hidden || !document.getElementById('adminToast').classList.contains('is-visible')`));
+
+    // ---- 4b. The notification slides in from the right and back out off the screen (also with reduced motion) ----
+    await b.reducedMotion(true);
+    await nav('/admin/dich-vu');
+    const tb = () => ev(`(() => { const t = document.getElementById('adminToast'); const r = t.getBoundingClientRect(); return { hidden: t.hidden, visible: t.classList.contains('is-visible'), left: Math.round(r.left), top: Math.round(r.top), dur: parseFloat(getComputedStyle(t).transitionDuration) }; })()`);
+    const arrow = (key, code) => send('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key, windowsVirtualKeyCode: code });
+    const firstShown = async () => { for (let i = 0; i < 100; i++) { const x = await tb(); if (!x.hidden) return x; await sleep(15); } return null; };
+    await ev(`document.querySelector('tbody[data-sortable] .drag-handle').focus()`);
+    await arrow('ArrowDown', 40);
+    const arriving = await firstShown();
+    await sleep(700);
+    const settled = await tb();
+    check('a notification slides in from the right (starts further right, then settles)', !!arriving && settled.visible && arriving.left > settled.left + 10, { arriving, settled });
+    check('… with reduced motion the slide still takes a visible while (≥ 0.29 s)', settled.dur >= 0.29, settled.dur);
+    await b.hover('#adminToast .toast-text');
+    await sleep(4600);
+    check('while the pointer is on it, it stays', (await tb()).visible);
+    await b.shot('admin-toast-held');
+    await click('#adminToast .toast-close'); // (click waits 400 ms)
+    await b.mouse('mouseMoved', { x: 5, y: 450 });
+    let gone = await tb();
+    check('× slides it out to the right (still in the page, already moved)', !gone.visible && (gone.hidden || gone.left > settled.left + 20), { gone, settled });
+    await sleep(700);
+    check('… then it is hidden', (await tb()).hidden);
+    // Phone: it sits at the bottom and slides down off the screen
+    await b.viewport(390, 844); await sleep(200);
+    await ev(`document.querySelector('tbody[data-sortable] .drag-handle').focus()`);
+    await arrow('ArrowDown', 40); // the first row down again: puts the order back
+    await firstShown(); await sleep(600);
+    const phoneAt = await tb();
+    await ev(`document.querySelector('#adminToast .toast-close').click()`); await sleep(260); // it starts slowly, then speeds away
+    const phoneOut = await tb();
+    check('phone: the notification slides down, off the bottom', phoneAt.visible && !phoneOut.visible && phoneOut.top > phoneAt.top + 10, { phoneAt, phoneOut });
+    await b.shot('admin-toast-phone-leaving');
+    await sleep(700);
+    await b.viewport(1280, 900); await send('Emulation.setEmulatedMedia', { features: [] });
 
     // ---- 5. Dark-mode contrast on key text ----
     await b.setCookie('theme', 'dark');
@@ -220,5 +257,30 @@ await suite(async (b) => {
       await nav(p);
       await shot(name, w);
     }
+  });
+
+  await part(b, 'VI / EN switch keeps the reading position', async () => {
+    const nav = (p) => b.nav(p, 500);
+    // The heading nearest to the top of the screen, and where it sits
+    const spot = () => ev(`(() => { const line = document.querySelector('.site-header').getBoundingClientRect().bottom;
+      const h = [...document.querySelectorAll('main h2, main h3')].find((x) => x.getBoundingClientRect().top >= line);
+      return { lang: document.documentElement.lang, text: h && h.textContent.trim(), top: h && Math.round(h.getBoundingClientRect().top), y: Math.round(scrollY), path: location.pathname }; })()`);
+    const switchTo = async (lang) => { const l = b.waitLoad(); await ev(`document.querySelector('.lang-switch a[href*="lang=${lang}"]').click()`); await l; await sleep(700); };
+    for (const [path, heading] of [['/giai-phap/stem-lab', 'h2'], ['/giai-phap/workshop', 'h2']]) {
+      await nav(path + '?lang=vi');
+      await ev(`(() => { const h = [...document.querySelectorAll('main ${heading}')]; h[Math.floor(h.length / 2)].scrollIntoView(); window.scrollBy(0, -150); return true; })()`); await sleep(400);
+      const vi = await spot();
+      await switchTo('en');
+      const en = await spot();
+      check(`${path}: VI → EN stays on the same part of the page (not back at the top)`, en.lang === 'en' && en.y > 300 && Math.abs(en.top - vi.top) <= 60 && en.path === path, { vi, en });
+      await switchTo('vi');
+      const back = await spot();
+      check(`${path}: EN → VI comes back to the same heading`, back.lang === 'vi' && back.text === vi.text && Math.abs(back.top - vi.top) <= 60, { vi, back });
+    }
+    // At the top of a page it stays at the top
+    await nav('/giai-phap/tap-huan?lang=vi');
+    await switchTo('en');
+    check('switching at the top of a page stays at the top', (await spot()).y === 0);
+    await switchTo('vi');
   });
 });

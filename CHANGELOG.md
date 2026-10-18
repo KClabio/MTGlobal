@@ -6,7 +6,38 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.0.8] - 2026-10-17
+## [1.0.9] - 2026-10-18
+
+### Added
+- **Log in with Google:** a "Đăng nhập bằng Google" button on the login and sign-up pages, shown once Google keys are set in `.env` (steps in the README). Name, email and photo come from the Google account at each Google login; an existing account with the same email is joined, keeping its role and requests. A Google-only account can set a password later in Profile.
+- **"Đăng nhập thành công" notice** after logging in (password or Google): it slides in under the header and slides back out after a few seconds, or with ×; it stays while the pointer is on it.
+- **Profile photo "Xóa ảnh" button** (asks first): the two letters of the name come back; a deleted Google photo doesn't return at the next Google login.
+- **Changing a sent request:** in "Yêu cầu của tôi", requests that are still "Mới" have a "Sửa" button that opens the request form filled in; once staff act on a request it is locked ("Đang xử lý" / "Đã xử lý"). Staff see "Đã sửa lúc …" on changed requests.
+- **Thank-you card after sending a request**, with "← Quay lại biểu mẫu" and "Xem yêu cầu của tôi"; reloading it no longer sends the request twice.
+- **Requests need an account:** a logged-out visitor is taken to the login page ("Xin hãy đăng nhập để yêu cầu tư vấn"); the robot and service pages show a login box instead of the form. Logged-in forms start from the profile (name, email, phone, organisation), still editable.
+- **Robot requests record the robot**, shown under "Quan tâm" in the admin request list and in "Yêu cầu của tôi".
+- **Dashboard:**
+  - "Yêu cầu theo tháng": each month's column is split into Mới / Đã liên hệ / Hoàn tất, with a key below; the line joins each month's total.
+  - A **"Tỉ lệ" panel with two tabs**: "Theo mục quan tâm" (Giải pháp STEM, Sản phẩm, Dịch vụ, Khác; click a group to open its own pie, with a way back) and "Thiết bị, học liệu, Robot STEM" (the catalogue by part).
+- **Admin → Người dùng:** filter buttons by role (Chủ sở hữu / Quản trị viên / Khách hàng) with counts, and a search by name, email or organisation; profile photos show as small pictures that open larger.
+- **Admin searches:** robots, and consultation requests with category chips.
+- **Cài đặt chung → "Khôi phục"** tab: put chosen Giải pháp pages back to their default content, with checkboxes per page.
+- **Tập huấn page:** a "Khám phá VEX Robotics" button to the VEX Robotics website; the number cards light up on hover.
+- **Sign-up checks:** name required, a valid email, matching passwords, at least 6 characters (counted while typing); phone and school are optional. After signing up the login page opens with the email filled in, and every role lands on Trang chủ after logging in.
+
+### Changed
+- **Giải pháp page editors:** an outline of sections with one item open at a time, Vietnamese and English side by side, move up/down, "Hoàn tác" after removing, and a warning before leaving unsaved changes. Button links and display options are left to the developer.
+- **"Ảnh & video" in the editors:** one numbered row per photo with its caption in both languages; the "Hiện trọn ảnh" box is gone.
+- **Page banners** (Cài đặt chung): edited per page with a preview.
+- **"Bạn quan tâm đến"** in the request form is grouped (Giải pháp STEM / Sản phẩm / Dịch vụ / Khác) with the full list of choices; each Giải pháp page's button picks its own choice.
+- **Giải pháp pages:** the section menu appears after scrolling past the banner, numbered, with reading progress; the step trail moves slower and reacts to the pointer; switching VI/EN keeps the reading position.
+- **Admin notifications** slide in from the right and back out off the screen (on phones from and to the bottom), also with "reduced motion" on, and stay while the pointer is on them.
+
+### Removed
+- The row of two buttons under the key numbers on the "Tư vấn, thiết kế và triển khai phòng Lab STEM" page (the closing sections already lead there).
+- The status pie on the dashboard (the monthly columns now show the statuses).
+
+## [1.0.8] - 2026-10-17 · `e9d6d72`
 
 ### Added
 - **Automatic tests** (`npm test`): one command checks the whole website and admin area in a real browser and prints only what fails. Test data is temporary and removed afterwards.

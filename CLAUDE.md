@@ -38,6 +38,7 @@ Each file ends with its own `@media` rules. Grep for a selector first, then read
 - `npm run dev` runs on **:3000**. This is the owner's server: never stop or restart it.
 - For your own checks use **:3001**: start `PORT=3001 node server.js` in the background, and stop it when done (`netstat -ano | findstr :3001`, then `taskkill /PID <pid> /F`). `npm test` starts and stops it by itself.
 - Database: `mongodb://localhost:27017/mtglobal_db` (`MONGO_URI` in `.env`).
+- "Đăng nhập bằng Google" (`lib/google-auth.js`) needs `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` in `.env`; without them the button is hidden. `npm test` gives its server fake keys and `GOOGLE_OAUTH_TEST_URL` (the fake Google of `tests/lib/fake-google.mjs`, :3002).
 - `.env`, `public/uploads/*` and `source-assets/` are not in git: never commit them or any secret.
 
 ## Tests
@@ -53,11 +54,12 @@ Each file ends with its own `@media` rules. Grep for a selector first, then read
   | `solutions` | Giải pháp menu, pages, assets, /giai-phap landing, STEM Lab page, "Khám phá thêm", equipment tabs + search, process trails |
   | `projects-news` | project school levels + searches, news search |
   | `partners` | partner strips, partner pages, partner admin, tile rows + hover |
-  | `services` | request forms (contact, robot pages), Dịch vụ landing |
+  | `services` | request forms (contact, robot pages), thank-you card, changing a sent request, Dịch vụ landing |
   | `media` | watch-only videos, "Sắp ra mắt" overlay |
-  | `accounts` | password eye, profile page, role badge, avatar size |
+  | `accounts` | password eye, profile page, role badge, avatar size, "Xóa ảnh", sign-up checks, login notice |
+  | `google` | "Đăng nhập bằng Google" (fake Google on :3002): new account, sync at each login, joining an email account, cancel / forged return, photo delete, first password |
   | `dashboard` | dashboard numbers, charts, animations, hover |
-  | `admin-lists` | permissions, notifications, drag order, list search, filter chips, request delete, delete dialog, admin menu scroll |
+  | `admin-lists` | permissions, notifications, drag order, list search, filter chips, request delete, delete dialog, admin menu scroll, users by role |
   | `admin-editor` | admin sidebar, Giải pháp page editor, Cài đặt chung, Thông tin công ty, plain-text content |
 - Settings changed in a test must be put back through an admin save (see `restoreSettingsNow` in `admin-editor.test.mjs`): the server caches site settings.
 - Tests use the dev database, but only with temporary data:

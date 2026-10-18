@@ -27,21 +27,31 @@ body.is-sorting, body.is-sorting * { cursor: grabbing !important; user-select: n
 tr.sortable-chosen { background: var(--mtg-hover); }
 .sort-hint .icon { color: var(--mtg-muted); }
 .count-badge { display: inline-block; margin-left: 6px; padding: 2px 10px; border-radius: 999px; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .85rem; font-weight: 700; vertical-align: middle; }
-/* Admin notifications: green = done, red = failed; icon + text so colour is never the only cue */
-.admin-toast { position: fixed; right: 20px; bottom: 20px; z-index: 200; display: flex; align-items: center; gap: 10px; max-width: min(420px, calc(100vw - 40px));
+/* Admin notifications: green = done, red = failed; icon + text so colour is never the only cue.
+   They slide in from the right and slide back out off the screen (on phones: up from and down off the bottom), like
+   the website's "Đăng nhập thành công" notice. With "reduced motion" the slide is shorter but still visible. */
+.admin-toast { --toast-off: translateX(calc(100% + 28px));
+  position: fixed; right: 20px; bottom: 20px; z-index: 200; display: flex; align-items: center; gap: 10px; max-width: min(420px, calc(100vw - 40px));
   background: var(--toast-success); color: #fff; padding: 12px 12px 12px 14px; border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow-lg); font-size: .9rem; font-weight: 600;
-  transform: translateY(16px); opacity: 0; transition: transform .25s ease, opacity .25s ease; }
+  transform: var(--toast-off); opacity: 0;
+  /* leaving: speeds away, fading only at the very end */
+  transition: transform calc(260ms + 300ms * var(--anim)) cubic-bezier(.55, 0, .75, .2), opacity calc(120ms + 80ms * var(--anim)) ease-in calc(160ms + 220ms * var(--anim)); }
 .admin-toast[hidden] { display: none; }
 .admin-toast:not(.is-visible) { pointer-events: none; } /* an invisible or fading notification never blocks clicks underneath */
-.admin-toast.is-visible { transform: none; opacity: 1; }
+.admin-toast.is-visible { transform: none; opacity: 1;
+  /* arriving: fast, then settles */
+  transition: transform calc(200ms + 250ms * var(--anim)) cubic-bezier(.22, 1, .36, 1), opacity calc(100ms + 80ms * var(--anim)) ease-out; }
 .admin-toast.is-error { background: var(--toast-error); }
 .admin-toast .toast-icon { display: inline-flex; flex: none; }
 .admin-toast .toast-text { flex: 1; line-height: 1.4; }
+.admin-toast .toast-action { flex: none; padding: 5px 12px; border: 1px solid rgba(255,255,255,.55); border-radius: 6px; background: transparent; color: #fff; font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; }
+.admin-toast .toast-action:hover { background: rgba(255,255,255,.18); }
+.admin-toast .toast-action[hidden] { display: none; }
 .admin-toast .toast-close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: none; border-radius: 6px; background: rgba(255,255,255,.15); color: #fff; font-size: 1.1rem; line-height: 1; cursor: pointer; }
 .admin-toast .toast-close:hover { background: rgba(255,255,255,.28); }
 
-@media (prefers-reduced-motion: reduce) {
-  .admin-toast { transition: none; }
+@media (max-width: 640px) {
+  .admin-toast { --toast-off: translateY(calc(100% + 24px)); }
 }
 
 /* Logos are previewed whole (contain), never cropped; checkerboard shows transparency */
@@ -63,12 +73,76 @@ tr.sortable-chosen { background: var(--mtg-hover); }
 /* Cài đặt chung */
 .settings-card { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); padding: 20px 22px; box-shadow: var(--mtg-shadow); margin-bottom: 18px; }
 .settings-card .admin-panel-title { margin-top: 0; }
-.banner-group-title { margin: 28px 0 12px; }
-.banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 16px; }
-.banner-card { margin-bottom: 0; scroll-margin-top: 80px; }
-.banner-card:target { outline: 3px solid var(--mtg-blue); outline-offset: 2px; }
-.banner-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.banner-card-head h3 { margin: 0; font-size: 1rem; }
+/* Người dùng: a round profile photo (or initials) before each name; clicking a photo opens it larger */
+.user-cell { display: flex; align-items: center; gap: 10px; }
+.user-avatar { flex: none; width: 36px; height: 36px; padding: 0; border: none; border-radius: 50%; overflow: hidden; background: var(--mtg-bg-alt); box-shadow: 0 0 0 2px var(--mtg-surface), 0 0 0 3px var(--mtg-border); }
+button.user-avatar { cursor: zoom-in; transition: box-shadow .15s ease, transform .15s ease; }
+button.user-avatar:hover, button.user-avatar:focus-visible { outline: none; transform: scale(1.06); box-shadow: 0 0 0 2px var(--mtg-surface), 0 0 0 4px var(--mtg-blue); }
+.user-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.user-initials { display: inline-flex; align-items: center; justify-content: center; background: var(--mtg-gradient-brand); color: #fff; font-size: .78rem; font-weight: 800; letter-spacing: .02em; }
+.avatar-dialog { width: min(360px, calc(100vw - 32px)); padding: 24px 24px 20px; border: none; border-radius: var(--mtg-radius); background: var(--mtg-surface); color: var(--mtg-ink); box-shadow: var(--mtg-shadow-lg); text-align: center; }
+.avatar-dialog[open] { animation: avatar-pop calc(200ms * var(--anim, 1)) ease-out; }
+.avatar-dialog::backdrop { background: rgba(15, 23, 42, .55); }
+@keyframes avatar-pop { from { opacity: 0; transform: scale(.92); } }
+.avatar-dialog-img { display: block; width: 100%; max-width: 312px; aspect-ratio: 1; margin: 0 auto 14px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 4px var(--mtg-surface), 0 0 0 6px var(--mtg-border); }
+.avatar-dialog-name { margin: 0; font-weight: 800; font-size: 1.05rem; color: var(--mtg-heading); }
+.avatar-dialog-email { margin: 2px 0 0; font-size: .88rem; color: var(--mtg-muted); overflow-wrap: anywhere; }
+.avatar-dialog-x { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: none; border-radius: 50%; background: transparent; color: var(--mtg-muted); cursor: pointer; }
+.avatar-dialog-x:hover, .avatar-dialog-x:focus-visible { background: var(--mtg-hover); color: var(--mtg-heading); }
+/* Cài đặt chung → Khôi phục mặc định: one row per Giải pháp page with a tick box; the red button acts on the ticked ones */
+.reset-warning { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 16px; padding: 10px 14px; border-radius: var(--mtg-radius-sm); background: var(--mtg-error-bg); color: var(--mtg-error); font-size: .9rem; font-weight: 600; }
+.reset-warning svg { flex: none; margin-top: 2px; }
+.reset-all { margin: 0 0 8px; font-weight: 600; }
+.reset-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.reset-row { display: flex; align-items: center; gap: 12px; padding: 4px 10px 4px 4px; border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); transition: border-color .15s ease, background-color .15s ease; }
+.reset-row:hover { border-color: var(--mtg-blue); }
+.reset-row.is-picked { border-color: var(--mtg-error); background: var(--mtg-error-bg); }
+.reset-check { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; margin: 0; padding: 8px; cursor: pointer; }
+.reset-check input { flex: none; width: 18px; height: 18px; accent-color: var(--mtg-error); }
+.reset-text { display: grid; gap: 2px; min-width: 0; }
+.reset-name { font-weight: 700; color: var(--mtg-heading); }
+.reset-date { font-size: .82rem; color: var(--mtg-muted); }
+.reset-actions { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 16px; }
+.reset-picked { font-size: .9rem; font-weight: 600; color: var(--mtg-muted); }
+.reset-actions .btn { display: inline-flex; align-items: center; gap: 8px; }
+.reset-actions .btn:disabled { opacity: .45; cursor: not-allowed; }
+.banner-group-title { margin: 24px 0 10px; font-size: 1rem; }
+.banner-rows { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow); overflow: hidden; }
+.banner-row + .banner-row { border-top: 1px solid var(--mtg-border); }
+.banner-row { scroll-margin-top: 80px; }
+.banner-row.is-open { background: var(--mtg-bg-alt); box-shadow: inset 4px 0 0 var(--mtg-blue-solid); }
+.banner-row-head { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto auto; align-items: center; gap: 14px; width: 100%; padding: 10px 16px; border: none; background: transparent; color: var(--mtg-ink); font: inherit; text-align: left; cursor: pointer; }
+.banner-row-head:hover { background: var(--mtg-hover); }
+.banner-row-head:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: -2px; }
+.banner-thumb { width: 64px; height: 40px; border-radius: 6px; background-color: var(--mtg-navy); background-image: linear-gradient(rgba(12, 20, 33, .55), rgba(12, 20, 33, .55)), var(--hero-image, none); background-size: cover; background-position: center; }
+.banner-row-text { display: grid; gap: 2px; min-width: 0; }
+.banner-row-name { font-weight: 700; color: var(--mtg-heading); }
+.banner-row-line { font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.banner-row-line.is-default { color: var(--mtg-muted); font-style: italic; }
+.banner-row-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.banner-row-action { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; font-weight: 700; color: var(--mtg-blue); white-space: nowrap; }
+.banner-row-action > span { display: inline-flex; align-items: center; gap: 6px; }
+.banner-row-head[aria-expanded="false"] [data-when="open"], .banner-row-head[aria-expanded="true"] [data-when="closed"] { display: none; }
+.banner-chevron { transition: transform var(--anim, .2s) ease; }
+.banner-row-head[aria-expanded="true"] .banner-chevron { transform: rotate(180deg); }
+.banner-editor { padding: 4px 16px 18px 94px; }
+.banner-live { display: grid; gap: 6px; justify-items: center; align-content: center; min-height: 120px; padding: 18px 20px; border-radius: var(--mtg-radius-sm); text-align: center; color: #fff;
+  background-color: var(--mtg-navy); background-image: linear-gradient(rgba(12, 20, 33, .74), rgba(12, 20, 33, .74)), var(--hero-image, none); background-size: cover; background-position: center; }
+.banner-live strong { font-size: 1.3rem; color: #fff; }
+.banner-live span { max-width: 560px; font-size: .9rem; color: rgba(255,255,255,.85); }
+.banner-live-note { margin: 6px 0 14px; font-size: .8rem; color: var(--mtg-muted); }
+.banner-editor .form-group { margin-bottom: 10px; }
+.banner-editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.banner-editor-actions .banner-remove { margin: 0; }
+.banner-editor-actions .banner-view { margin-left: auto; }
+.banner-file-name { font-size: .84rem; color: var(--mtg-ink); overflow-wrap: anywhere; }
+.banner-file-name:empty { display: none; }
+.page-media-pick [data-when-image] { display: none; }
+.page-media-pick.has-image [data-when-image="some"], .page-media-pick:not(.has-image) [data-when-image="none"] { display: inline; }
+.tag-muted { background: transparent; color: var(--mtg-muted); box-shadow: inset 0 0 0 1px var(--mtg-border); }
+.tag-blue { background: var(--mtg-blue-tint); color: var(--mtg-info-ink); }
+.tag-green { background: var(--mtg-green-tint); color: var(--mtg-green-ink); }
+.tag[hidden] { display: none; }
 .banner-preview { position: relative; height: 96px; border-radius: var(--mtg-radius-sm); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; text-align: center; padding: 8px;
   background-image: linear-gradient(rgba(12, 20, 33, .74), rgba(12, 20, 33, .74)), var(--hero-image); background-size: cover; background-position: center; }
 .banner-preview.is-hero { height: auto; background: var(--mtg-bg-alt); padding: 10px; max-width: 360px; }
@@ -76,31 +150,125 @@ tr.sortable-chosen { background: var(--mtg-hover); }
 .banner-remove { margin-bottom: 10px; font-size: .88rem; }
 .page-banner-note a { font-weight: 700; }
 
-/* Solution-page editor */
-.page-section { padding-bottom: 14px; border-left: 4px solid var(--mtg-blue); }
-.page-section .page-continued { margin: -4px 0 14px; color: var(--mtg-muted); font-size: .88rem; }
-.page-subsection { margin-top: 10px; padding: 14px; background: var(--mtg-bg-alt); border-radius: var(--mtg-radius-sm); }
+/* Solution-page editor: an outline of sections, one open at a time */
+.page-editor-top { flex-wrap: wrap; gap: 12px 20px; }
+.page-sections-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin-bottom: 10px; }
+.page-sections-head .admin-panel-title { margin: 0; }
+.page-sections-hint { margin: 0; font-size: .86rem; color: var(--mtg-muted); }
+.page-outline { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; } /* a long one-line title is cut with … instead of widening the page */
+.page-section { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow); scroll-margin-top: 16px; }
+.page-section.is-open { border-color: var(--mtg-blue); box-shadow: inset 4px 0 0 var(--mtg-blue-solid), var(--mtg-shadow); }
+.page-section.has-error { border-color: var(--mtg-error); }
+.page-section.sortable-ghost { background: var(--mtg-blue-tint); }
+.ps-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px 8px 6px; }
+.ps-num { flex: none; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .78rem; font-weight: 700; line-height: 24px; text-align: center; }
+.ps-summary { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; border-radius: var(--mtg-radius-sm); background: transparent; color: var(--mtg-ink); font: inherit; text-align: left; cursor: pointer; }
+.ps-summary:hover { background: var(--mtg-hover); }
+.ps-summary:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 1px; }
+.ps-kind { flex: none; display: inline-flex; align-items: center; gap: 6px; width: 132px; font-size: .8rem; font-weight: 700; color: var(--mtg-muted); }
+.ps-kind-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.ps-kind-icon .kind-icon { display: none; }
+.page-section[data-kind="text"] .kind-icon-text, .page-section[data-kind="cards"] .kind-icon-cards, .page-section[data-kind="steps"] .kind-icon-steps,
+.page-section[data-kind="gallery"] .kind-icon-gallery, .page-section[data-kind="stats"] .kind-icon-stats, .page-section[data-kind="buttons"] .kind-icon-buttons { display: block; }
+.ps-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--mtg-heading); }
+.ps-title.is-empty { color: var(--mtg-muted); font-weight: 500; font-style: italic; }
+.ps-title.is-excerpt { color: var(--mtg-muted); font-weight: 500; }
+.ps-meta { flex: none; font-size: .82rem; color: var(--mtg-muted); white-space: nowrap; }
+.ps-flag { flex: none; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.ps-flag[hidden] { display: none; }
+.ps-flag-continued { background: var(--mtg-bg-alt); color: var(--mtg-muted); }
+.ps-flag-en { background: var(--mtg-orange-tint); color: var(--mtg-orange-ink); }
+.ps-flag-error { background: var(--mtg-error-bg); color: var(--mtg-error); }
+.ps-tools, .pi-tools { flex: none; display: flex; align-items: center; gap: 2px; }
+.ps-edit { margin: 0 4px; min-width: 76px; justify-content: center; }
+.ps-edit > span { display: inline-flex; align-items: center; gap: 6px; }
+.page-section:not(.is-open) .ps-edit [data-when="open"], .page-section.is-open .ps-edit [data-when="closed"] { display: none; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: var(--mtg-muted); cursor: pointer; }
+.icon-btn:hover:not(:disabled) { background: var(--mtg-bg-alt); color: var(--mtg-heading); }
+.icon-btn:disabled { opacity: .3; cursor: default; }
+.icon-btn:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 1px; }
+.icon-btn-danger:hover:not(:disabled) { background: var(--mtg-error-bg); color: var(--mtg-error); }
+.ps-body { padding: 6px 20px 18px 56px; border-top: 1px solid var(--mtg-border); }
+.ps-body > .form-group { margin: 14px 0 0; }
+/* Vietnamese on the left, English on the right (one column on phones) */
+.bi-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 16px; }
+.ps-body > .bi-row { margin-top: 14px; }
+.ps-body > .bi-row .form-group, .banner-editor .bi-row .form-group { margin: 0; }
+.page-buttons-note { margin: -4px 0 10px; }
+[data-kinds][hidden], [data-item-kinds][hidden] { display: none !important; }
+.lang-pill { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 4px; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .68rem; font-weight: 700; letter-spacing: .04em; vertical-align: 1px; }
+.form-optional { font-weight: 500; font-size: .8rem; color: var(--mtg-muted); }
+.ps-plain-hint { margin: 6px 0 0; }
+.page-subsection { margin-top: 16px; padding: 14px; background: var(--mtg-bg-alt); border-radius: var(--mtg-radius-sm); }
 .page-subsection-title { margin: 0 0 10px; font-size: .92rem; color: var(--mtg-heading); }
-.page-item { padding: 10px 14px 2px; }
-.page-media-list { display: grid; gap: 10px; margin-bottom: 12px; }
+.page-link-note { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; }
+.page-link-note svg { flex: none; color: var(--mtg-blue); }
+.page-items { display: grid; gap: 8px; margin-bottom: 10px; }
+.page-items:empty { display: none; }
+/* Items (cards, steps, numbers, buttons): one line each, one open at a time inside a section */
+.page-item { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); }
+.page-item.is-open { border-color: var(--mtg-blue); }
+.page-item.has-error { border-color: var(--mtg-error); }
+.page-item.sortable-ghost { background: var(--mtg-blue-tint); }
+.pi-head { display: flex; align-items: center; gap: 4px; padding: 4px 6px 4px 4px; }
+.pi-summary { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: none; border-radius: 6px; background: transparent; color: var(--mtg-ink); font: inherit; text-align: left; cursor: pointer; }
+.pi-summary:hover { background: var(--mtg-hover); }
+.pi-summary:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 1px; }
+.pi-label { flex: none; min-width: 64px; font-size: .8rem; font-weight: 700; color: var(--mtg-muted); white-space: nowrap; }
+.pi-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9rem; font-weight: 600; color: var(--mtg-heading); }
+.pi-title.is-excerpt { color: var(--mtg-muted); font-weight: 500; }
+.pi-title.is-empty { color: var(--mtg-muted); font-weight: 500; font-style: italic; }
+.pi-edit { margin: 0 2px; min-width: 70px; justify-content: center; padding-top: 4px; padding-bottom: 4px; }
+.pi-edit > span { display: inline-flex; align-items: center; gap: 5px; }
+.page-item:not(.is-open) .pi-edit [data-when="open"], .page-item.is-open .pi-edit [data-when="closed"] { display: none; }
+.pi-body { display: grid; gap: 8px; padding: 10px 14px 14px 40px; border-top: 1px solid var(--mtg-border); }
+.pi-body[hidden] { display: none; }
+.pi-body .form-group { margin: 0; }
+.pi-body label { font-size: .8rem; }
+.page-media-box { padding: 16px; }
+/* Photos & videos: a header (icon, title, count, "add"), then one row per picture: handle | preview | VI | EN captions | bin */
+.page-media-head { display: flex; align-items: center; gap: 12px; }
+.page-media-head-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.page-media-head-text { flex: 1; min-width: 0; }
+.page-media-title { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--mtg-heading); line-height: 1.3; }
+.page-media-count { margin: 2px 0 0; font-size: .86rem; color: var(--mtg-muted); }
+.page-media-hint { margin: 8px 0 0; }
+.page-media-list { display: grid; gap: 10px; margin-top: 14px; }
 .page-media-list:empty { display: none; }
-.page-media { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: start; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); padding: 10px; }
-.page-media-thumb { position: relative; aspect-ratio: 4/3; background: #fff; border-radius: 6px; overflow: hidden; border: 1px solid var(--mtg-border); }
+.page-media { display: grid; grid-template-columns: auto 184px minmax(0, 1fr) auto; align-items: start; gap: 14px; padding: 10px 10px 10px 6px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); transition: border-color .15s ease, box-shadow .15s ease; }
+.page-media:hover, .page-media:focus-within { border-color: var(--mtg-blue); box-shadow: 0 4px 14px -8px rgba(21, 101, 192, .45); }
+.page-media.sortable-ghost { background: var(--mtg-blue-tint); }
+.page-media .media-drag { align-self: center; }
+.page-media-thumb { position: relative; aspect-ratio: 4/3; background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid var(--mtg-border); }
 .page-media-thumb img { width: 100%; height: 100%; object-fit: contain; }
-.page-media-thumb .media-drag { position: absolute; top: 4px; left: 4px; background: var(--mtg-surface); box-shadow: var(--mtg-shadow); }
+.page-media-num { position: absolute; left: 6px; top: 6px; min-width: 26px; height: 26px; padding: 0 7px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--mtg-blue); color: #fff; font-size: .8rem; font-weight: 800; box-shadow: 0 2px 6px rgba(0, 0, 0, .25); }
 .page-media-video { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: var(--mtg-muted); background: var(--mtg-bg-alt); }
-.page-media-badge { position: absolute; right: 4px; bottom: 4px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 999px; background: rgba(0,0,0,.7); color: #fff; font-size: .7rem; font-weight: 700; }
-.page-media-fields { display: grid; gap: 8px; }
-.page-media-fields .form-control { padding: 8px 12px; font-size: .88rem; }
-.page-media-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; font-size: .86rem; }
+.page-media-badge { position: absolute; right: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; background: rgba(0,0,0,.72); color: #fff; font-size: .72rem; font-weight: 700; }
+.page-media-fields .form-group { margin: 0; }
+.page-media-fields label { font-size: .82rem; }
+.page-media textarea.page-media-caption { min-height: 64px; resize: none; overflow: hidden; field-sizing: content; line-height: 1.45; font-size: .92rem; }
+.page-add { position: relative; margin-top: 12px; }
+.page-add-btn { display: inline-flex; align-items: center; gap: 8px; width: 100%; justify-content: center; min-height: 48px; border-style: dashed; }
+.type-picker { margin-top: 10px; padding: 14px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow-lg); }
+.type-picker-title { margin: 0 0 10px; font-weight: 700; color: var(--mtg-heading); }
+.type-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.type-tile { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "icon name" "icon desc"; column-gap: 12px; row-gap: 2px; align-items: center; padding: 12px; border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); background: var(--mtg-surface); color: var(--mtg-ink); font: inherit; text-align: left; cursor: pointer; }
+.type-tile:hover { border-color: var(--mtg-blue); background: var(--mtg-hover); }
+.type-tile:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
+.type-tile-icon { grid-area: icon; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 10px; background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.type-tile-name { grid-area: name; font-weight: 700; color: var(--mtg-heading); }
+.type-tile-desc { grid-area: desc; font-size: .8rem; color: var(--mtg-muted); line-height: 1.35; }
+.page-unsaved { display: inline-flex; align-items: center; gap: 8px; margin-right: auto; font-size: .88rem; font-weight: 600; color: var(--mtg-orange-ink); }
+.page-unsaved::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.page-unsaved[hidden] { display: none; }
 .page-media-pick { position: relative; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .page-media-pick:focus-within { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
 .visually-hidden-file { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
-.page-media-pending { font-size: .86rem; color: var(--mtg-ink); margin-top: 6px; overflow-wrap: anywhere; }
-.page-form-actions { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding: 12px 0; background: var(--mtg-bg-alt); border-top: 1px solid var(--mtg-border); }
-.page-reset { margin-top: 16px; text-align: right; }
+.page-media-pending { font-size: .86rem; color: var(--mtg-ink); margin-top: 10px; padding: 8px 12px; border-radius: var(--mtg-radius-sm); background: var(--mtg-surface); border: 1px dashed var(--mtg-blue); overflow-wrap: anywhere; }
+.page-media-pending[hidden] { display: none; }
+.page-form-actions { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 20px; padding: 12px 0; background: var(--mtg-bg-alt); border-top: 1px solid var(--mtg-border); }
+.page-form-actions[hidden] { display: none; }
 body.has-view-fab .page-form-actions { padding-right: 84px; } /* keep Save clear of the floating "view page" button */
-@media (max-width: 640px) { .page-media { grid-template-columns: 1fr; } }
 
 .admin-nav-group { display: block; margin: 14px 12px 4px; font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mtg-muted); }
 .admin-nav a { padding-top: 8px; padding-bottom: 8px; }
@@ -187,7 +355,6 @@ tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg
 .chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
 .chart-baseline { stroke: var(--chart-axis); }
 .chart-tick, .chart-label { fill: var(--chart-text); font-size: 12px; font-variant-numeric: tabular-nums; }
-.chart-value { fill: var(--mtg-heading); font-size: 12px; font-weight: 700; }
 .chart-bar { fill: var(--chart-bar); }
 .chart-hit { fill: transparent; }
 .chart-col { outline: none; cursor: default; }
@@ -195,18 +362,19 @@ tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg
 .chart-col:focus-visible .chart-hit { stroke: var(--chart-bar); stroke-width: 1.5; }
 .chart-tooltip { position: fixed; z-index: 100; pointer-events: none; background: var(--mtg-surface); color: var(--mtg-ink); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow-lg); padding: 6px 10px; font-size: .82rem; font-weight: 600; white-space: nowrap; }
 
-/* Requests per month: columns (received) + line (now completed) */
+/* Requests per month: columns split by status (the pie's colours) + a neutral line joining the totals (growth) */
 .chart-legend { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin: 8px 0 0; padding: 0; font-size: .8rem; color: var(--mtg-muted); }
 .chart-legend li { display: flex; align-items: center; gap: 7px; }
-.key-bar { width: 12px; height: 12px; border-radius: 3px; background: var(--chart-bar); }
-.key-line { position: relative; width: 20px; height: 2px; border-radius: 2px; background: var(--status-done); }
-.key-line::after { content: ''; position: absolute; left: 6px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--status-done); }
-.chart-line { fill: none; stroke: var(--status-done); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
+.chart-legend .key-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.chart-legend .key-icon { display: inline-flex; margin-left: -3px; }
+.key-line { position: relative; width: 20px; height: 2px; border-radius: 2px; background: var(--mtg-heading); }
+.key-line::after { content: ''; position: absolute; left: 6px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--mtg-heading); }
+.chart-line { fill: none; stroke: var(--mtg-heading); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; pointer-events: none; }
 .chart-pt { pointer-events: none; }
-.chart-dot { fill: var(--status-done); stroke: var(--mtg-surface); stroke-width: 2; }
-/* Glow on hover: a blurred copy of the bar (and of that month's dot) fades in behind it */
-.chart-bar-glow { fill: var(--chart-bar); opacity: 0; transition: opacity .18s ease; pointer-events: none; }
-.chart-dot-glow { fill: var(--status-done); opacity: 0; transition: opacity .18s ease; }
+.chart-dot { fill: var(--mtg-heading); stroke: var(--mtg-surface); stroke-width: 2; }
+/* Glow on hover: a neutral blurred copy of the whole column (and of that month's dot) fades in behind it */
+.chart-bar-glow { fill: var(--chart-axis); opacity: 0; transition: opacity .18s ease; pointer-events: none; }
+.chart-dot-glow { fill: var(--mtg-heading); opacity: 0; transition: opacity .18s ease; }
 .chart-bar { transition: filter .18s ease; }
 .chart-col:hover .chart-bar-glow, .chart-col:focus-visible .chart-bar-glow { opacity: .7; }
 .chart-col:hover .chart-bar, .chart-col:focus-visible .chart-bar { filter: brightness(1.12); }
@@ -219,7 +387,6 @@ tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg
   animation: chart-grow calc(600ms * var(--anim)) cubic-bezier(.2, .7, .2, 1) both;
   animation-delay: calc(var(--i) * 60ms * var(--anim));
 }
-.js .chart-anim .chart-value { animation: chart-fade calc(300ms * var(--anim)) ease-out both; animation-delay: calc((600ms + (var(--n) - 1) * 60ms) * var(--anim)); }
 /* The line is quick at first and slows down as it reaches the latest month; a fixed 1.6s on every device (owner's choice).
    Each dot pops as the line reaches it: --at is that moment (0..1 of the draw), worked out in lib/dashboard.js for this easing. */
 .chart { --line-dur: 1.6s; --line-delay: calc((600ms + (var(--n) - 1) * 60ms) * var(--anim)); }
@@ -232,11 +399,13 @@ tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg
 @keyframes chart-grow { from { transform: scaleY(0); } }
 @keyframes chart-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes chart-pop { from { transform: scale(0); } }
-@keyframes chart-fade { from { opacity: 0; } }
 
-/* Processing status: pie that sweeps in clockwise; a slice slides out on hover (or when its legend row is hovered) */
-.pie-wrap { display: grid; grid-template-columns: minmax(110px, 140px) minmax(0, 1fr); gap: 18px; align-items: center; }
-.pie { display: block; width: 100%; height: auto; overflow: visible; }
+/* Interest pie: sweeps in clockwise; a slice slides out on hover (or when its legend row is hovered) */
+/* The pie on top, as large as the panel allows; its legend (count + share per group / choice) underneath */
+.pie-wrap { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; justify-items: center; }
+.pie-wrap[hidden] { display: none; } /* the group pies wait hidden until a slice opens them */
+.pie { display: block; width: 100%; max-width: 240px; height: auto; overflow: visible; }
+.pie-wrap .legend-list { width: 100%; }
 .pie-sweep { fill: none; stroke: #fff; }
 /* Opening: a 1s sweep (owner's choice, also when the device asks for less motion) that eases in and
    settles softly, while the whole pie fades in and grows slightly from its centre */
@@ -247,12 +416,29 @@ tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg
 .pie-slice:hover, .pie-slice:focus-visible, .pie-slice.is-hot { transform: translate(var(--dx), var(--dy)); }
 .pie.has-hot .pie-slice:not(.is-hot) { opacity: .55; }
 .pie-slice:focus-visible { stroke: var(--mtg-heading); }
+/* Interest pie: a group's slice opens that group's own pie. The opened slice grows out from the centre while the
+   others fade (public/js/admin.js waits for this), then the new pie plays the opening sweep */
+[data-drill] { cursor: pointer; }
+.pie-slice.is-zooming { transform-box: view-box; transform-origin: 50% 50%; transform: translate(var(--dx), var(--dy)) scale(1.18);
+  transition: transform calc(160ms + 140ms * var(--anim)) cubic-bezier(.3, .7, .3, 1), opacity calc(160ms + 140ms * var(--anim)) ease; }
+.pie.is-leaving .pie-slice:not(.is-zooming) { opacity: 0; transition-duration: calc(140ms + 120ms * var(--anim)); }
+/* The pie panel's two tabs (interests / STEM equipment catalogue): the admin tabs, compact inside a panel */
+.admin-tabs.pie-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: -4px 0 14px; } /* two equal halves; a long name wraps inside its tab */
+.admin-tabs.pie-tabs .admin-tab { justify-content: center; text-align: center; font-size: .86rem; line-height: 1.3; padding: 8px 10px; }
+.pie-panel-sub { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; color: var(--mtg-muted); font-size: .86rem; }
+.pie-more { font-weight: 600; white-space: nowrap; }
+.pie-crumb { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; width: 100%; }
+.pie-crumb-title { font-weight: 700; color: var(--mtg-heading); font-size: .92rem; }
+.pie-back { display: inline-flex; align-items: center; gap: 6px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; justify-self: center; }
+.legend-go { color: var(--mtg-muted); font-size: 1.1rem; line-height: 1; }
+.pie-wrap .legend-row[data-drill]:hover, .pie-wrap .legend-row[data-drill]:focus-visible { background: var(--mtg-bg-alt); outline: none; }
+.pie-wrap .legend-row[data-drill]:focus-visible { box-shadow: inset 0 0 0 2px var(--chart-bar); }
 .pie-empty { fill: none; stroke: var(--chart-grid); stroke-width: 18; }
-.pie-wrap .legend-row { grid-template-columns: 20px minmax(0, 1fr) auto 40px; gap: 6px; padding-left: 6px; padding-right: 6px; border-radius: var(--mtg-radius-sm); transition: background .15s ease; }
+.pie-wrap .legend-row { grid-template-columns: 20px minmax(0, 1fr) auto 40px 12px; gap: 6px; padding-left: 6px; padding-right: 6px; border-radius: var(--mtg-radius-sm); transition: background .15s ease; }
 .pie-wrap .legend-row.is-hot { background: var(--mtg-bg-alt); }
 @media (max-width: 560px) {
-  .pie-wrap { grid-template-columns: 1fr; }
-  .pie { max-width: 170px; margin: 0 auto; }
+  .pie { max-width: 200px; }
 }
 .legend-list { list-style: none; padding: 0; margin: 0; }
 .legend-row { display: grid; grid-template-columns: 26px 1fr auto 48px; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--mtg-border); font-size: .9rem; }
@@ -360,7 +546,35 @@ body:has(.page-form-actions) .admin-toast { bottom: 96px; } /* and above a stick
   .mini-grid { grid-template-columns: repeat(2, 1fr); }
   .hbar-row { grid-template-columns: 1fr 32px; }
   /* the chart SVG scales down with its width; enlarge its text (in viewBox units) so it stays ~10-11px on phones */
-  .chart-tick, .chart-label, .chart-value { font-size: 20px; }
+  .chart-tick, .chart-label { font-size: 20px; }
   .hbar-row .hbar-label { grid-column: 1 / -1; }
   .admin-topbar { flex-wrap: wrap; gap: 12px; }
+}
+
+/* Giải pháp editor + banner list on small screens */
+@media (max-width: 720px) {
+  .ps-head { flex-wrap: wrap; }
+  .ps-summary { flex-basis: calc(100% - 70px); flex-wrap: wrap; gap: 4px 10px; }
+  .ps-kind { width: auto; }
+  .ps-title { flex-basis: 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .ps-tools { margin-left: auto; }
+  .ps-body { padding: 4px 14px 16px; }
+  .pi-head { flex-wrap: wrap; }
+  .pi-summary { flex-basis: calc(100% - 40px); flex-wrap: wrap; gap: 2px 8px; }
+  .pi-title { flex-basis: 100%; }
+  .pi-tools { margin-left: auto; }
+  .pi-body { padding: 10px 12px 12px; }
+  .page-media { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .page-media-thumb { grid-column: 2; max-width: 260px; }
+  .page-media .media-remove { grid-column: 3; grid-row: 1; }
+  .page-media-fields { grid-column: 1 / -1; }
+  .page-media-head { flex-wrap: wrap; }
+  .page-media-head .page-media-pick { width: 100%; justify-content: center; }
+  .bi-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .banner-row-head { grid-template-columns: 48px minmax(0, 1fr) auto; }
+  .banner-thumb { width: 48px; height: 32px; }
+  .banner-row-badges { grid-column: 2 / -1; justify-content: flex-start; }
+  .banner-row-action { grid-row: 1; grid-column: 3; }
+  .banner-editor { padding: 4px 14px 16px; }
+  .banner-editor-actions .banner-view { margin-left: 0; }
 }

@@ -1,30 +1,54 @@
 <%- include('partials/head', { active: 'yeu-cau' }) %>
+<% const interestChips = typeof interests !== 'undefined' ? interests : []; %>
 
 <div class="admin-topbar">
   <h1><%= t('admin.requests.title') %></h1>
   <div class="row-actions">
-    <a class="btn btn-sm <%= statusFilter === '' ? 'btn-primary' : 'btn-ghost' %>" href="/admin/yeu-cau"><%= t('admin.requests.all') %></a>
+    <a class="btn btn-sm <%= statusFilter === '' ? 'btn-primary' : 'btn-ghost' %>" href="/admin/yeu-cau" data-keep-query><%= t('admin.requests.all') %></a>
     <% statuses.forEach(function (s) { %>
-      <a class="btn btn-sm <%= statusFilter === s ? 'btn-primary' : 'btn-ghost' %>" href="/admin/yeu-cau?status=<%= s %>"><%= t('admin.status.' + s) %></a>
+      <a class="btn btn-sm <%= statusFilter === s ? 'btn-primary' : 'btn-ghost' %>" href="/admin/yeu-cau?status=<%= s %>" data-keep-query><%= t('admin.status.' + s) %></a>
     <% }) %>
   </div>
 </div>
 
+<% if (requests.length) { %>
+  <%- include('partials/list-search', { target: 'requests' }) %>
+  <% if (interestChips.length) { %>
+    <%- include('partials/list-filter', { target: 'requests', param: 'quan-tam', label: t('admin.search.filterInterest'), total: requests.length,
+          options: interestChips.map(function (o) { return { value: o.value, label: t('admin.interest.' + o.value), count: o.count }; }) }) %>
+  <% } %>
+<% } %>
+
 <div style="overflow-x:auto;">
 <table class="data-table">
   <thead><tr><th><%= t('admin.requests.colDate') %></th><th><%= t('admin.requests.colName') %></th><th><%= t('admin.requests.colContact') %></th><th><%= t('admin.requests.colInterest') %></th><th><%= t('admin.requests.colMessage') %></th><th><%= t('admin.requests.colStatus') %></th><th></th></tr></thead>
-  <tbody>
+  <tbody data-list="requests">
     <% requests.forEach(function (r) { %>
-      <tr>
-        <td><%= new Date(r.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
-        <td><%= r.name %><% if (r.schoolOrCompany) { %><br><small><%= r.schoolOrCompany %></small><% } %></td>
+      <tr data-id="<%= r._id %>" data-search="<%= [r.name, r.schoolOrCompany, r.phone, (r.phone || '').replace(/\D/g, ''), r.email, r.message].concat((r.details || []).map(function (d) { return [d.valueVi, d.valueEn].join(' '); })).filter(Boolean).join(' ') %>" data-filter="<%= r.interestedIn %>">
+        <td>
+          <%= new Date(r.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %>
+          <%# Changed by the sender after sending ("Yêu cầu của tôi" → Sửa, routes/account.js) %>
+          <% if (r.editedAt) { const ed = new Date(r.editedAt); const loc = lang === 'en' ? 'en-US' : 'vi-VN'; %>
+            <br><span class="tag tag-edited" data-edited-at title="<%= ed.toLocaleString(loc) %>"><%= t('admin.requests.editedAt', { time: ed.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }), date: lang === 'en' ? (ed.getMonth() + 1) + '/' + ed.getDate() : String(ed.getDate()).padStart(2, '0') + '/' + String(ed.getMonth() + 1).padStart(2, '0') }) %></span>
+          <% } %>
+        </td>
+        <td><span data-search-name><%= r.name %></span><% if (r.schoolOrCompany) { %><br><small><%= r.schoolOrCompany %></small><% } %></td>
         <td><%= r.phone %> <%= r.email ? '· ' + r.email : '' %></td>
-        <td><span class="tag"><%= t('admin.interest.' + r.interestedIn) %></span></td>
-        <td style="max-width:320px;">
+        <% const product = (r.details || []).filter(isProductLine); const answers = (r.details || []).filter(function (d) { return !isProductLine(d); }); %>
+        <td data-col="interest">
+          <span class="tag"><%= t('admin.interest.' + r.interestedIn) %></span>
+          <%# Which robot (robot-page requests) goes with the category; the service's own answers stay with the message %>
+          <% if (product.length) { %>
+            <dl class="request-details request-product">
+              <% product.forEach(function (d) { %><div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div><% }) %>
+            </dl>
+          <% } %>
+        </td>
+        <td style="max-width:320px;" data-col="message">
           <%= r.message %>
-          <% if (r.details && r.details.length) { %>
+          <% if (answers.length) { %>
             <dl class="request-details">
-              <% r.details.forEach(function (d) { %>
+              <% answers.forEach(function (d) { %>
                 <div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div>
               <% }) %>
             </dl>
@@ -49,6 +73,7 @@
   </tbody>
 </table>
 </div>
+<p class="empty-note list-search-none" data-list-search-none="requests" hidden></p>
 <% if (!requests.length) { %><p class="empty-note"><%= t('admin.requests.empty') %></p><% } %>
 
 <%- include('partials/foot') %>

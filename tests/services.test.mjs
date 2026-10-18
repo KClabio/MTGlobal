@@ -1,17 +1,25 @@
 // Request forms (Liên hệ, robot pages: checks in the browser, saved category, success message, admin label)
 // and the Dịch vụ landing page with its single home-slider card.
-import { suite, part, check, db, BASE, ROOT, appRequire, removeLater, stamp } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, appRequire, removeLater, stamp, createUser } from './lib/index.mjs';
 
 const ejs = appRequire('ejs');
 const { makeTranslator } = appRequire('./lib/i18n.js');
+const { isProductLine } = appRequire('./models/QuoteRequest.js');
 
 await suite(async (b) => {
   const { send, ev, sleep } = b;
   const MARK = `ZZTEST-forms-${stamp}`;
   removeLater('quoterequests', { name: { $regex: '^' + MARK } });
+  // Requests need an account: the forms are used logged in as a customer whose profile has a phone and an organisation
+  const requester = await createUser('requester', 'customer');
+  const PROFILE = { name: `ZZ requester`, email: requester.email, phone: '0912 000 111', schoolOrCompany: 'ZZ Trường Thử' };
+  await (await db()).collection('users').updateOne({ _id: requester.id }, { $set: { phone: PROFILE.phone, schoolOrCompany: PROFILE.schoolOrCompany } });
+  const asRequester = (lang = 'vi') => ({ cookie: `lang=${lang}; connect.sid=${requester.sid}` });
 
   await part(b, 'form checks in the browser', async () => {
-    const navigate = (url) => b.nav(url, 150);
+    await b.login(requester.sid);
+    // The form opens with the profile filled in: empty it to test the checks
+    const navigate = async (url) => { await b.nav(url, 150); await ev(`(() => { const f = document.querySelector('[data-quote-form]'); ['name', 'phone', 'email', 'schoolOrCompany'].forEach((n) => { f.elements[n].value = ''; }); })()`); };
     const setField = async (name, text) => {
       await ev(`(() => { const f = document.querySelector('[data-quote-form]').elements[${JSON.stringify(name)}]; f.focus(); f.select && f.select(); })()`);
       if (text === '') await b.key('Backspace', 'Backspace', 8);
@@ -57,8 +65,17 @@ await suite(async (b) => {
 
     await setField('name', MARK); await setField('email', ''); await setField('phone', '0912345678');
     nav = await clickSubmit();
-    const success = await ev(`!!document.querySelector('.form-alert.success')`);
-    check('valid name + phone submits and shows success', nav && success, { nav, success });
+    const success = await ev(`(() => { const c = document.querySelector('[data-request-sent]'); return c && { path: location.pathname + location.search, text: c.querySelector('.request-sent-text').textContent,
+      back: c.querySelector('[data-back-to-form]').getAttribute('href'), backText: c.querySelector('[data-back-to-form]').textContent.trim(), mine: c.querySelector('[data-see-requests]').getAttribute('href'), form: !!document.querySelector('[data-quote-form]') }; })()`);
+    check('valid name + phone submits: the thank-you card at /lien-he?da-gui=1', nav && success && success.path === '/lien-he?da-gui=1' && /Cảm ơn bạn/.test(success.text) && !success.form, success);
+    check('… with "← Quay lại biểu mẫu" (/lien-he) and "Xem yêu cầu của tôi" (/tai-khoan)', success && success.back === '/lien-he' && success.backText === '← Quay lại biểu mẫu' && success.mine === '/tai-khoan', success);
+    await b.shot('contact-sent');
+    const countSent = async () => (await db()).collection('quoterequests').countDocuments({ name: MARK });
+    const before = await countSent();
+    await b.nav('/lien-he?da-gui=1', 200);
+    check('reloading the thank-you page sends nothing again', (await countSent()) === before && before === 1, before);
+    { const l = b.waitLoad(); await ev(`document.querySelector('[data-back-to-form]').click()`); await l; await sleep(200); }
+    check('"← Quay lại biểu mẫu" opens the empty form again', await ev(`location.pathname === '/lien-he' && !!document.querySelector('[data-quote-form]') && document.querySelector('[data-quote-form] [name=message]').value === ''`));
 
     // --- Product page sidebar (EN) ---
     await navigate(`${BASE}/san-pham/robot-leo-cau-thang?lang=en`);
@@ -73,9 +90,10 @@ await suite(async (b) => {
   await part(b, 'robot request form (HTTP)', async () => {
     const col = (await db()).collection('quoterequests');
     const ROBOTS = ['robot-leo-cau-thang', 'robot-di-theo-nguoi', 'robot-cat-co', 'robot-gia-dinh'];
-    const post = (path, fields, lang = 'vi') => fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams(fields), headers: { cookie: `lang=${lang}` } });
+    const post = (path, fields, lang = 'vi') => fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams(fields), headers: asRequester(lang) });
+    const get = async (path, lang = 'vi') => (await fetch(BASE + path, { headers: asRequester(lang) })).text();
     for (const robot of ROBOTS) {
-      const page = await (await fetch(`${BASE}/san-pham/${robot}`)).text();
+      const page = await get(`/san-pham/${robot}`);
       check(`[${robot}] no "interested in" dropdown, form posts to robot route`,
         !page.includes('name="interestedIn"') && page.includes(`action="/san-pham/${robot}/yeu-cau"`));
       const name = `${MARK}-${robot}`;
@@ -83,8 +101,11 @@ await suite(async (b) => {
       check(`[${robot}] valid submit -> 303 back to the robot page`, r.status === 303 && r.headers.get('location') === `/san-pham/${robot}?da-gui=1#yeu-cau`, { status: r.status, location: r.headers.get('location') });
       const saved = await col.findOne({ name });
       check(`[${robot}] saved as san-pham-robot even with tampered interestedIn=khac`, saved && saved.interestedIn === 'san-pham-robot', saved && saved.interestedIn);
-      const after = await (await fetch(`${BASE}/san-pham/${robot}?da-gui=1`, { headers: { cookie: 'lang=en' } })).text();
-      check(`[${robot}] success message shown on the robot page`, after.includes('Your request has been sent') && after.includes('id="yeu-cau"'));
+      const product = await (await db()).collection('products').findOne({ category: robot });
+      const line = saved && (saved.details || [])[0];
+      check(`[${robot}] the request names the robot ("Sản phẩm: ${product.nameVi}")`, line && line.kind === 'product' && line.labelVi === 'Sản phẩm' && line.valueVi === product.nameVi && line.labelEn === 'Product' && line.valueEn === product.nameEn, saved && saved.details);
+      const after = await get(`/san-pham/${robot}?da-gui=1`, 'en');
+      check(`[${robot}] success message shown on the robot page, "Back to the form" leads to its own form`, after.includes('Your request has been sent') && after.includes('id="yeu-cau"') && after.includes(`href="/san-pham/${robot}#yeu-cau" data-back-to-form`));
     }
     // Validation error stays on the robot page with values kept
     let r = await post('/san-pham/robot-cat-co/yeu-cau', { name: '', email: 'an@example.com', message: 'Giữ lại nội dung' }, 'en');
@@ -95,19 +116,39 @@ await suite(async (b) => {
     r = await post('/san-pham/khong-ton-tai/yeu-cau', { name: 'X', phone: '0912345678', message: 'x' });
     check('unknown robot -> 404', r.status === 404, r.status);
     // Liên hệ keeps its dropdown and the chosen category
-    html = await (await fetch(`${BASE}/lien-he`)).text();
+    html = await get('/lien-he');
     check('Liên hệ still shows the dropdown and posts to /lien-he', html.includes('name="interestedIn"') && html.includes('action="/lien-he"'));
+    const groups = [...html.matchAll(/<optgroup label="([^"]+)">([\s\S]*?)<\/optgroup>/g)].map((m) => [m[1], [...m[2].matchAll(/value="([^"]+)"/g)].map((v) => v[1])]);
+    check('"Bạn quan tâm đến": Giải pháp STEM (5) · Sản phẩm (robots) · Dịch vụ (2), then Khác',
+      JSON.stringify(groups) === JSON.stringify([['Giải pháp STEM', ['giai-phap-stem-lab', 'thiet-bi-stem', 'workshop-stem', 'dao-tao-stem', 'tap-huan-stem']], ['Sản phẩm', ['san-pham-robot']], ['Dịch vụ', ['tu-van-du-hoc', 'phan-phoi-san-pham']]])
+      && /<\/optgroup>\s*<option value="khac"/.test(html), groups);
+    for (const [topic, label] of [['workshop-stem', 'Workshop trải nghiệm STEM'], ['dao-tao-stem', 'Đào tạo STEM'], ['tap-huan-stem', 'Tập huấn &amp; triển khai'], ['nonsense', 'Khác']]) {
+      const pre = await get(`/lien-he?quan_tam=${topic}`);
+      check(`?quan_tam=${topic} pre-selects "${label.replace('&amp;', '&')}"`, (pre.match(/<option value="[^"]+" selected>([^<]+)/) || [])[1] === label);
+    }
+    r = await post('/lien-he', { name: `${MARK}-workshop`, email: 'an@example.com', message: 'Workshop', interestedIn: 'workshop-stem' });
+    check('Liên hệ: sending → 303 to the thank-you page (/lien-he?da-gui=1)', r.status === 303 && r.headers.get('location') === '/lien-he?da-gui=1', { status: r.status, at: r.headers.get('location') });
+    check('a new choice is saved as chosen (workshop-stem)', r.status === 303 && (await col.findOne({ name: `${MARK}-workshop` })).interestedIn === 'workshop-stem');
     r = await post('/lien-he', { name: `${MARK}-contact`, email: 'an@example.com', message: 'Hỏi về du học', interestedIn: 'tu-van-du-hoc' });
     const contactSaved = await col.findOne({ name: `${MARK}-contact` });
-    check('Liên hệ keeps the chosen category (tu-van-du-hoc)', r.status === 200 && contactSaved && contactSaved.interestedIn === 'tu-van-du-hoc', contactSaved && contactSaved.interestedIn);
+    check('Liên hệ keeps the chosen category (tu-van-du-hoc)', r.status === 303 && contactSaved && contactSaved.interestedIn === 'tu-van-du-hoc', contactSaved && contactSaved.interestedIn);
     // Admin list label: render the admin view with the saved test records
     const requests = await col.find({ name: { $regex: '^' + MARK } }).sort({ createdAt: -1 }).toArray();
-    const adminHtml = await ejs.renderFile(`${ROOT}views/admin/requests.ejs`, { requests, statusFilter: '', statuses: ['moi', 'da_lien_he', 'hoan_tat'], active: 'yeu-cau', user: { name: 'Admin' }, lang: 'vi', theme: 'light', t: makeTranslator('vi'), adminLangUrl: () => '#', flash: null }, { root: `${ROOT}views` });
+    const adminHtml = await ejs.renderFile(`${ROOT}views/admin/requests.ejs`, { requests, statusFilter: '', statuses: ['moi', 'da_lien_he', 'hoan_tat'], active: 'yeu-cau', user: { name: 'Admin' }, lang: 'vi', theme: 'light', t: makeTranslator('vi'), adminLangUrl: () => '#', flash: null, isProductLine }, { root: `${ROOT}views` });
     check('admin shows "Sản phẩm Robot thông minh" (4 robot requests)', (adminHtml.match(/>Sản phẩm Robot thông minh</g) || []).length === 4);
     check('admin shows "Tư vấn du học" for the contact request', adminHtml.includes('>Tư vấn du học<') && !adminHtml.includes('>san-pham-robot<'));
+    check('admin shows "Workshop trải nghiệm STEM" for the new choice', adminHtml.includes('>Workshop trải nghiệm STEM<'));
+    const lawn = (await (await db()).collection('products').findOne({ category: 'robot-cat-co' })).nameVi;
+    const lawnRow = [...adminHtml.matchAll(/<tr data-id="[^"]+" data-search="([^"]*)"/g)].map((m) => m[1]).filter((x) => x.includes(`${MARK}-robot-cat-co`));
+    check(`admin search text of a robot request includes the robot ("${lawn}")`, lawnRow.length === 1 && lawnRow[0].includes(lawn), lawnRow);
+    // The robot's name sits with the category ("Quan tâm"), not with the message ("Nội dung")
+    const rowHtml = adminHtml.slice(adminHtml.indexOf(`${MARK}-robot-cat-co`), adminHtml.indexOf('</tr>', adminHtml.indexOf(`${MARK}-robot-cat-co`)));
+    const cell = (col) => (rowHtml.match(new RegExp(`data-col="${col}"[^>]*>([\\s\\S]*?)</td>`)) || [])[1] || '';
+    check('admin: "Sản phẩm: …" is under the "Quan tâm" tag, not in "Nội dung"', cell('interest').includes('>Sản phẩm</dt>') && cell('interest').includes(`>${lawn}</dd>`) && !cell('message').includes('request-details'), { interest: cell('interest'), message: cell('message') });
   });
 
   await part(b, 'robot request form (browser)', async () => {
+    await b.login(requester.sid);
     await b.nav('/san-pham/robot-leo-cau-thang?lang=vi', 300);
     await b.shot('robot-form-sidebar');
     const name = `${MARK}-browser`;
@@ -116,13 +157,137 @@ await suite(async (b) => {
     const l = b.waitLoad();
     await ev(`document.querySelector('#yeu-cau button[type=submit]').click()`);
     await l; await sleep(500);
-    const s = await ev(`({ path: location.pathname + location.search + location.hash, success: !!document.querySelector('#yeu-cau .form-alert.success'),
+    const s = await ev(`({ path: location.pathname + location.search + location.hash, success: !!document.querySelector('#yeu-cau [data-request-sent]'),
       formTop: Math.round(document.querySelector('#yeu-cau').getBoundingClientRect().top), scrollY: Math.round(scrollY) })`);
     check('lands back on the same robot page', s.path === '/san-pham/robot-leo-cau-thang?da-gui=1#yeu-cau', s.path);
     check('success message shown in the sidebar', s.success);
     check('page scrolled to the form (form just below the sticky header)', s.scrollY > 0 && s.formTop >= 76 && s.formTop < 400, s);
     const saved = await (await db()).collection('quoterequests').findOne({ name });
     check('saved with category san-pham-robot', saved && saved.interestedIn === 'san-pham-robot', saved && saved.interestedIn);
+  });
+
+  await part(b, 'requests need an account; the form starts from the profile', async () => {
+    const col = (await db()).collection('quoterequests');
+    const svc = await (await db()).collection('services').findOne({});
+    const guest = (path, init = {}) => fetch(BASE + path, { redirect: 'manual', ...init, headers: { cookie: 'lang=vi', ...(init.headers || {}) } });
+    // Logged out
+    let r = await guest('/lien-he?quan_tam=workshop-stem');
+    check('logged out: Liên hệ (every "Yêu cầu tư vấn" button) → the login page', r.status === 303 && r.headers.get('location') === '/dang-nhap?yeu-cau=1', { status: r.status, at: r.headers.get('location') });
+    for (const lang of ['vi', 'en']) {
+      const html = await (await fetch(`${BASE}/dang-nhap?yeu-cau=1`, { headers: { cookie: `lang=${lang}` } })).text();
+      const note = (html.match(/data-need-login>([^<]*)</) || [])[1];
+      check(`login page says why (${lang}): "${note}"`, note === (lang === 'vi' ? 'Xin hãy đăng nhập để yêu cầu tư vấn.' : 'Please log in to request a consultation.') && html.includes('href="/dang-ky?yeu-cau=1"'));
+    }
+    check('the plain login page has no such note', !(await (await fetch(`${BASE}/dang-nhap`)).text()).includes('data-need-login'));
+    const sends = [['/lien-he', {}], ['/san-pham/robot-cat-co/yeu-cau', {}], [`/dich-vu/${svc.slug}/yeu-cau`, {}]];
+    for (const [path] of sends) {
+      r = await guest(path, { method: 'POST', body: new URLSearchParams({ name: `${MARK}-guest`, phone: '0912345678', message: 'x' }) });
+      check(`logged out: sending ${path} → the login page`, r.status === 303 && r.headers.get('location') === '/dang-nhap?yeu-cau=1', r.status);
+    }
+    check('… and nothing was saved', (await col.countDocuments({ name: `${MARK}-guest` })) === 0);
+    await b.nav('/san-pham/robot-cat-co', 300);
+    const box = await ev(`(() => { const a = document.querySelector('#yeu-cau [data-login-needed]'); return { form: !!document.querySelector('[data-quote-form]'), box: !!a, text: a && a.textContent.replace(/\\s+/g, ' ').trim(), login: a && a.querySelector('a.btn').getAttribute('href'), register: a && a.querySelector('.login-needed-alt a').getAttribute('href') }; })()`);
+    check('logged out: the robot page shows a login box instead of the form', !box.form && box.box && /Bạn cần đăng nhập để gửi yêu cầu tư vấn/.test(box.text) && box.login === '/dang-nhap?yeu-cau=1' && box.register === '/dang-ky?yeu-cau=1', box);
+    await b.shot('robot-login-box');
+    await b.nav(`/dich-vu/${svc.slug}`, 300);
+    check('logged out: the Dịch vụ page too', await ev(`!document.querySelector('[data-quote-form]') && !!document.querySelector('#yeu-cau [data-login-needed]')`));
+    let l = b.waitLoad(); await ev(`document.querySelector('#yeu-cau [data-login-needed] a.btn').click()`); await l; await sleep(200);
+    check('its button opens the login page with the note', await ev(`location.pathname === '/dang-nhap' && !!document.querySelector('[data-need-login]')`));
+    await b.nav('/giai-phap/workshop', 300);
+    l = b.waitLoad(); await ev(`document.querySelector('.next-steps .cta-band-btn').click()`); await l; await sleep(200);
+    check('a "Đăng ký workshop" / "Yêu cầu tư vấn" button while logged out → the login page with the note', await ev(`location.pathname === '/dang-nhap' && !!document.querySelector('[data-need-login]')`));
+    // Logged in: every form starts from the profile, still editable
+    await b.login(requester.sid);
+    const filled = () => ev(`(() => { const f = document.querySelector('[data-quote-form]'); return { name: f.elements.name.value, email: f.elements.email.value, phone: f.elements.phone.value, schoolOrCompany: f.elements.schoolOrCompany.value, locked: [...f.elements].some((e) => e.readOnly || e.disabled) }; })()`);
+    for (const path of ['/lien-he', '/san-pham/robot-cat-co', `/dich-vu/${svc.slug}`]) {
+      await b.nav(path, 300);
+      const v = await filled();
+      check(`logged in: ${path} opens with the profile filled in (name, email, phone, organisation), nothing locked`, JSON.stringify({ ...v, locked: undefined }) === JSON.stringify({ ...PROFILE, locked: undefined }) && !v.locked, v);
+    }
+    await b.nav('/lien-he', 300);
+    await ev(`(() => { const f = document.querySelector('[data-quote-form]'); f.elements.name.value = '${MARK}-own'; f.elements.email.value = 'other.zz@example.com'; f.elements.message.value = 'Email khác'; })()`);
+    l = b.waitLoad(); await ev(`document.querySelector('[data-quote-form] button[type=submit]').click()`); await l; await sleep(200);
+    const own = await col.findOne({ name: `${MARK}-own` });
+    check('a changed email is sent as typed (and the request belongs to the account)', own && own.email === 'other.zz@example.com' && own.phone === PROFILE.phone && String(own.user) === String(requester.id), own && { email: own.email, phone: own.phone });
+    await b.shot('contact-prefilled');
+  });
+
+  await part(b, 'changing a sent request ("Yêu cầu của tôi" → Sửa)', async () => {
+    const col = (await db()).collection('quoterequests');
+    const other = await createUser('other-customer', 'customer');
+    const as = (who) => ({ cookie: `lang=vi; connect.sid=${who.sid}` });
+    const get = async (path, who = requester) => { const r = await fetch(BASE + path, { redirect: 'manual', headers: as(who) }); return { status: r.status, at: r.headers.get('location'), html: await r.text() }; };
+    const post = async (path, fields, who = requester) => { const r = await fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams(fields), headers: as(who) }); return { status: r.status, at: r.headers.get('location'), html: await r.text() }; };
+
+    const NAME = `${MARK}-edit`;
+    await post('/lien-he', { name: NAME, phone: '0912345678', email: '', message: 'Nội dung cũ', interestedIn: 'workshop-stem' });
+    const sent = await col.findOne({ name: NAME });
+    const EDIT = `/tai-khoan/yeu-cau/${sent._id}/sua`;
+    let r = await get('/tai-khoan');
+    check('"Yêu cầu của tôi": a "Sửa" button for the new ("Mới") request', r.html.includes(`href="${EDIT}" data-edit-request`));
+
+    r = await get(EDIT);
+    check('the edit page: the Liên hệ form filled with the request', r.status === 200 && r.html.includes(`action="${EDIT}"`) && r.html.includes(`value="${NAME}"`) && r.html.includes('>Nội dung cũ</textarea>')
+      && /<option value="workshop-stem" selected>/.test(r.html) && />Cập nhật yêu cầu<\/button>/.test(r.html) && r.html.includes('href="/tai-khoan">Hủy</a>') && r.html.includes('data-back>&larr; Quay lại'));
+
+    r = await post(EDIT, { name: NAME, phone: '0912345678', message: '   ', interestedIn: 'workshop-stem' });
+    check('an empty message is refused like a new request (400, values kept, nothing saved)', r.status === 400 && r.html.includes('data-error-for="message"') && r.html.includes(`value="${NAME}"`)
+      && (await col.findOne({ _id: sent._id })).message === 'Nội dung cũ', r.status);
+
+    r = await post(EDIT, { name: NAME, phone: '0912345678', schoolOrCompany: 'ZZ Trường Mới', message: 'Nội dung mới', interestedIn: 'dao-tao-stem' });
+    let saved = await col.findOne({ _id: sent._id });
+    check('a good change: 303 back to "Yêu cầu của tôi"', r.status === 303 && r.at === `/tai-khoan?da-sua=${sent._id}`, r);
+    check('… saved: new message, organisation and category, "edited" time set, still the same account', saved.message === 'Nội dung mới' && saved.schoolOrCompany === 'ZZ Trường Mới' && saved.interestedIn === 'dao-tao-stem'
+      && saved.editedAt && Date.now() - new Date(saved.editedAt) < 60000 && String(saved.user) === String(requester.id) && saved.status === 'moi', saved);
+    r = await get(r.at);
+    check('… "Đã cập nhật yêu cầu.", that row highlighted, "Đã sửa" under its date', r.html.includes('Đã cập nhật yêu cầu.') && r.html.includes(`data-request-id="${sent._id}" class="is-just-edited"`) && r.html.includes('>Đã sửa</span>'));
+
+    // A robot request keeps its category and its "Sản phẩm" line
+    const robotReq = await col.findOne({ name: `${MARK}-robot-cat-co` });
+    r = await get(`/tai-khoan/yeu-cau/${robotReq._id}/sua`);
+    check('robot request: its "Sản phẩm" line shown read only, no category list', r.html.includes('data-request-fixed') && r.html.includes('>Sản phẩm</dt>') && !r.html.includes('name="interestedIn"'));
+    r = await post(`/tai-khoan/yeu-cau/${robotReq._id}/sua`, { name: robotReq.name, phone: '0912345678', message: 'Đổi nội dung', interestedIn: 'khac' });
+    saved = await col.findOne({ _id: robotReq._id });
+    check('… changing it keeps san-pham-robot and the robot line (even with interestedIn=khac sent)', r.status === 303 && saved.message === 'Đổi nội dung' && saved.interestedIn === 'san-pham-robot' && JSON.stringify(saved.details) === JSON.stringify(robotReq.details), saved);
+
+    // Only the sender
+    r = await get(EDIT, other);
+    check('another customer: the edit page is "not found"', r.status === 404);
+    r = await post(EDIT, { name: 'ZZ hijack', phone: '0912345678', message: 'hijack' }, other);
+    check('… and their change is refused, nothing saved', r.status === 404 && (await col.findOne({ _id: sent._id })).message === 'Nội dung mới');
+    check('a wrong address is "not found" too', (await get('/tai-khoan/yeu-cau/not-an-id/sua')).status === 404);
+    const guest = await fetch(BASE + EDIT, { redirect: 'manual' });
+    check('logged out: to the login page', guest.status === 302 && guest.headers.get('location') === '/dang-nhap', guest.status);
+
+    // Staff mark it "Đã liên hệ": locked
+    await col.updateOne({ _id: sent._id }, { $set: { status: 'da_lien_he' } });
+    r = await get('/tai-khoan');
+    check('once staff act on it: no "Sửa", "Đang xử lý" instead', !r.html.includes(`href="${EDIT}"`) && /data-request-id="[^"]+"[^>]*>[\s\S]*?data-request-in-progress>Đang xử lý/.test(r.html));
+    r = await get(EDIT);
+    check('… its edit page sends you back with the reason', r.status === 303 && r.at === '/tai-khoan?khoa=1');
+    r = await post(EDIT, { name: NAME, phone: '0912345678', message: 'Quá muộn' });
+    check('… a change sent anyway is refused', r.status === 303 && r.at === '/tai-khoan?khoa=1' && (await col.findOne({ _id: sent._id })).message === 'Nội dung mới');
+    check('… and the list says why', (await get('/tai-khoan?khoa=1')).html.includes('đang được MTG xử lý nên không sửa được nữa'));
+    // "Hoàn tất": the row says "Đã xử lý", not "Đang xử lý"
+    await col.updateOne({ _id: sent._id }, { $set: { status: 'hoan_tat' } });
+    r = await get('/tai-khoan');
+    const doneRow = r.html.slice(r.html.indexOf(`data-request-id="${sent._id}"`), r.html.indexOf('</tr>', r.html.indexOf(`data-request-id="${sent._id}"`)));
+    check('a "Hoàn tất" request: "Đã xử lý" (not "Đang xử lý"), no "Sửa"', doneRow.includes('data-request-done>Đã xử lý<') && !doneRow.includes('Đang xử lý') && !doneRow.includes('data-edit-request'), doneRow.slice(-300));
+    r = await get(EDIT);
+    check('… and its edit page still sends you back', r.status === 303 && r.at === '/tai-khoan?khoa=1');
+
+    // Staff see "Đã sửa lúc …"
+    const requests = await col.find({ name: { $regex: '^' + MARK } }).sort({ createdAt: -1 }).toArray();
+    const adminHtml = await ejs.renderFile(`${ROOT}views/admin/requests.ejs`, { requests, statusFilter: '', statuses: ['moi', 'da_lien_he', 'hoan_tat'], active: 'yeu-cau', user: { name: 'Admin' }, lang: 'vi', theme: 'light', t: makeTranslator('vi'), adminLangUrl: () => '#', flash: null, isProductLine }, { root: `${ROOT}views` });
+    check('admin list: "Đã sửa lúc HH:MM dd/mm" on the changed requests (2)', (adminHtml.match(/data-edited-at title="[^"]+">Đã sửa lúc \d{2}:\d{2} \d{2}\/\d{2}</g) || []).length === 2);
+
+    // In the browser
+    await b.login(requester.sid);
+    await b.nav('/tai-khoan', 300);
+    await b.shot('my-requests-edit');
+    await b.nav(`/tai-khoan/yeu-cau/${robotReq._id}/sua`, 300);
+    check('edit page in the browser: form ready, "Cập nhật yêu cầu" next to "Hủy"', await ev(`!!document.querySelector('[data-quote-form] .form-actions-row .btn-primary') && document.querySelector('[data-quote-form] [name=message]').value === 'Đổi nội dung'`));
+    await b.shot('request-edit');
   });
 
   await part(b, 'Dịch vụ landing page', async () => {

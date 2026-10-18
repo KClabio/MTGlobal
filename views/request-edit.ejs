@@ -1,0 +1,41 @@
+<%- include('partials/header', { title: t('requests.editTitle') + ' - MTG' }) %>
+<%
+  // Changing a sent request (routes/account.js): the Liên hệ form, filled with the request. A robot or service
+  // request keeps its category and its lines (robot, package, answers), shown here read only.
+  const reqDetails = request.details || [];
+  const reqDate = new Date(request.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN');
+%>
+
+<%- include('partials/page-banner', { pill: t('nav.myAccount'), heading: t('requests.editTitle'), subheading: null, backHref: '/tai-khoan' }) %>
+
+<section class="section">
+  <div class="container" style="max-width:720px;">
+    <p class="request-edit-meta" data-request-meta>
+      <%= t('requests.sentOn', { date: reqDate }) %> ·
+      <span class="tag status-<%= request.status %>"><%= t('admin.status.' + request.status) %></span>
+      <% if (request.editedAt) { %>· <span class="tag tag-edited"><%= t('requests.edited') %></span><% } %>
+    </p>
+    <% if (reqDetails.length) { %>
+      <div class="request-edit-fixed" data-request-fixed>
+        <p class="form-hint"><%= t('requests.fixedLines', { topic: t('forms.interest.' + request.interestedIn) }) %></p>
+        <dl class="request-details">
+          <% reqDetails.forEach(function (d) { %>
+            <div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div>
+          <% }) %>
+        </dl>
+      </div>
+    <% } %>
+    <%- include('partials/quote-form', {
+      actionUrl: '/tai-khoan/yeu-cau/' + request._id + '/sua',
+      fixedInterest: reqDetails.length ? request.interestedIn : null,
+      sent: false,
+      error: error,
+      errors: errors,
+      values: values,
+      submitLabel: t('requests.saveChanges'),
+      cancelHref: '/tai-khoan'
+    }) %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

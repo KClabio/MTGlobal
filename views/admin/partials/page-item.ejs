@@ -1,45 +1,45 @@
 <%
-  // One card / step / statistic / button inside a solution-page section. Which inputs show depends on the section type.
+  // One card / step / statistic / button inside a solution-page section. Closed, it is one line ("Thẻ 2 · Lập trình");
+  // "Sửa" opens its boxes, Vietnamese on the left and English on the right. Which boxes show depends on the section
+  // type (data-item-kinds). Buttons show only their wording: the link and "main button" are set by the developer
+  // (hidden fields, kept on save), and buttons can't be moved or removed here. One item per section is open at a time.
   const item = it || {};
   const P = (key) => t('admin.pages.' + key);
+  const pill = (L) => '<span class="lang-pill">' + L.toUpperCase() + '</span>';
 %>
-<div class="row-card page-item" data-row data-item>
-  <div class="row-card-head">
-    <button type="button" class="drag-handle item-drag" aria-label="<%= P('dragItem') %>" title="<%= P('dragItem') %>"><%- include('icon', { name: 'grip', size: 16 }) %></button>
-    <span class="row-card-title"><span data-item-label><%= P('item_cards') %></span> <span data-row-num></span></span>
-    <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
-  </div>
-  <div class="form-row">
-    <div class="form-group">
-      <label data-swap-label data-label-default="<%= P('itemTitleVi') %>" data-label-stats="<%= P('statValueVi') %>" data-label-buttons="<%= P('buttonLabelVi') %>"><%= P('itemTitleVi') %></label>
-      <input class="form-control" data-item-field="titleVi" value="<%= item.titleVi || '' %>">
-    </div>
-    <div class="form-group">
-      <label data-swap-label data-label-default="<%= P('itemTitleEn') %>" data-label-stats="<%= P('statValueEn') %>" data-label-buttons="<%= P('buttonLabelEn') %>"><%= P('itemTitleEn') %></label>
-      <input class="form-control" data-item-field="titleEn" value="<%= item.titleEn || '' %>">
-    </div>
-  </div>
-  <div class="form-row" data-item-kinds="cards steps stats">
-    <div class="form-group">
-      <label data-swap-label data-label-default="<%= P('itemTextVi') %>" data-label-stats="<%= P('statLabelVi') %>"><%= P('itemTextVi') %></label>
-      <textarea class="form-control" data-item-field="textVi" rows="3"><%= item.textVi || '' %></textarea>
-    </div>
-    <div class="form-group">
-      <label data-swap-label data-label-default="<%= P('itemTextEn') %>" data-label-stats="<%= P('statLabelEn') %>"><%= P('itemTextEn') %></label>
-      <textarea class="form-control" data-item-field="textEn" rows="3"><%= item.textEn || '' %></textarea>
+<div class="page-item" data-row data-item>
+  <input type="hidden" data-item-field="url" value="<%= item.url || '' %>">
+  <input type="hidden" data-item-field="primary" value="<%= item.primary ? '1' : '0' %>">
+  <div class="pi-head">
+    <button type="button" class="drag-handle item-drag" data-item-kinds="cards steps stats" aria-label="<%= P('dragItem') %>" title="<%= P('dragItem') %>"><%- include('icon', { name: 'grip', size: 16 }) %></button>
+    <button type="button" class="pi-summary" data-item-toggle aria-expanded="false">
+      <span class="pi-label"><span data-item-label><%= P('item_cards') %></span> <span data-row-num></span></span>
+      <span class="pi-title" data-item-summary></span>
+      <span class="ps-flag ps-flag-en" data-item-flag-en hidden title="<%= P('enMissing') %>">EN</span>
+    </button>
+    <div class="pi-tools">
+      <button type="button" class="icon-btn" data-move="up" data-item-kinds="cards steps stats" aria-label="<%= P('moveUp') %>" title="<%= P('moveUp') %>"><%- include('icon', { name: 'arrow-up', size: 15 }) %></button>
+      <button type="button" class="icon-btn" data-move="down" data-item-kinds="cards steps stats" aria-label="<%= P('moveDown') %>" title="<%= P('moveDown') %>"><%- include('icon', { name: 'arrow-down', size: 15 }) %></button>
+      <button type="button" class="btn btn-ghost btn-sm pi-edit" data-item-toggle><span data-when="closed"><%- include('icon', { name: 'pencil', size: 13 }) %> <%= t('admin.common.edit') %></span><span data-when="open"><%= P('done') %></span></button>
+      <button type="button" class="icon-btn icon-btn-danger" data-remove-item data-item-kinds="cards steps stats" aria-label="<%= t('admin.common.remove') %>" title="<%= t('admin.common.remove') %>"><%- include('icon', { name: 'trash', size: 15 }) %></button>
     </div>
   </div>
-  <div class="form-row" data-item-kinds="text buttons">
-    <div class="form-group">
-      <label><%= P('buttonUrl') %></label>
-      <input class="form-control" data-item-field="url" value="<%= item.url || '' %>" placeholder="/lien-he">
-      <p class="form-hint"><%= P('buttonUrlHint') %></p>
+  <div class="pi-body" hidden>
+    <div class="bi-row">
+      <% ['vi', 'en'].forEach(function (l) { const L = l === 'en' ? 'En' : 'Vi'; %>
+        <div class="form-group">
+          <label><span data-swap-label data-label-default="<%= P('itemTitle') %>" data-label-stats="<%= P('statValue') %>" data-label-buttons="<%= P('buttonLabel') %>"><%= P('itemTitle') %></span> <%- pill(l) %></label>
+          <input class="form-control" data-item-field="title<%= L %>" value="<%= item['title' + L] || '' %>">
+        </div>
+      <% }) %>
     </div>
-    <div class="form-group" style="align-self:center;">
-      <span class="checkbox-row" data-mirror-wrap>
-        <label class="checkbox-row" style="margin:0;"><input type="checkbox" data-mirror <%= item.primary ? 'checked' : '' %>> <%= P('buttonPrimary') %></label>
-        <input type="hidden" data-item-field="primary" value="<%= item.primary ? '1' : '0' %>">
-      </span>
+    <div class="bi-row" data-item-kinds="cards steps stats">
+      <% ['vi', 'en'].forEach(function (l) { const L = l === 'en' ? 'En' : 'Vi'; %>
+        <div class="form-group">
+          <label><span data-swap-label data-label-default="<%= P('itemText') %>" data-label-stats="<%= P('statLabel') %>"><%= P('itemText') %></span> <%- pill(l) %></label>
+          <textarea class="form-control" data-item-field="text<%= L %>" rows="3"><%= item['text' + L] || '' %></textarea>
+        </div>
+      <% }) %>
     </div>
   </div>
 </div>

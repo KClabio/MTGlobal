@@ -25,7 +25,9 @@ const up = async () => { try { return (await fetch(`${BASE}/health`)).ok; } catc
 let server = null;
 let serverLog = '';
 if (!(await up())) {
-  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: ['ignore', 'pipe', 'pipe'] });
+  // "Đăng nhập bằng Google" talks to the fake Google of tests/lib/fake-google.mjs (google.test.mjs starts it on :3002)
+  const fakeGoogle = { GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret', GOOGLE_OAUTH_TEST_URL: 'http://localhost:3002', GOOGLE_REDIRECT_URL: '' };
+  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ...fakeGoogle }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.on('data', (d) => { serverLog += d; });
   server.stderr.on('data', (d) => { serverLog += d; });
   let ok = false;

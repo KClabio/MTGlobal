@@ -1,0 +1,8 @@
+<%# "Đăng nhập bằng Google" under the login / register form; only when the Google keys are set (lib/google-auth.js) %>
+<% if (googleEnabled) { %>
+  <div class="auth-divider"><span><%= t('auth.or') %></span></div>
+  <a class="btn btn-google btn-block" href="/dang-nhap/google" data-google-login>
+    <%- include('google-logo', { size: 18 }) %>
+    <span><%= t(typeof label !== 'undefined' ? label : 'auth.googleButton') %></span>
+  </a>
+<% } %>

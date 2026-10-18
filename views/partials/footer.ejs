@@ -43,6 +43,14 @@
     </div>
   </footer>
 
+  <% if (typeof loginNotice !== 'undefined' && loginNotice) { %>
+    <%# Shown once after logging in; public/js/main.js hides it after a few seconds (CSS fades it out without JS) %>
+    <div class="site-toast" role="status" aria-live="polite" data-site-toast>
+      <span class="site-toast-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="site-toast-text"><strong><%= t('auth.loginDone') %></strong> <%= t('auth.loginHello', { name: loginNotice }) %></span>
+      <button type="button" class="site-toast-x" data-site-toast-close aria-label="<%= t('auth.closeNotice') %>" title="<%= t('auth.closeNotice') %>">×</button>
+    </div>
+  <% } %>
   <script src="/js/theme.js"></script>
   <script src="/js/main.js"></script>
 </body>

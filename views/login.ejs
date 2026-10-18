@@ -4,12 +4,16 @@
   <div class="container" style="max-width:480px;">
     <h1 style="text-align:center;"><%= t('forms.loginTitle') %></h1>
     <div class="form-card">
+      <%# Right after signing up (routes/auth.js): a welcome note, the new email filled in, the cursor in the password box %>
+      <% if (registered) { %><div class="form-alert success" data-registered><%= t('auth.registered') %></div><% } %>
+      <%# Sent here by a consultation request while logged out (routes/index.js) %>
+      <% if (typeof needLogin !== 'undefined' && needLogin) { %><div class="form-alert info" data-need-login><%= t('auth.loginToRequest') %></div><% } %>
       <% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
       <form method="POST" action="/dang-nhap">
-        <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
+        <% if (typeof needLogin !== 'undefined' && needLogin) { %><input type="hidden" name="forRequest" value="1"><% } %>
         <div class="form-group">
           <label for="loginEmail"><%= t('forms.email') %></label>
-          <input class="form-control" type="email" id="loginEmail" name="email" required autocomplete="username">
+          <input class="form-control" type="email" id="loginEmail" name="email" required autocomplete="username" value="<%= email %>">
         </div>
         <div class="form-group">
           <label for="loginPassword"><%= t('forms.password') %></label>
@@ -17,12 +21,16 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block"><%= t('forms.loginTitle') %></button>
       </form>
+      <%- include('partials/google-button', { label: 'auth.googleButton' }) %>
       <p style="text-align:center; margin-top:16px;">
-        <%= lang === 'en' ? "Don't have an account?" : 'Chưa có tài khoản?' %>
-        <a href="/dang-ky"><%= t('nav.register') %></a>
+        <%= t('auth.noAccount') %>
+        <a href="/dang-ky<%= typeof needLogin !== 'undefined' && needLogin ? '?yeu-cau=1' : '' %>"><%= t('nav.register') %></a>
       </p>
     </div>
   </div>
 </section>
+<% if (registered) { %>
+<script>document.getElementById('loginPassword').focus();</script>
+<% } %>
 
 <%- include('partials/footer') %>

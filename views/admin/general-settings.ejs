@@ -16,6 +16,7 @@
     { key: 'brand', label: G('tabBrand') },
     { key: 'home', label: G('tabHome') },
     { key: 'banners', label: G('tabBanners'), count: banners.length },
+    { key: 'reset', label: G('tabReset') },
   ];
 %>
 
@@ -74,46 +75,102 @@
     </div>
   </section>
 
-  <!-- Page banners, grouped like the website menu -->
+  <!-- Page banners, grouped like the website menu: one short row per page, one row open at a time -->
   <section class="admin-tab-panel" role="tabpanel" id="panel-banners" data-panel="banners" aria-labelledby="tab-banners"<%= openTab === 'banners' ? '' : ' hidden' %>>
     <p class="admin-hint"><%- include('partials/icon', { name: 'image', size: 16 }) %><span><%= G('bannersHint') %></span></p>
+    <div class="banner-list" data-banner-list>
     <% GROUPS.forEach(function (group) { %>
       <% const list = banners.filter(function (b) { return b.group === group.key; }); %>
       <% if (!list.length) return; %>
       <h2 class="admin-panel-title banner-group-title"><%= group.label %></h2>
-      <div class="banner-grid">
+      <div class="banner-rows">
         <% list.forEach(function (b) { %>
           <% const saved = (settings.banners && settings.banners[b.key]) || {}; %>
-          <div class="settings-card banner-card" id="banner-<%= b.key %>">
-            <div class="banner-card-head">
-              <h3><%= t(b.labelKey) %></h3>
-              <a class="btn btn-ghost btn-sm" href="<%= b.url %>" target="_blank" rel="noopener"><%= G('viewPage') %> ↗</a>
-            </div>
-            <div class="form-group">
-              <label for="bannerVi_<%= b.key %>"><%= G('bannerVi') %></label>
-              <textarea class="form-control" id="bannerVi_<%= b.key %>" name="bannerVi_<%= b.key %>" rows="2" placeholder="<%= b.defaultVi || G('noDefault') %>"><%= saved.subtitleVi || '' %></textarea>
-            </div>
-            <div class="form-group">
-              <label for="bannerEn_<%= b.key %>"><%= G('bannerEn') %></label>
-              <textarea class="form-control" id="bannerEn_<%= b.key %>" name="bannerEn_<%= b.key %>" rows="2" placeholder="<%= b.defaultEn || G('noDefault') %>"><%= saved.subtitleEn || '' %></textarea>
-            </div>
-            <div class="form-group">
-              <label for="banner_<%= b.key %>"><%= G('bannerImage') %></label>
-              <% if (saved.image) { %>
-                <div class="banner-preview" style="--hero-image: url('<%= encodeURI(saved.image) %>');"><span><%= t(b.labelKey) %></span></div>
-                <label class="checkbox-row banner-remove"><input type="checkbox" name="removeBanner_<%= b.key %>" value="1"> <%= G('removeImage') %></label>
-              <% } %>
-              <input class="form-control" type="file" id="banner_<%= b.key %>" name="banner_<%= b.key %>" accept="image/*">
+          <div class="banner-row" id="banner-<%= b.key %>" data-banner-row
+               data-default-vi="<%= b.defaultVi %>" data-default-en="<%= b.defaultEn %>"
+               data-saved-image="<%= saved.image ? encodeURI(saved.image) : '' %>">
+            <button type="button" class="banner-row-head" data-banner-toggle aria-expanded="false" aria-controls="banner-edit-<%= b.key %>">
+              <span class="banner-thumb" data-banner-thumb<% if (saved.image) { %> style="--hero-image: url('<%= encodeURI(saved.image) %>');"<% } %>></span>
+              <span class="banner-row-text">
+                <span class="banner-row-name"><%= t(b.labelKey) %></span>
+                <span class="banner-row-line" data-banner-summary></span>
+              </span>
+              <span class="banner-row-badges">
+                <span class="tag tag-muted" data-badge="default"><%= G('badgeDefault') %></span>
+                <span class="tag tag-blue" data-badge="custom" hidden><%= G('badgeCustom') %></span>
+                <span class="tag tag-green" data-badge="image" hidden><%= G('badgeImage') %></span>
+              </span>
+              <span class="banner-row-action"><span data-when="closed"><%- include('partials/icon', { name: 'pencil', size: 15 }) %> <%= G('edit') %></span><span data-when="open"><%= G('close') %></span><%- include('partials/icon', { name: 'chevron-down', size: 16, cls: 'banner-chevron' }) %></span>
+            </button>
+            <div class="banner-editor" id="banner-edit-<%= b.key %>" hidden>
+              <div class="banner-live" data-banner-live aria-hidden="true">
+                <strong data-live-title="vi"><%= tVi(b.labelKey) %></strong><strong data-live-title="en" hidden><%= tEn(b.labelKey) %></strong>
+                <span data-banner-live-line></span>
+              </div>
+              <p class="banner-live-note"><%= G('previewNote') %></p>
+              <div class="bi-row">
+                <div class="form-group">
+                  <label for="bannerVi_<%= b.key %>"><%= G('bannerVi') %></label>
+                  <textarea class="form-control" id="bannerVi_<%= b.key %>" name="bannerVi_<%= b.key %>" rows="3" data-banner-text="vi" placeholder="<%= b.defaultVi || G('noDefault') %>"><%= saved.subtitleVi || '' %></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="bannerEn_<%= b.key %>"><%= G('bannerEn') %></label>
+                  <textarea class="form-control" id="bannerEn_<%= b.key %>" name="bannerEn_<%= b.key %>" rows="3" data-banner-text="en" placeholder="<%= b.defaultEn || G('noDefault') %>"><%= saved.subtitleEn || '' %></textarea>
+                </div>
+              </div>
+              <div class="banner-editor-actions">
+                <button type="button" class="btn btn-ghost btn-sm" data-banner-default><%- include('partials/icon', { name: 'rotate-ccw', size: 15 }) %> <%= G('useDefault') %></button>
+                <label class="btn btn-ghost btn-sm page-media-pick"><%- include('partials/icon', { name: 'image', size: 16 }) %> <span data-when-image="none"><%= G('pickImage') %></span><span data-when-image="some"><%= G('replaceImage') %></span>
+                  <input type="file" class="visually-hidden-file" id="banner_<%= b.key %>" name="banner_<%= b.key %>" accept="image/*" data-banner-file aria-label="<%= G('bannerImage') %>">
+                </label>
+                <% if (saved.image) { %>
+                  <label class="checkbox-row banner-remove"><input type="checkbox" name="removeBanner_<%= b.key %>" value="1" data-banner-remove> <%= G('removeImage') %></label>
+                <% } %>
+                <span class="banner-file-name" data-banner-file-name></span>
+                <a class="btn btn-ghost btn-sm banner-view" href="<%= b.url %>" target="_blank" rel="noopener"><%= G('viewPage') %> ↗</a>
+              </div>
             </div>
           </div>
         <% }) %>
       </div>
     <% }) %>
+    </div>
   </section>
 
-  <div class="form-actions page-form-actions">
+  <!-- Back to the default content of the Giải pháp pages. The boxes and the button belong to the "reset-pages" form
+       below the main form (forms can't be nested); the main "Lưu cài đặt" bar is hidden on this tab. -->
+  <section class="admin-tab-panel" role="tabpanel" id="panel-reset" data-panel="reset" aria-labelledby="tab-reset"<%= openTab === 'reset' ? '' : ' hidden' %>>
+    <div class="settings-card reset-card" data-reset-pages data-confirm-one="<%= G('resetConfirmOne') %>" data-confirm-many="<%= G('resetConfirmMany') %>" data-picked="<%= G('resetPicked') %>">
+      <h2 class="admin-panel-title"><%= G('resetTitle') %></h2>
+      <p class="form-hint"><%= G('resetIntro') %></p>
+      <p class="reset-warning"><%- include('partials/icon', { name: 'rotate-ccw', size: 16 }) %><span><%= G('resetWarning') %></span></p>
+      <label class="checkbox-row reset-all"><input type="checkbox" data-reset-all> <%= G('resetAll') %></label>
+      <ul class="reset-list">
+        <% resetPages.forEach(function (p) { %>
+          <li class="reset-row">
+            <label class="reset-check">
+              <input type="checkbox" name="pages" value="<%= p.slug %>" form="reset-pages" data-reset-page data-name="<%= p.name %>">
+              <span class="reset-text">
+                <span class="reset-name"><%= p.name %></span>
+                <span class="reset-date"><%= p.updatedAt ? G('resetSavedOn', { date: new Date(p.updatedAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') }) : G('resetNeverSaved') %></span>
+              </span>
+            </label>
+            <a class="btn btn-ghost btn-sm" href="/giai-phap/<%= p.slug %>" target="_blank" rel="noopener"><%= G('viewPage') %> ↗</a>
+          </li>
+        <% }) %>
+      </ul>
+      <div class="reset-actions">
+        <span class="reset-picked" data-reset-picked aria-live="polite"></span>
+        <button type="submit" form="reset-pages" class="btn btn-danger" data-reset-submit disabled><%- include('partials/icon', { name: 'rotate-ccw', size: 16 }) %> <%= G('resetButton') %></button>
+      </div>
+    </div>
+  </section>
+
+  <div class="form-actions page-form-actions" data-save-bar>
     <button class="btn btn-primary" type="submit"><%= t('admin.settings.save') %></button>
   </div>
 </form>
+
+<form id="reset-pages" method="POST" action="/admin/cai-dat/khoi-phuc" data-confirm="" data-confirm-title="<%= G('resetTitle') %>"></form>
 
 <%- include('partials/foot') %>

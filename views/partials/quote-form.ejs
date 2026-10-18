@@ -3,7 +3,13 @@
   const qfPrefill = typeof prefillInterestedIn !== 'undefined' ? prefillInterestedIn : null;
   const qfCompact = typeof compact !== 'undefined' && compact;
   const qfErrors = typeof errors !== 'undefined' && errors ? errors : {};
-  const qfValues = typeof values !== 'undefined' && values ? values : {};
+  // Requests need an account (routes/index.js): a logged-out visitor sees a login box instead of the form.
+  // A logged-in one starts from what their profile has (name, email, phone, organisation), all still editable;
+  // after a failed send, what they typed is shown again instead.
+  const qfUser = typeof user !== 'undefined' && user ? user : null;
+  const qfTyped = typeof values !== 'undefined' && values ? values : {};
+  const qfValues = Object.keys(qfTyped).length || !qfUser ? qfTyped
+    : { name: qfUser.name || '', email: qfUser.email || '', phone: qfUser.phone || '', schoolOrCompany: qfUser.schoolOrCompany || '' };
   const qfInterest = qfValues.interestedIn || qfPrefill;
   // When the page already determines the category (robot pages), the server sets it and no dropdown is shown
   const qfFixedInterest = typeof fixedInterest !== 'undefined' && fixedInterest;
@@ -11,11 +17,32 @@
   const qfQuestions = typeof serviceQuestions !== 'undefined' && serviceQuestions ? serviceQuestions : [];
   const qfPackages = typeof servicePackages !== 'undefined' && servicePackages ? servicePackages : [];
   const qfLabel = (item, vi, en) => (lang === 'en' && item[en]) || item[vi] || item[en];
+  // After sending: back to the empty form of the same page (Liên hệ by default), or on to "Yêu cầu của tôi"
+  const qfBackHref = typeof backHref !== 'undefined' && backHref ? backHref : '/lien-he';
+  // Changing a sent request (views/request-edit.ejs) reuses this form with its own button text and a "Hủy" link
+  const qfSubmitLabel = typeof submitLabel !== 'undefined' && submitLabel ? submitLabel : t('forms.submitRequest');
+  const qfCancelHref = typeof cancelHref !== 'undefined' && cancelHref ? cancelHref : null;
   const qfInvalid = (key) => (qfErrors[key] || ((key === 'phone' || key === 'email') && qfErrors.contact) ? ' is-invalid' : '');
 %>
+<% if (!qfUser) { %>
+<div class="form-card login-needed<%= qfCompact ? ' form-card--compact' : '' %>" data-login-needed>
+  <span class="login-needed-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+  <h3 class="login-needed-title"><%= t('auth.requestNeedsAccountTitle') %></h3>
+  <p class="login-needed-text"><%= t('auth.requestNeedsAccount') %></p>
+  <a class="btn btn-primary btn-block" href="/dang-nhap?yeu-cau=1"><%= t('nav.login') %></a>
+  <p class="login-needed-alt"><%= t('auth.noAccount') %> <a href="/dang-ky?yeu-cau=1"><%= t('nav.register') %></a></p>
+</div>
+<% } else { %>
 <div class="form-card<%= qfCompact ? ' form-card--compact' : '' %>">
   <% if (typeof sent !== 'undefined' && sent) { %>
-    <div class="form-alert success"><%= t('forms.requestSuccess') %></div>
+    <div class="request-sent" data-request-sent>
+      <span class="request-sent-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <p class="request-sent-text" role="status"><%= t('forms.requestSuccess') %></p>
+      <div class="request-sent-actions">
+        <a class="btn btn-ghost" href="<%= qfBackHref %>" data-back-to-form>← <%= t('forms.backToForm') %></a>
+        <a class="btn btn-primary" href="/tai-khoan" data-see-requests><%= t('forms.seeMyRequests') %></a>
+      </div>
+    </div>
   <% } else { %>
     <% if (typeof error !== 'undefined' && error) { %>
       <div class="form-alert error"><%= error %></div>
@@ -86,11 +113,12 @@
       <div class="form-group">
         <label><%= t('forms.interestedIn') %></label>
         <select class="form-control" name="interestedIn">
-          <option value="san-pham-robot" <%= qfInterest === 'san-pham-robot' ? 'selected' : '' %>><%= t('forms.interestedInRobot') %></option>
-          <option value="giai-phap-stem-lab" <%= qfInterest === 'giai-phap-stem-lab' ? 'selected' : '' %>><%= t('forms.interestedInStemLab') %></option>
-          <option value="tu-van-du-hoc" <%= qfInterest === 'tu-van-du-hoc' ? 'selected' : '' %>><%= t('forms.interestedInStudyAbroad') %></option>
-          <option value="phan-phoi-san-pham" <%= qfInterest === 'phan-phoi-san-pham' ? 'selected' : '' %>><%= t('forms.interestedInDistribution') %></option>
-          <option value="khac" <%= (!qfInterest || qfInterest === 'khac') ? 'selected' : '' %>><%= t('forms.interestedInOther') %></option>
+          <% INTEREST_GROUPS.forEach(function (g) { %>
+            <optgroup label="<%= t('forms.interestGroup.' + g.key) %>">
+              <% g.codes.forEach(function (code) { %><option value="<%= code %>" <%= qfInterest === code ? 'selected' : '' %>><%= t('forms.interest.' + code) %></option><% }) %>
+            </optgroup>
+          <% }) %>
+          <option value="khac" <%= (!qfInterest || !INTEREST_GROUPS.some(function (g) { return g.codes.includes(qfInterest); })) ? 'selected' : '' %>><%= t('forms.interest.khac') %></option>
         </select>
       </div>
       <% } %>
@@ -99,7 +127,15 @@
         <textarea class="form-control<%= qfInvalid('message') %>" name="message" required><%= qfValues.message || '' %></textarea>
         <% if (qfErrors.message) { %><div class="field-error" data-error-for="message"><%= qfErrors.message %></div><% } %>
       </div>
-      <button type="submit" class="btn btn-primary btn-block"><%= t('forms.submitRequest') %></button>
+      <% if (qfCancelHref) { %>
+        <div class="form-actions-row">
+          <a class="btn btn-ghost" href="<%= qfCancelHref %>"><%= t('common.cancel') %></a>
+          <button type="submit" class="btn btn-primary"><%= qfSubmitLabel %></button>
+        </div>
+      <% } else { %>
+        <button type="submit" class="btn btn-primary btn-block"><%= qfSubmitLabel %></button>
+      <% } %>
     </form>
   <% } %>
 </div>
+<% } %>

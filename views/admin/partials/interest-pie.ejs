@@ -1,0 +1,33 @@
+<%# One pie of the dashboard's interest panel (views/admin/dashboard.ejs) with its legend underneath.
+    view: 'top' or a group key; data: { rows, total, chart } from lib/dashboard.js; the top pie's group slices and rows
+    carry data-drill and open that group's pie (public/js/admin.js). %>
+<% const ch = data.chart; const isTop = view === 'top'; const hint = t('admin.dashboard.interestDrillHint'); %>
+<svg class="pie chart-anim" viewBox="0 0 <%= ch.S %> <%= ch.S %>" role="img" aria-label="<%= aria %>">
+  <defs>
+    <mask id="pieReveal-<%= view %>" maskUnits="userSpaceOnUse" x="0" y="0" width="<%= ch.S %>" height="<%= ch.S %>">
+      <circle class="pie-sweep" cx="<%= ch.c %>" cy="<%= ch.c %>" r="<%= ch.maskR %>" stroke-width="<%= ch.maskR * 2 %>" pathLength="1" transform="rotate(-90 <%= ch.c %> <%= ch.c %>)"></circle>
+    </mask>
+  </defs>
+  <% if (data.total > 0) { %>
+    <g mask="url(#pieReveal-<%= view %>)">
+      <% ch.slices.forEach(function (s) { const label = s.label + ': ' + s.count + ' (' + s.percent + '%)'; const drill = isTop && s.drill; %>
+        <path class="pie-slice" d="<%= s.d %>" data-key="<%= s.key %>" tabindex="0"<% if (drill) { %> data-drill="<%= s.key %>" role="button"<% } %>
+              style="--dx:<%= s.whole ? 0 : s.dx %>px; --dy:<%= s.whole ? 0 : s.dy %>px; fill:<%= s.color %>;"
+              data-tip="<%= drill ? label + ' · ' + hint : label %>" aria-label="<%= drill ? label + '. ' + hint : label %>"></path>
+      <% }) %>
+    </g>
+  <% } else { %>
+    <circle class="pie-empty" cx="<%= ch.c %>" cy="<%= ch.c %>" r="<%= ch.r - 9 %>"></circle>
+  <% } %>
+</svg>
+<ul class="legend-list">
+  <% data.rows.forEach(function (s) { const drill = isTop && s.drill && s.count > 0; %>
+    <li class="legend-row" data-key="<%= s.key %>"<% if (drill) { %> data-drill="<%= s.key %>" tabindex="0" role="button" aria-label="<%= s.label %>: <%= s.count %> (<%= s.percent %>%). <%= hint %>"<% } %>>
+      <span class="legend-dot" style="background:<%= s.color %>;" aria-hidden="true"></span>
+      <span class="legend-label"><%= s.label %></span>
+      <span class="legend-count"><%= s.count %></span>
+      <span class="legend-pct"><%= s.percent %>%</span>
+      <% if (drill) { %><span class="legend-go" aria-hidden="true">›</span><% } %>
+    </li>
+  <% }) %>
+</ul>

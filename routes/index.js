@@ -7,7 +7,7 @@ const Service = require('../models/Service');
 const Partner = require('../models/Partner');
 const Article = require('../models/Article');
 const QuoteRequest = require('../models/QuoteRequest');
-const { isNonEmpty, isValidEmail, isValidPhone } = require('../lib/validators');
+const { validateQuoteRequest, readQuoteValues } = require('../lib/quote-request'); // also used to change a sent request (routes/account.js)
 const { readServiceAnswers } = require('../lib/service-content');
 const { getSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
 const { groupProjectsByLevel } = require('../lib/project-levels');
@@ -62,12 +62,15 @@ router.get('/san-pham/:category', async (req, res) => {
   res.render('product-detail', { product, sent: req.query['da-gui'] === '1' });
 });
 
-// Requests sent from a robot's page are always "Sản phẩm Robot thông minh"; the category isn't taken from the form
+// Requests sent from a robot's page are always "Sản phẩm Robot thông minh" (the category isn't taken from the form),
+// and they note which robot they are about (shown with the request in the admin and in "Yêu cầu của tôi")
 router.post('/san-pham/:category/yeu-cau', async (req, res) => {
+  if (needsLogin(req, res)) return;
   const product = await findRobot(req.params.category);
   if (!product) return res.status(404).render('404');
 
   const values = { ...readQuoteValues(req), interestedIn: 'san-pham-robot' };
+  const robot = { kind: 'product', labelVi: 'Sản phẩm', labelEn: 'Product', valueVi: product.nameVi || product.nameEn || '', valueEn: product.nameEn || product.nameVi || '' };
   const errors = validateQuoteRequest(values, res.locals.t);
   if (Object.keys(errors).length) {
     return res.status(400).render('product-detail', {
@@ -79,7 +82,7 @@ router.post('/san-pham/:category/yeu-cau', async (req, res) => {
     });
   }
 
-  await saveQuoteRequest(values, req.user);
+  await saveQuoteRequest({ ...values, details: [robot] }, req.user);
   // Redirect after POST so a page refresh doesn't send the request twice
   res.redirect(303, `/san-pham/${product.category}?da-gui=1#yeu-cau`);
 });
@@ -138,6 +141,7 @@ router.get('/dich-vu/:slug', async (req, res) => {
 
 // A service page's request: the category is the service itself, plus answers to that service's own questions
 router.post('/dich-vu/:slug/yeu-cau', async (req, res) => {
+  if (needsLogin(req, res)) return;
   const service = await Service.findOne({ slug: req.params.slug }).lean();
   if (!service) return res.status(404).render('404');
 
@@ -172,35 +176,19 @@ router.get('/tin-tuc/:id', async (req, res) => {
 });
 
 // ---- Liên hệ / quote requests ----
+// Consultation requests need an account: a logged-out visitor goes to the login page, which says why
+// ("Xin hãy đăng nhập để yêu cầu tư vấn"). The robot and Dịch vụ pages show a login box instead of their form.
+function needsLogin(req, res) {
+  if (req.user) return false;
+  res.redirect(303, '/dang-nhap?yeu-cau=1');
+  return true;
+}
+
 router.get('/lien-he', (req, res) => {
-  res.render('contact', { sent: false, error: null, errors: {}, values: {}, prefillInterestedIn: req.query.quan_tam || null });
+  if (needsLogin(req, res)) return;
+  // ?da-gui=1: the thank-you card after sending (a redirect, so reloading it doesn't send the request again)
+  res.render('contact', { sent: req.query['da-gui'] === '1', error: null, errors: {}, values: {}, prefillInterestedIn: req.query.quan_tam || null });
 });
-
-// Gatekeeping for the request form: name and message required, plus at least one valid way to reach the sender
-function validateQuoteRequest(values, t) {
-  const errors = {};
-  if (!isNonEmpty(values.name)) errors.name = t('forms.errName');
-  if (!values.phone && !values.email) {
-    errors.contact = t('forms.errContact');
-  } else {
-    if (values.phone && !isValidPhone(values.phone)) errors.phone = t('forms.errPhone');
-    if (values.email && !isValidEmail(values.email)) errors.email = t('forms.errEmail');
-  }
-  if (!isNonEmpty(values.message)) errors.message = t('forms.errMessage');
-  return errors;
-}
-
-function readQuoteValues(req) {
-  const field = (key) => (typeof req.body[key] === 'string' ? req.body[key].trim() : '');
-  return {
-    name: field('name'),
-    phone: field('phone'),
-    email: field('email'),
-    schoolOrCompany: field('schoolOrCompany'),
-    message: field('message'),
-    interestedIn: QuoteRequest.INTERESTED_IN.includes(field('interestedIn')) ? field('interestedIn') : 'khac',
-  };
-}
 
 function saveQuoteRequest(values, user) {
   return QuoteRequest.create({
@@ -216,6 +204,7 @@ function saveQuoteRequest(values, user) {
 }
 
 router.post('/lien-he', async (req, res) => {
+  if (needsLogin(req, res)) return;
   const values = readQuoteValues(req);
 
   const errors = validateQuoteRequest(values, res.locals.t);
@@ -230,7 +219,7 @@ router.post('/lien-he', async (req, res) => {
   }
 
   await saveQuoteRequest(values, req.user);
-  res.render('contact', { sent: true, error: null, errors: {}, values: {}, prefillInterestedIn: null });
+  res.redirect(303, '/lien-he?da-gui=1');
 });
 
 module.exports = router;

@@ -13,16 +13,17 @@ async function loadUser(req, res, next) {
   next();
 }
 
+// Logged out: to the login page (after logging in, everyone lands on Trang chủ: routes/auth.js)
 function requireAuth(req, res, next) {
   if (!req.user) {
-    return res.redirect(`/dang-nhap?redirect=${encodeURIComponent(req.originalUrl)}`);
+    return res.redirect('/dang-nhap');
   }
   next();
 }
 
 function requireAdmin(req, res, next) {
   if (!req.user) {
-    return res.redirect(`/dang-nhap?redirect=${encodeURIComponent(req.originalUrl)}`);
+    return res.redirect('/dang-nhap');
   }
   if (!isStaff(req.user.role)) {
     return res.status(403).render('403');
