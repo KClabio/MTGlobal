@@ -120,6 +120,30 @@ await suite(async (b) => {
     check('phone: a submenu link opens its page', (await ev('location.pathname')) === '/giai-phap/workshop');
   });
 
+  await part(b, 'logo always shown', async () => {
+    // Logged out the header also holds the light/dark switch and "Đăng nhập" / "Đăng ký": the logo must still fit
+    const fit = () => ev(`(() => { const h = document.querySelector('.site-header .header-inner'); const end = h.getBoundingClientRect().right - parseFloat(getComputedStyle(h).paddingRight);
+      const shown = [...h.children].filter((c) => getComputedStyle(c).display !== 'none');
+      return { logo: Math.round(document.querySelector('.site-header .logo-img, .site-header .logo-text').getBoundingClientRect().width), inside: shown.every((c) => c.getBoundingClientRect().right <= end + 1),
+        menu: getComputedStyle(document.querySelector('.main-nav')).display !== 'none', drawer: getComputedStyle(document.getElementById('navToggle')).display !== 'none' }; })()`);
+    const bad = [];
+    for (const who of ['guest', 'user']) {
+      if (who === 'user') await b.login(user.sid);
+      for (const lang of ['vi', 'en']) {
+        await b.setCookie('lang', lang);
+        for (const w of [1440, 1280, 1241, 1240, 1101, 1100, 960, 640, 400, 390, 360, 340, 320]) {
+          await b.viewport(w, 800); await b.nav('/', 150);
+          const f = await fit();
+          // the full menu needs 1241px when logged out (1101px logged in); below that it sits behind ☰
+          const wide = w > (who === 'guest' ? 1240 : 1100);
+          if (f.logo < 80 || !f.inside || f.menu !== wide || f.drawer === wide) bad.push({ who, lang, w, ...f });
+        }
+      }
+    }
+    check('the logo shows at full size at every width, logged in or out, in both languages; nothing spills out of the header', bad.length === 0, bad);
+    await b.setCookie('lang', 'vi'); await b.clearCookie('connect.sid'); await b.viewport(1280, 900);
+  });
+
   await part(b, 'theme switches', async () => {
     const nav = (p) => b.nav(p, 350);
     const themeNow = () => ev(`document.documentElement.getAttribute('data-theme')`);

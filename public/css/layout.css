@@ -5,7 +5,8 @@
 .brand-bar { height: 4px; background: var(--mtg-gradient-brand); }
 .site-header { position: sticky; top: 0; z-index: 50; background: var(--mtg-surface); box-shadow: var(--mtg-shadow); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 20px; }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; color: var(--mtg-heading); }
+/* flex: none: a full header must never squeeze the logo away */
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; color: var(--mtg-heading); flex: none; }
 .logo img { height: 42px; }
 /* Uploaded logo is a white-background JPG with wide margins: crop the empty top/bottom so the mark reads larger */
 .logo .logo-img { height: 44px; width: auto; aspect-ratio: 2.6 / 1; object-fit: cover; }
@@ -105,6 +106,19 @@
 [data-theme="dark"] .admin-brand img { background: #fff; border-radius: 6px; padding: 2px 6px; }
 
 /* ---- Responsive ---- */
+/* Logged out (.is-guest) the header also holds the light/dark switch and two buttons: a tighter menu keeps the logo in
+   on wide screens, and below 1241px (where it can't fit) the menu moves into the ☰ drawer */
+@media (min-width: 1241px) {
+  .is-guest .header-inner { gap: 16px; }
+  .is-guest .main-nav { gap: 2px; }
+  .is-guest .main-nav > a, .is-guest .nav-dropdown > .nav-dropdown-trigger { padding: 10px 8px; font-size: .88rem; }
+  .is-guest .header-actions { gap: 8px; }
+  .is-guest .header-actions .btn { padding-left: 12px; padding-right: 12px; }
+}
+@media (max-width: 1240px) {
+  .is-guest .main-nav { display: none; }
+  .is-guest .nav-toggle { display: flex; }
+}
 @media (max-width: 1240px) {
   .header-inner { gap: 16px; }
   .main-nav > a, .nav-dropdown > .nav-dropdown-trigger { padding: 10px 9px; font-size: .88rem; }
@@ -119,8 +133,20 @@
   .footer-inner { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
+  /* Phones, logged out: "Đăng ký" waits on the login page (its sign-up link), so the logo still fits */
+  .is-guest .header-inner { gap: 12px; }
+  .is-guest .header-actions { gap: 8px; }
+  .is-guest .header-actions .btn-primary { display: none; }
   .page-hero h1 { font-size: 1.7rem; }
   .hero-back-row { margin: -40px 0 16px; }
+}
+@media (max-width: 400px) {
+  .is-guest .header-inner { padding-left: 12px; padding-right: 12px; }
+  .is-guest .logo .logo-img { height: 36px; }
+  .is-guest .header-actions .btn { padding-left: 12px; padding-right: 12px; }
+}
+@media (max-width: 340px) {
+  .is-guest .header-inner, .is-guest .header-actions { gap: 6px; }
 }
 
 /* ---- Mobile nav drawer ---- */

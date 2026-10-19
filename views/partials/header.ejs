@@ -19,7 +19,7 @@
 </head>
 <body>
   <div class="brand-bar"></div>
-  <header class="site-header" id="siteHeader">
+  <header class="site-header<%= user ? '' : ' is-guest' %>" id="siteHeader">
     <div class="container header-inner">
       <a href="/" class="logo"><%- include('logo') %></a>
 

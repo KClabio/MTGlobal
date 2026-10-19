@@ -34,20 +34,29 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 - **Menu:** point at *Smart Robotics*, *Solutions* or *Services* to see their pages; click the name itself to open its overview page.
 - **Videos** can be watched (play, time bar, volume, fullscreen) but not downloaded.
 - **Home page:** scroll the **What We Do** cards sideways (mouse wheel, arrows or drag) and click one to open it.
-- **Language:** **VI / EN** at the top right.
+- **Language and light/dark:** **VI / EN** at the top right, with the light/dark switch next to it (in the name menu once logged in).
+- **Solutions pages:** after the banner, a numbered menu of the page's sections stays at the top and shows how far you have read; **Read more** opens a card's longer text.
+- **STEM Lab page** (Consulting, design & deployment): the sample rooms are tabs by school level, each with its room drawing and description; **View full size** shows the whole drawing in a box on the page. The **3D design** pictures open larger the same way when clicked. **← Back**, Esc or the browser's Back button close the box.
+- **Equipment page:** tabs by part (*Part I…IV*) and a search box that finds items by name or by the topic of their list (`ro bot` finds the educational robots).
 - **Partners:** click a partner logo to read about it and open its website.
 - **Reference projects:** grouped by school level (lower secondary, upper secondary, university); search by school name.
 - **News:** search by title or text.
 - **Ask for advice:** log in first (a visitor who isn't logged in is taken to the login page). Then fill in the form on **Contact** (or on a robot or service page); your name, email, phone and organisation from your profile are already filled in and can be changed.
-- **Your account:** **Sign Up** (name, email and password; phone and organisation are optional), then **Log In** with the new account, or simply use **Log in with Google**. After logging in you land on the home page. See your requests in **My Requests** and your details and role in **Profile**.
+- **Your account:** **Sign Up** (name, email and password; phone and organisation are optional; on phones it's on the **Log In** page), then **Log In** with the new account, or simply use **Log in with Google**. After logging in you land on the home page. See your requests in **My Requests** and your details and role in **Profile**.
 - **After sending a request:** the thank-you card has **← Back to the form** and **See my requests**. In **My Requests**, **Edit** changes a request while it is still *New*; once MTG starts on it, it is locked. Staff see "Edited …" with the time.
 - **Logging in with Google:** your name, email and photo come from your Google account each time you log in that way (the name can't be changed on the website). If you already have an account with the same email, it's the same account. You can also set a password in **Profile** to log in with email and password.
 - **Profile photo:** **Choose photo** to upload one; **Delete photo** takes it away and the two letters of your name come back.
 
 ![Home page](docs/images/en/home.jpg)
 
+![STEM Lab page: sample rooms by school level](docs/images/en/stem-lab.jpg)
+
+![Equipment page: search by topic](docs/images/en/equipment.jpg)
+
 ### For staff: the admin area
 **Sign in:** log in (you land on the home page) → open the name menu at the top right → **Admin**.
+
+**Overview** (the first admin page): new and total requests, customers and published news at the top; **Requests per month** for the last 6 months, each column split into *New / Contacted / Completed*; **Proportions** with two pies, *By interest* (click a slice to see its own pie) and *Equipment, materials & STEM robots*; and the latest requests.
 
 ![Admin overview](docs/images/en/admin-dashboard.jpg)
 
@@ -55,7 +64,7 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 - **Add:** the blue **+ Add…** button. **Change:** **Edit** on a row. Then **Save**.
 - **Two languages:** fill in Vietnamese and English. If English is empty, Vietnamese is shown.
 - **Order:** drag a row by its ⠿ handle. The website follows the new order.
-- **Find:** type in the search box (accents not needed: `may in` finds "máy in"). Robots, equipment, reference projects, news and consultation requests have one. Equipment can also be filtered by part (*Part I…IV*), reference projects by school level, requests by interest.
+- **Find:** type in the search box (accents not needed: `may in` finds "máy in"). Robots, equipment, reference projects, news and consultation requests have one. Equipment is also found by the topic of its list, and can be filtered by part (*Part I…IV*), reference projects by school level, requests by interest.
 - **Delete:** **Delete**, then confirm.
 - **See the result:** the round button at the bottom right opens the page on the website.
 - **Admin language:** **VI / EN** at the bottom of the left menu.
@@ -70,7 +79,7 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 - **Edit** opens one section at a time. Inside it, cards, steps, numbers and buttons are short lines too: **Edit** on a line opens just that one. **Add a section** at the bottom asks which kind first.
 - Vietnamese boxes are on the left, English on the right. An empty English box shows the Vietnamese text in grey, and an orange **EN** mark shows a section or card that still lacks English.
 - Move with ⠿ or ▲ ▼. The bin deletes; **Undo** in the notification brings it back. Nothing changes on the website until **Save page** ("Unsaved changes" shows next to it).
-- **Set by the developer, not in the admin:** buttons and their links (in a "Buttons" section you can only change the wording), and how a section is displayed (type, columns, folded, short cards, tabs, picture shape, short name in the page menu). Saving keeps them as they are.
+- **Set by the developer, not in the admin:** buttons and their links (in a "Buttons" section you can only change the wording), and how a section is displayed (type, columns, folded, short cards, tabs, pictures that open larger when clicked, picture shape, short name in the page menu). Saving keeps them as they are.
 - **Photos & videos:** one row per picture: its number, a large preview, and the caption in Vietnamese (left) and English (right). The header shows how many there are; **+ Add photos/videos** is next to it.
 
 **General settings** has four tabs:
@@ -150,20 +159,29 @@ Uploaded photos and the database are not stored in this repository — copy them
 - **Menu:** đưa chuột vào *Robotics thông minh*, *Giải pháp* hoặc *Dịch vụ* để xem các trang con; bấm vào chính tên đó để mở trang tổng quan.
 - **Video** xem được (phát, thanh thời gian, âm lượng, toàn màn hình) nhưng không tải về được.
 - **Trang chủ:** lướt ngang các thẻ **Lĩnh vực hoạt động** (cuộn chuột, mũi tên hoặc kéo) và bấm để mở.
-- **Ngôn ngữ:** **VI / EN** ở góc trên bên phải.
+- **Ngôn ngữ và sáng/tối:** **VI / EN** ở góc trên bên phải, nút chuyển giao diện sáng/tối ở ngay cạnh (khi đã đăng nhập thì nằm trong menu tên).
+- **Các trang Giải pháp:** sau banner, thanh mục lục đánh số các phần của trang luôn ở trên cùng và cho biết bạn đã đọc tới đâu; **Xem chi tiết** mở phần chữ dài của thẻ.
+- **Trang Lab STEM** (Tư vấn, thiết kế & triển khai): các mẫu phòng là các tab theo cấp học, mỗi tab có bản vẽ phòng và phần mô tả; **Xem ảnh lớn** mở trọn bản vẽ trong một khung ngay trên trang. Các ảnh **Thiết kế 3D** cũng mở lớn như vậy khi bấm vào. **← Quay lại**, phím Esc hoặc nút Back của trình duyệt để đóng.
+- **Trang Thiết bị:** các tab theo phần (*Phần I…IV*) và ô tìm kiếm theo tên hoặc theo chủ đề của nhóm (`ro bot` ra các robot giáo dục).
 - **Đối tác:** bấm vào logo đối tác để xem giới thiệu và mở website của họ.
 - **Dự án tham khảo:** chia theo cấp học (THCS, THPT, Đại học); tìm theo tên trường.
 - **Tin tức:** tìm theo tiêu đề hoặc nội dung.
 - **Cần tư vấn:** đăng nhập trước (chưa đăng nhập sẽ được đưa tới trang đăng nhập). Sau đó điền biểu mẫu ở trang **Liên hệ** (hoặc trang robot, trang dịch vụ); họ tên, email, số điện thoại và đơn vị trong hồ sơ được điền sẵn và vẫn sửa được.
-- **Tài khoản:** **Đăng ký** (họ tên, email và mật khẩu; số điện thoại và đơn vị không bắt buộc), rồi **Đăng nhập** bằng tài khoản vừa tạo, hoặc bấm **Đăng nhập bằng Google**. Đăng nhập xong sẽ về Trang chủ. Xem yêu cầu ở **Yêu cầu của tôi**, thông tin và vai trò ở **Hồ sơ**.
+- **Tài khoản:** **Đăng ký** (họ tên, email và mật khẩu; số điện thoại và đơn vị không bắt buộc; trên điện thoại nằm ở trang **Đăng nhập**), rồi **Đăng nhập** bằng tài khoản vừa tạo, hoặc bấm **Đăng nhập bằng Google**. Đăng nhập xong sẽ về Trang chủ. Xem yêu cầu ở **Yêu cầu của tôi**, thông tin và vai trò ở **Hồ sơ**.
 - **Sau khi gửi yêu cầu:** thẻ cảm ơn có nút **← Quay lại biểu mẫu** và **Xem yêu cầu của tôi**. Trong **Yêu cầu của tôi**, nút **Sửa** cho phép sửa yêu cầu khi còn ở trạng thái *Mới*; khi MTG bắt đầu xử lý thì không sửa được nữa. Nhân viên thấy nhãn "Đã sửa lúc …".
 - **Đăng nhập bằng Google:** họ tên, email và ảnh đại diện được lấy từ tài khoản Google ở mỗi lần đăng nhập bằng Google (không sửa tên trên website được). Nếu đã có tài khoản cùng email thì đó vẫn là tài khoản ấy. Có thể đặt thêm mật khẩu ở **Hồ sơ** để đăng nhập bằng email và mật khẩu.
 - **Ảnh đại diện:** **Chọn ảnh** để tải ảnh lên; **Xóa ảnh** để bỏ ảnh, khi đó hai chữ cái đầu của tên hiện lại.
 
 ![Trang chủ](docs/images/vi/home.jpg)
 
+![Trang Lab STEM: mẫu phòng theo cấp học](docs/images/vi/stem-lab.jpg)
+
+![Trang Thiết bị: tìm theo chủ đề](docs/images/vi/equipment.jpg)
+
 ### Dành cho nhân viên: trang quản trị
 **Vào trang:** đăng nhập (sẽ về Trang chủ) → bấm tên của bạn ở góc trên bên phải → **Quản trị**.
+
+**Tổng quan** (trang đầu của quản trị): số yêu cầu mới, tổng yêu cầu, khách hàng và tin đã đăng ở trên cùng; **Yêu cầu theo tháng** trong 6 tháng gần nhất, mỗi cột chia *Mới / Đã liên hệ / Hoàn tất*; **Tỉ lệ** với hai biểu đồ tròn, *Theo mục quan tâm* (bấm vào một phần để xem biểu đồ riêng của nó) và *Thiết bị, học liệu, Robot STEM*; và các yêu cầu mới nhất.
 
 ![Tổng quan quản trị](docs/images/vi/admin-dashboard.jpg)
 
@@ -171,7 +189,7 @@ Uploaded photos and the database are not stored in this repository — copy them
 - **Thêm:** nút xanh **+ Thêm…**. **Sửa:** nút **Sửa** ở từng dòng. Xong bấm **Lưu**.
 - **Hai ngôn ngữ:** điền cả tiếng Việt và tiếng Anh. Để trống tiếng Anh thì sẽ hiện tiếng Việt.
 - **Thứ tự:** kéo dòng bằng tay nắm ⠿. Website đổi theo thứ tự mới.
-- **Tìm:** gõ vào ô tìm kiếm (không cần dấu: `may in` vẫn ra "máy in"). Có ở Robot, Thiết bị, Dự án tham khảo, Tin tức và Yêu cầu tư vấn. Thiết bị còn lọc được theo phần (*Phần I…IV*), dự án tham khảo theo cấp học, yêu cầu tư vấn theo mục quan tâm.
+- **Tìm:** gõ vào ô tìm kiếm (không cần dấu: `may in` vẫn ra "máy in"). Có ở Robot, Thiết bị, Dự án tham khảo, Tin tức và Yêu cầu tư vấn. Thiết bị còn tìm được theo chủ đề của nhóm và lọc được theo phần (*Phần I…IV*), dự án tham khảo theo cấp học, yêu cầu tư vấn theo mục quan tâm.
 - **Xoá:** bấm **Xoá** rồi xác nhận.
 - **Xem kết quả:** nút tròn ở góc dưới bên phải mở trang đó trên website.
 - **Ngôn ngữ trang quản trị:** **VI / EN** ở cuối menu bên trái.
@@ -186,7 +204,7 @@ Uploaded photos and the database are not stored in this repository — copy them
 - **Sửa** mở từng mục một. Bên trong, các thẻ, bước, số liệu và nút bấm cũng là từng dòng ngắn: **Sửa** ở dòng nào thì chỉ mở dòng đó. **Thêm mục mới** ở cuối trang hỏi loại mục trước.
 - Ô tiếng Việt bên trái, ô tiếng Anh bên phải. Ô tiếng Anh còn trống hiện mờ câu tiếng Việt để tham khảo; dấu **EN** màu cam báo mục hoặc thẻ còn thiếu tiếng Anh.
 - Đổi chỗ bằng ⠿ hoặc ▲ ▼. Nút thùng rác để xoá; **Hoàn tác** trong thông báo để lấy lại. Website chỉ thay đổi khi bấm **Lưu trang** (bên cạnh hiện "Có thay đổi chưa lưu").
-- **Do nhà phát triển thiết lập, không sửa trong trang quản trị:** nút bấm và liên kết của nút (ở mục "Nút bấm" chỉ sửa được chữ trên nút), và cách hiển thị của mục (loại mục, số cột, thu gọn, thẻ rút gọn, dạng tab, khung ảnh, tên ngắn trên thanh mục lục). Khi lưu, các thiết lập này được giữ nguyên.
+- **Do nhà phát triển thiết lập, không sửa trong trang quản trị:** nút bấm và liên kết của nút (ở mục "Nút bấm" chỉ sửa được chữ trên nút), và cách hiển thị của mục (loại mục, số cột, thu gọn, thẻ rút gọn, dạng tab, ảnh bấm vào để xem lớn, khung ảnh, tên ngắn trên thanh mục lục). Khi lưu, các thiết lập này được giữ nguyên.
 - **Ảnh & video:** mỗi ảnh một dòng: số thứ tự, ảnh xem trước lớn, chú thích tiếng Việt (bên trái) và tiếng Anh (bên phải). Đầu phần cho biết có bao nhiêu ảnh; nút **+ Thêm ảnh/video** ở bên cạnh.
 
 **Cài đặt chung** có bốn thẻ:

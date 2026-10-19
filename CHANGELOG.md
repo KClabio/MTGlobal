@@ -6,7 +6,19 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.0.10] - 2026-10-19
+## [1.0.11] - 2026-10-19
+
+### Changed
+- **README:** the guide (English and Tiếng Việt) and its screenshots now match the current website. It adds the Giải pháp section menu, the STEM Lab sample rooms with "Xem ảnh lớn", the "Thiết kế 3D" pictures, the equipment page's tabs and topic search, the light/dark switch and the dashboard charts, with new pictures of the STEM Lab and equipment pages.
+
+### Fixed
+- **The MTG logo was missing for visitors who were not logged in**: the menu, the light/dark switch and the "Đăng nhập" / "Đăng ký" buttons left it no room, so it shrank to nothing. It now always shows at full size. To make room, the menu is a little tighter on wide screens, it moves into the ☰ button below 1241 px wide (as on smaller screens before), and on phones "Đăng ký" is reached from the login page.
+
+  ![Header with the logo, logged out](docs/screenshots/1.0.11/header-logo.jpg)
+
+  ![Phone header with the logo, logged out](docs/screenshots/1.0.11/header-logo-phone.jpg)
+
+## [1.0.10] - 2026-10-19 · `a81997e`
 
 ### Added
 - **"Xem ảnh lớn" on "Mẫu thiết kế phân khu theo cấp học"** (STEM Lab page): the whole room drawing opens in a box in the middle of the page, with "← Quay lại"; Esc, a click outside or the browser's Back button also close it. It works in Chrome, Edge, Opera, Firefox and Cốc Cốc; if an ad-blocking extension hides the box, the picture opens on its own instead, and Back returns to the page.
