@@ -6,7 +6,24 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.0.11] - 2026-10-19
+## [1.0.12] - 2026-10-19
+
+### Changed
+- **Admin menu on phones and narrow windows** (960 px wide or less): instead of a strip that scrolled sideways across the top, the menu is hidden and a round **☰** button above the page title slides it in from the left. It has the logo, every section, the VI/EN switch and the light/dark switch; **×**, a tap on the darkened page beside it or Esc closes it, and it opens scrolled to the current page. Wide screens keep the menu on the left as before.
+
+  ![Admin overview on a phone, menu closed](docs/screenshots/1.0.12/admin-menu-closed.jpg)
+
+  ![The menu slid in from the left](docs/screenshots/1.0.12/admin-menu-open.jpg)
+- **"Yêu cầu theo lĩnh vực"** on the admin overview lists the areas in the same order as the admin menu (Sản phẩm robot, the Giải pháp pages, the services, then Khác) instead of ranking them by count, so each area keeps its place. The bars still compare the areas.
+
+  ![Requests by area, in menu order](docs/screenshots/1.0.12/requests-by-area.jpg)
+- **README:** explains the ☰ admin menu on phones.
+
+### Fixed
+- The admin overview on phones could be pushed a little sideways: a hidden table that screen readers use stuck out past the screen edge.
+- With the keyboard, moving onto a month of "Yêu cầu theo tháng" could show its tooltip only for an instant when the page scrolled; it now stays and follows the column.
+
+## [1.0.11] - 2026-10-19 · `c038453`
 
 ### Changed
 - **README:** the guide (English and Tiếng Việt) and its screenshots now match the current website. It adds the Giải pháp section menu, the STEM Lab sample rooms with "Xem ảnh lớn", the "Thiết kế 3D" pictures, the equipment page's tabs and topic search, the light/dark switch and the dashboard charts, with new pictures of the STEM Lab and equipment pages.

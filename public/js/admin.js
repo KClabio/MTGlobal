@@ -107,18 +107,24 @@
       tip.style.left = left + 'px';
       tip.style.top = top + 'px';
     };
+    var focused = null; // the element whose tooltip keyboard focus opened
     var hide = function () { tip.hidden = true; };
+    var showAtFocus = function () { var r = focused.getBoundingClientRect(); show(focused, r.left + r.width / 2, r.top); };
     document.querySelectorAll('[data-tip]').forEach(function (el) {
       el.addEventListener('mousemove', function (e) { show(el, e.clientX, e.clientY); });
-      el.addEventListener('mouseleave', hide);
+      el.addEventListener('mouseleave', function () { if (focused !== el) hide(); });
       el.addEventListener('focus', function () {
         if (!keyFocus(el)) return;
-        var r = el.getBoundingClientRect();
-        show(el, r.left + r.width / 2, r.top);
+        focused = el;
+        showAtFocus();
       });
-      el.addEventListener('blur', hide);
+      el.addEventListener('blur', function () { if (focused === el) focused = null; hide(); });
     });
-    window.addEventListener('scroll', hide, { passive: true });
+    // Scrolling hides a mouse tooltip; one opened by keyboard focus follows its element instead (Tab can scroll the
+    // page smoothly to the next column, which would otherwise hide the tooltip it just opened)
+    window.addEventListener('scroll', function () {
+      if (focused && document.activeElement === focused && !tip.hidden) showAtFocus(); else hide();
+    }, { passive: true });
   }
 
   // ---- Dashboard charts: hovering a month lights up its point on the line too ----
@@ -1143,4 +1149,52 @@
     if (initialQ) input.value = initialQ;
     if (initialQ || filterValue) apply();
   });
+})();
+
+// ---- Narrow screens (960px and below): the menu is hidden and slides in from the left with the round ☰ button
+// above the page title. ×, the dark backdrop, Esc or choosing a page close it; the page behind can't be reached
+// (inert) while it is open, and focus goes back to ☰. ----
+(function () {
+  var menu = document.getElementById('adminSidebar');
+  var openBtn = document.querySelector('.admin-menu-btn');
+  var scrim = document.querySelector('.admin-scrim');
+  var main = document.querySelector('.admin-main');
+  if (!menu || !openBtn || !scrim) return;
+  var closeBtn = menu.querySelector('.admin-menu-close');
+  var hideTimer = null;
+
+  function isOpen() { return menu.classList.contains('is-open'); }
+  function open() {
+    clearTimeout(hideTimer);
+    scrim.hidden = false;
+    void scrim.offsetWidth; // start the backdrop's fade from transparent
+    scrim.classList.add('is-visible');
+    menu.classList.add('is-open');
+    document.documentElement.classList.add('has-admin-menu');
+    openBtn.setAttribute('aria-expanded', 'true');
+    if (main) main.inert = true;
+    var current = menu.querySelector('.admin-nav a.active') || menu.querySelector('.admin-nav a');
+    if (current) current.focus({ preventScroll: true });
+  }
+  function close(returnFocus) {
+    if (!isOpen()) return;
+    menu.classList.remove('is-open');
+    scrim.classList.remove('is-visible');
+    document.documentElement.classList.remove('has-admin-menu');
+    openBtn.setAttribute('aria-expanded', 'false');
+    if (main) main.inert = false;
+    hideTimer = setTimeout(function () { scrim.hidden = true; }, 400); // after the fade
+    if (returnFocus) openBtn.focus();
+  }
+
+  openBtn.addEventListener('click', open);
+  if (closeBtn) closeBtn.addEventListener('click', function () { close(true); });
+  scrim.addEventListener('click', function () { close(true); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen()) close(true); });
+  menu.addEventListener('click', function (e) { if (e.target.closest('a[href]')) close(false); });
+  // Widening the window past 960px puts the menu back on the left: nothing may stay locked
+  var narrow = window.matchMedia('(max-width: 960px)');
+  if (narrow.addEventListener) narrow.addEventListener('change', function (e) { if (!e.matches) close(false); });
+  // Coming back with the browser's Back button shows the page as it was left: closed
+  window.addEventListener('pageshow', function (e) { if (e.persisted) close(false); });
 })();

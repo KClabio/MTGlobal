@@ -56,6 +56,8 @@ The bilingual (Vietnamese / English) website of **Công ty TNHH Công nghệ M�
 ### For staff: the admin area
 **Sign in:** log in (you land on the home page) → open the name menu at the top right → **Admin**.
 
+**On a phone or a narrow window**, the admin menu is hidden: the round **☰** button above the page title slides it in from the left (with the language and light/dark switches); **×**, a tap beside it or Esc closes it.
+
 **Overview** (the first admin page): new and total requests, customers and published news at the top; **Requests per month** for the last 6 months, each column split into *New / Contacted / Completed*; **Proportions** with two pies, *By interest* (click a slice to see its own pie) and *Equipment, materials & STEM robots*; and the latest requests.
 
 ![Admin overview](docs/images/en/admin-dashboard.jpg)
@@ -180,6 +182,8 @@ Uploaded photos and the database are not stored in this repository — copy them
 
 ### Dành cho nhân viên: trang quản trị
 **Vào trang:** đăng nhập (sẽ về Trang chủ) → bấm tên của bạn ở góc trên bên phải → **Quản trị**.
+
+**Trên điện thoại hoặc cửa sổ hẹp**, menu quản trị được ẩn đi: nút tròn **☰** phía trên tiêu đề trang sẽ trượt menu ra từ bên trái (kèm nút ngôn ngữ và sáng/tối); bấm **×**, chạm ra ngoài menu hoặc phím Esc để đóng.
 
 **Tổng quan** (trang đầu của quản trị): số yêu cầu mới, tổng yêu cầu, khách hàng và tin đã đăng ở trên cùng; **Yêu cầu theo tháng** trong 6 tháng gần nhất, mỗi cột chia *Mới / Đã liên hệ / Hoàn tất*; **Tỉ lệ** với hai biểu đồ tròn, *Theo mục quan tâm* (bấm vào một phần để xem biểu đồ riêng của nó) và *Thiết bị, học liệu, Robot STEM*; và các yêu cầu mới nhất.
 

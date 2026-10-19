@@ -160,6 +160,9 @@
   "admin": {
     "pageTitle": "Admin - MTG",
     "brand": "MTG Admin",
+    "menuOpen": "Open menu",
+    "menuClose": "Close menu",
+    "menuLabel": "Admin menu",
     "language": "Language",
     "nav": {
       "dashboard": "Overview",
@@ -255,7 +258,7 @@
       "monthLong": "{name} {y}",
       "tipMonth": "{month}: {n} requests",
       "interestTitle": "Requests by area",
-      "interestSub": "Which areas customers ask about most",
+      "interestSub": "Requests for each area, in the order of the left menu",
       "tipInterest": "{label}: {n} requests ({pct}%)",
       "latestTitle": "Latest requests",
       "viewAll": "View all →",

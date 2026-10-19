@@ -229,8 +229,8 @@ await suite(async (b) => {
       await b.key('Escape', 'Escape', 27);
       await b.viewport(390, 844);
       await nav('/admin/trang/tap-huan');
-      const mob = await ev(`({ groupsShown: [...document.querySelectorAll('.admin-nav-group')].some(g => g.offsetParent), overflow: document.documentElement.scrollWidth - innerWidth })`);
-      check('390px: group headings hidden in the compact strip, no page overflow', !mob.groupsShown && mob.overflow <= 1, mob);
+      const mob = await ev(`({ menuHidden: getComputedStyle(document.querySelector('.admin-sidebar')).visibility === 'hidden', button: getComputedStyle(document.querySelector('.admin-menu-btn')).display !== 'none', overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth })`);
+      check('390px: the menu is hidden behind the ☰ button, no page overflow', mob.menuHidden && mob.button && mob.overflow <= 1, mob);
       check('no native browser dialogs', nativeDialogs === 0, nativeDialogs);
     } finally {
       uploaded.forEach((u) => { try { unlinkSync(PUB + u); } catch {} });

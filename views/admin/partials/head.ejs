@@ -51,11 +51,16 @@
 </head>
 <body>
   <div class="admin-wrap">
-    <aside class="admin-sidebar">
-      <a href="/admin" class="admin-brand">
-        <img src="/images/mtg-logo-transparent.png" alt="MTG - Smart solutions for Life">
-        <span><%= t('admin.brand') %></span>
-      </a>
+    <%# On wide screens a fixed menu on the left; at 960px and below it is hidden and slides in from the left with the
+        round ☰ button above the page title (public/js/admin.js), × / the dark backdrop / Esc close it %>
+    <aside class="admin-sidebar" id="adminSidebar" aria-label="<%= t('admin.menuLabel') %>">
+      <div class="admin-brand-row">
+        <a href="/admin" class="admin-brand">
+          <img src="/images/mtg-logo-transparent.png" alt="MTG - Smart solutions for Life">
+          <span><%= t('admin.brand') %></span>
+        </a>
+        <button type="button" class="admin-menu-close" aria-label="<%= t('admin.menuClose') %>" title="<%= t('admin.menuClose') %>"><%- include('icon', { name: 'x', size: 18 }) %></button>
+      </div>
       <nav class="admin-nav">
         <% navGroups.forEach(function (group) { %>
           <% if (group.label) { %><span class="admin-nav-group"><%= group.label %></span><% } %>
@@ -74,9 +79,10 @@
         <%- include('../../partials/theme-toggle', { label: t('admin.theme.dark'), compact: true }) %>
       </div>
     </aside>
+    <div class="admin-scrim" hidden></div>
     <script>
-      // The menu scrolls on its own (tall list on desktop, sideways bar on phones). Every item loads a new page,
-      // so keep the menu where it was (saved per tab) and make sure the current item is in view.
+      // The menu scrolls on its own (a tall list, also when it slides in on narrow screens). Every item loads a new
+      // page, so keep the menu where it was (saved per tab) and make sure the current item is in view.
       // Runs right here, before the page is drawn, so the menu never visibly jumps.
       (function () {
         var bar = document.querySelector('.admin-sidebar');
@@ -84,7 +90,7 @@
         var KEY = 'adminNavScroll';
         var saved = null;
         try { saved = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) { /* storage blocked */ }
-        if (saved) { bar.scrollTop = saved.top || 0; bar.scrollLeft = saved.left || 0; }
+        if (saved) bar.scrollTop = saved.top || 0;
         var active = bar.querySelector('.admin-nav a.active');
         if (active) {
           var b = bar.getBoundingClientRect();
@@ -93,13 +99,13 @@
           var lang = bar.querySelector('.admin-lang');
           var bottom = b.bottom - (lang && getComputedStyle(lang).position === 'sticky' ? lang.offsetHeight : 0);
           if (a.top < b.top || a.bottom > bottom) bar.scrollTop += a.top - b.top - (bottom - b.top - a.height) / 2;
-          if (a.left < b.left || a.right > b.right) bar.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
         }
         function save() {
-          try { sessionStorage.setItem(KEY, JSON.stringify({ top: bar.scrollTop, left: bar.scrollLeft })); } catch (e) { /* storage blocked */ }
+          try { sessionStorage.setItem(KEY, JSON.stringify({ top: bar.scrollTop })); } catch (e) { /* storage blocked */ }
         }
         bar.addEventListener('click', function (e) { if (e.target.closest('a, button')) save(); });
         window.addEventListener('pagehide', save);
       })();
     </script>
     <main class="admin-main">
+      <button type="button" class="admin-menu-btn" aria-controls="adminSidebar" aria-expanded="false" aria-label="<%= t('admin.menuOpen') %>" title="<%= t('admin.menuOpen') %>"><%- include('icon', { name: 'menu', size: 20 }) %></button>

@@ -10,6 +10,7 @@ const form = (o) => { const fd = new FormData(); for (const [k, v] of Object.ent
 
 await suite(async (b) => {
   const { send, ev, sleep } = b;
+  const shot = (name) => b.shot(name);
   const d = await db();
   // Every list's order is put back afterwards; test records are removed
   for (const c of ['projects', 'products', 'partners', 'articles', 'services']) await restoreLater(c, {});
@@ -797,21 +798,69 @@ await suite(async (b) => {
     await nav('/admin/nguoi-dung');
     s = await state();
     check('saved position that would hide the current item is corrected to show it', s.active === '/admin/nguoi-dung' && s.visibleV, s);
-    // Phone: horizontal bar
+    // Narrow screens (960px and below): the menu is hidden; the round ☰ above the page title slides it in from the left
+    const menu = () => ev(`(() => { const bar = document.querySelector('.admin-sidebar'); const r = bar.getBoundingClientRect(); const btn = document.querySelector('.admin-menu-btn');
+      const br = btn.getBoundingClientRect(); const h1 = document.querySelector('.admin-topbar h1').getBoundingClientRect(); const scrim = document.querySelector('.admin-scrim');
+      return { onScreen: getComputedStyle(bar).visibility === 'visible' && Math.round(r.left) === 0 && r.right > 200, hidden: getComputedStyle(bar).visibility === 'hidden' && r.right <= 1,
+        btn: getComputedStyle(btn).display !== 'none' && br.width === 44 && br.height === 44 && getComputedStyle(btn).borderRadius === '50%', btnAboveTitle: br.bottom <= h1.top && br.left <= h1.left + 1,
+        expanded: btn.getAttribute('aria-expanded'), scrim: !scrim.hidden && +getComputedStyle(scrim).opacity > .9, pageLocked: getComputedStyle(document.documentElement).overflow === 'hidden', inert: document.querySelector('.admin-main').inert,
+        logo: !!bar.querySelector('.admin-brand img') && bar.querySelector('.admin-brand img').naturalWidth > 0, links: bar.querySelectorAll('.admin-nav a').length, groups: [...bar.querySelectorAll('.admin-nav-group')].filter((g) => g.offsetParent).length,
+        lang: [...bar.querySelectorAll('.admin-lang a')].map((a) => a.textContent.trim()).join('/'), theme: !!bar.querySelector('.admin-lang [data-theme-toggle]'),
+        focus: document.activeElement === btn ? 'button' : (document.activeElement.closest('.admin-sidebar') ? 'menu:' + document.activeElement.textContent.trim() : document.activeElement.tagName),
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
     await b.viewport(390, 844);
     await ev(`sessionStorage.clear()`);
     await nav('/admin');
-    s = await state();
-    check('phone 390: the menu is a sideways bar that needs scrolling', s.maxLeft > 100, s);
-    await ev(`(() => { const bar = document.querySelector('.admin-sidebar'); const a = bar.querySelector('a[href="/admin/doi-tac"]'); bar.scrollLeft = a.offsetLeft - 100; return bar.scrollLeft; })()`);
-    const pBefore = await state();
-    await clickNav('/admin/doi-tac');
-    s = await state();
-    check('phone: after clicking "Đối tác đồng hành" the bar keeps its sideways position, item active + visible', Math.abs(s.left - pBefore.left) <= 2 && s.active === '/admin/doi-tac' && s.visibleH, { pBefore, s });
+    let m = await menu();
+    check('phone 390: menu hidden; a round 44px ☰ button above the "Tổng quan" title; no sideways scrolling', m.hidden && m.btn && m.btnAboveTitle && m.expanded === 'false' && m.overflow <= 1, m);
+    await shot('admin-menu-closed-390');
+    await b.clickAt('.admin-menu-btn'); await sleep(700);
+    m = await menu();
+    check('tapping ☰ slides the menu in from the left: logo, all 16 links with their group titles, VI/EN and the light/dark switch',
+      m.onScreen && m.logo && m.links === 16 && m.groups === 6 && m.lang === 'VI/EN' && m.theme && m.expanded === 'true', m);
+    check('… with a dark backdrop, the page behind locked (no scroll, no Tab) and the focus on the current page "Tổng quan"', m.scrim && m.pageLocked && m.inert && m.focus === 'menu:Tổng quan', m);
+    await shot('admin-menu-open-390');
+    await b.key('Escape', 'Escape', 27); await sleep(700);
+    m = await menu();
+    check('Esc closes it; focus back on ☰, page unlocked', m.hidden && m.expanded === 'false' && !m.scrim && !m.pageLocked && !m.inert && m.focus === 'button', m);
+    await b.clickAt('.admin-menu-btn'); await sleep(700);
+    await b.mouse('mousePressed', { x: 370, y: 400 }, { button: 'left', clickCount: 1 }); await b.mouse('mouseReleased', { x: 370, y: 400 }, { button: 'left', clickCount: 1 }); await sleep(700);
+    m = await menu();
+    check('a tap on the dark backdrop closes it', m.hidden && m.focus === 'button', m);
+    await b.clickAt('.admin-menu-btn'); await sleep(700);
+    await b.clickAt('.admin-menu-close'); await sleep(700);
+    m = await menu();
+    check('× in the menu closes it', m.hidden && m.focus === 'button', m);
+    await b.clickAt('.admin-menu-btn'); await sleep(700);
+    { const l = b.waitLoad(); await b.clickAt('.admin-nav a[href="/admin/doi-tac"]'); await l; await sleep(400); }
+    m = await menu();
+    check('choosing "Đối tác đồng hành" in the menu opens that page, with the menu closed', (await ev('location.pathname')) === '/admin/doi-tac' && m.hidden && m.btn, m);
     await ev(`sessionStorage.clear()`);
     await nav('/admin/cai-dat');
+    await b.clickAt('.admin-menu-btn'); await sleep(700);
     s = await state();
-    check('phone, fresh tab on /admin/cai-dat: bar scrolled so the item is visible', s.active === '/admin/cai-dat' && s.visibleH && s.left > 0, s);
+    check('fresh tab on /admin/cai-dat: the opened menu shows "Cài đặt chung" (scrolled down to it)', s.active === '/admin/cai-dat' && s.visibleV && s.top > 0, s);
+    await b.key('Escape', 'Escape', 27); await sleep(500);
+    await b.reducedMotion();
+    await b.clickAt('.admin-menu-btn');
+    await sleep(60);
+    const midway = await ev(`Math.round(document.querySelector('.admin-sidebar').getBoundingClientRect().left)`);
+    await sleep(500);
+    m = await menu();
+    check('reduced motion: still a short visible slide, then fully open', midway < 0 && m.onScreen, { midway, m });
+    await b.key('Escape', 'Escape', 27); await sleep(400);
+    await b.reducedMotion(false);
+    await b.setCookie('theme', 'dark');
+    await b.viewport(800, 900); await nav('/admin');
+    m = await menu();
+    check('tablet 800: the same hidden menu and ☰ button', m.hidden && m.btn, m);
+    await b.clickAt('.admin-menu-btn'); await sleep(700);
+    await shot('admin-menu-open-800-dark');
+    await b.viewport(1280, 900); await sleep(500);
+    m = await menu();
+    check('widening the window past 960px while it is open: the usual menu on the left, ☰ hidden, nothing left locked',
+      m.onScreen && !m.btn && !m.scrim && !m.pageLocked && !m.inert && m.expanded === 'false', m);
+    await b.setCookie('theme', 'light');
   });
 
   await part(b, 'Người dùng: profile photos', async () => {

@@ -92,11 +92,12 @@
       <% }) %>
       <li data-key="total"><span class="key-line" aria-hidden="true"></span><%= t('admin.dashboard.seriesTotal') %></li>
     </ul>
-    <table class="sr-only">
+    <%# The numbers for screen readers. Hidden by a wrapper: a table ignores the 1px width of .sr-only and widened phone pages %>
+    <div class="sr-only"><table>
       <caption><%= t('admin.dashboard.monthlyTitle') %></caption>
       <tr><th><%= t('admin.dashboard.monthCol') %></th><th><%= t('admin.dashboard.totalCol') %></th><% m.legend.forEach(function (s) { %><th><%= s.label %></th><% }) %></tr>
       <% m.bars.forEach(function (b) { %><tr><td><%= b.title %></td><td><%= b.value %></td><% m.legend.forEach(function (s) { %><td><%= b.parts[s.key] %></td><% }) %></tr><% }) %>
-    </table>
+    </table></div>
   </section>
 
   <!-- Interests: pie of the 4 groups (sweeps in on open, a slice slides out on hover); a click on a group opens its own

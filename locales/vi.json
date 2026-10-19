@@ -160,6 +160,9 @@
   "admin": {
     "pageTitle": "Quản trị - MTG",
     "brand": "MTG Admin",
+    "menuOpen": "Mở menu",
+    "menuClose": "Đóng menu",
+    "menuLabel": "Menu quản trị",
     "language": "Ngôn ngữ",
     "nav": {
       "dashboard": "Tổng quan",
@@ -255,7 +258,7 @@
       "monthLong": "Tháng {m}/{y}",
       "tipMonth": "{month}: {n} yêu cầu",
       "interestTitle": "Yêu cầu theo lĩnh vực",
-      "interestSub": "Khách hàng quan tâm nhiều nhất đến lĩnh vực nào",
+      "interestSub": "Số yêu cầu của từng lĩnh vực, theo thứ tự menu bên trái",
       "tipInterest": "{label}: {n} yêu cầu ({pct}%)",
       "latestTitle": "Yêu cầu mới nhất",
       "viewAll": "Xem tất cả →",
