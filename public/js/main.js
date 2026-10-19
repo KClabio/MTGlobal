@@ -649,9 +649,11 @@
   var empty = results.querySelector('[data-equip-empty]');
   var current = null;
 
-  // Accents and case don't matter: "may in" finds "Máy in"
-  function fold(text) {
-    return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+  // Same rule as the admin list search: every typed word must start a word of the item's names (VI + EN) or of its
+  // sub-list topic. Accents, case and punctuation don't matter: "may tinh" finds "Máy tính", "vex-iq" finds "VEX IQ"
+  function words(text) {
+    return String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd')
+      .split(/[^a-z0-9]+/).filter(Boolean);
   }
 
   function select(slug, focus) {
@@ -689,23 +691,23 @@
   var cards = [];
   panels.forEach(function (panel) {
     var label = panel.getAttribute('data-part-label');
-    var partTitle = (panel.querySelector('.equipment-group-title') || {}).textContent || '';
     panel.querySelectorAll('.card').forEach(function (card) {
-      cards.push({ card: card, label: label, text: fold(card.textContent + ' ' + partTitle + ' ' + label) });
+      cards.push({ card: card, label: label, words: words(card.getAttribute('data-search') || card.textContent) });
     });
   });
 
   function search() {
-    var q = fold(input.value);
-    if (!q) {
+    var query = words(input.value);
+    if (!query.length) {
       results.hidden = true;
       grid.innerHTML = '';
       tools.classList.remove('is-searching');
       select(current);
       return;
     }
-    var words = q.split(' ');
-    var hits = cards.filter(function (c) { return words.every(function (w) { return c.text.indexOf(w) !== -1; }); });
+    var hits = cards.filter(function (c) {
+      return query.every(function (q) { return c.words.some(function (w) { return w.indexOf(q) === 0; }); });
+    });
     grid.innerHTML = '';
     hits.forEach(function (h) {
       var copy = h.card.cloneNode(true);
@@ -812,6 +814,189 @@ document.addEventListener('contextmenu', function (e) {
     list.hidden = false;
     wrap.classList.add('is-tabbed');
     select(0);
+  });
+})();
+
+// Giải pháp pages: "Xem ảnh lớn", or a click on a picture of a 'zoom' gallery, shows the picture larger in a box on the
+// page. "← Quay lại", the browser's or phone's Back, Esc or a click outside the box close it. Opening adds one history step, so Back closes the picture instead of
+// leaving the page; closing any other way takes that step out again.
+// Built to work in every browser and next to blocker add-ons (uBlock, AdBlock…):
+// - the box shows the picture the page has already loaded, so there is no new download for a blocker to stop;
+// - its names avoid the words blocker lists hide ("popup", "modal", "overlay", "lightbox");
+// - if the box still ends up hidden or covered, the picture opens in the tab itself (Back returns to the page);
+// - without <dialog> (very old browsers) the button opens the picture in the tab; without JS a <noscript> link does.
+// It is a button, not a link to the picture file, so hovering it previews nothing (no address, no add-on picture pop-up).
+// The picture gets its size in pixels here (never larger than its real size); "Đang tải ảnh…" shows until it has loaded,
+// and a message with a link if it can't be loaded.
+(function () {
+  var buttons = document.querySelectorAll('[data-image-view]');
+  if (!buttons.length) return;
+  if (typeof HTMLDialogElement === 'undefined' || typeof document.createElement('dialog').showModal !== 'function') {
+    buttons.forEach(function (btn) { btn.addEventListener('click', function () { location.assign(btn.getAttribute('data-full')); }); });
+    return;
+  }
+  var box = null, img, title, back, note, head, opener = null, address = '', natural = null, stepAdded = false, ownBack = false, opened = 0;
+  var PAD = 16; // the box's inner padding (components.css: .plan-zoom-body)
+
+  // The picture the button belongs to: beside it (floor-plan tabs) or inside it (a zoomable gallery picture)
+  function pagePicture(btn) {
+    var holder = btn.closest('.media-tabpanel, .media-figure');
+    return holder && holder.querySelector('.media-frame img');
+  }
+
+  function build(btn) {
+    box = document.createElement('dialog');
+    box.className = 'plan-zoom';
+    box.setAttribute('aria-labelledby', 'planZoomTitle');
+    box.innerHTML = '<div class="plan-zoom-head"><h2 class="plan-zoom-title" id="planZoomTitle"></h2>' +
+      '<button type="button" class="btn btn-ghost btn-sm plan-zoom-back"><span aria-hidden="true">&larr;</span> <span></span></button></div>' +
+      '<div class="plan-zoom-body"><img class="plan-zoom-img" alt=""><p class="plan-zoom-note" aria-live="polite"></p></div>';
+    document.body.appendChild(box);
+    head = box.querySelector('.plan-zoom-head');
+    title = box.querySelector('.plan-zoom-title');
+    back = box.querySelector('.plan-zoom-back');
+    img = box.querySelector('.plan-zoom-img');
+    note = box.querySelector('.plan-zoom-note');
+    back.lastChild.textContent = btn.getAttribute('data-back-label');
+    back.addEventListener('click', function () { box.close(); });
+    box.addEventListener('click', function (e) { if (e.target === box) box.close(); }); // outside the box (the dimmed page)
+    box.addEventListener('close', function () {
+      document.documentElement.classList.remove('has-plan-zoom');
+      if (stepAdded) { stepAdded = false; ownBack = true; history.back(); } // closed by the button, Esc or a click: take the step out
+      if (opener) opener.focus();
+    });
+    window.addEventListener('popstate', function () {
+      if (ownBack) { ownBack = false; return; } // our own step-out (it may land after a quick reopen)
+      if (!box.open) return;
+      stepAdded = false; // Back already took the step out
+      box.close();
+    });
+    window.addEventListener('resize', fit);
+    img.addEventListener('load', function () {
+      natural = { w: img.naturalWidth, h: img.naturalHeight };
+      note.hidden = true;
+      fit();
+    });
+    img.addEventListener('error', function () {
+      note.textContent = '';
+      note.appendChild(document.createTextNode(opener.getAttribute('data-failed') + ' '));
+      var link = document.createElement('a');
+      link.href = address;
+      link.textContent = opener.getAttribute('data-open');
+      note.appendChild(link);
+      note.hidden = false;
+      box.classList.add('is-failed');
+    });
+  }
+
+  // As large as fits in ~92% × 92% of the window (minus the box's title row), never beyond the picture's real size
+  function fit() {
+    if (!box || !box.open || !natural || !natural.w || !natural.h) return;
+    var maxW = Math.min(window.innerWidth * 0.92, 1600) - PAD * 2;
+    var maxH = window.innerHeight * 0.92 - head.offsetHeight - PAD * 2;
+    var scale = Math.min(1, maxW / natural.w, Math.max(120, maxH) / natural.h);
+    img.style.width = Math.max(1, Math.floor(natural.w * scale)) + 'px';
+    img.style.height = Math.max(1, Math.floor(natural.h * scale)) + 'px';
+  }
+
+  // False when something (a blocker add-on's style or a layer it adds) hides or covers the open box
+  function onScreen() {
+    if (!box.open) return true; // already closed by the visitor
+    var cs = getComputedStyle(box);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.1) return false;
+    var r = box.getBoundingClientRect();
+    if (r.width < 40 || r.height < 40) return false;
+    if (!box.classList.contains('is-failed')) {
+      var ci = getComputedStyle(img);
+      if (ci.display === 'none' || ci.visibility === 'hidden' || parseFloat(ci.opacity) < 0.1) return false;
+    }
+    var hit = document.elementFromPoint ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+    return !hit || box.contains(hit);
+  }
+
+  // The box can't be seen: show the picture in the tab instead. It takes the place of the box's history step, so Back
+  // returns to the page.
+  function openInTab() {
+    var hadStep = stepAdded;
+    stepAdded = false;
+    box.close();
+    if (hadStep) location.replace(address);
+    else location.assign(address);
+  }
+
+  function check(n) {
+    if (n === opened && box.open && !onScreen()) openInTab();
+  }
+
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!box) build(btn);
+      if (box.open) return;
+      opener = btn;
+      // The picture the page shows (already loaded: no new download), else the button's own address
+      var shown = pagePicture(btn);
+      var loaded = shown && shown.complete && shown.naturalWidth;
+      address = (loaded && shown.currentSrc) || btn.getAttribute('data-full');
+      natural = loaded ? { w: shown.naturalWidth, h: shown.naturalHeight } : { w: 1500, h: 1000 };
+      title.textContent = btn.getAttribute('data-title') || '';
+      img.alt = btn.getAttribute('data-alt') || '';
+      box.classList.remove('is-failed');
+      note.textContent = btn.getAttribute('data-loading');
+      note.hidden = false;
+      img.src = address;
+      try { history.pushState({ planZoom: true }, '', location.href); stepAdded = true; } catch (err) { stepAdded = false; }
+      document.documentElement.classList.add('has-plan-zoom');
+      box.showModal();
+      fit();
+      if (img.complete && img.naturalWidth) { natural = { w: img.naturalWidth, h: img.naturalHeight }; note.hidden = true; fit(); }
+      back.focus();
+      // Look again once it is drawn, and a little later (some add-ons hide things after a short delay)
+      var n = ++opened;
+      requestAnimationFrame(function () { requestAnimationFrame(function () { check(n); }); });
+      setTimeout(function () { check(n); }, 600);
+    });
+  });
+})();
+
+// Giải pháp cards: "Xem chi tiết" slides its text open and closed instead of jumping. A click during the slide turns it
+// around. Without JS the <details> still opens, just at once; with "reduced motion" the slide stays, only shorter (--anim).
+(function () {
+  var folds = document.querySelectorAll('details.card-more');
+  if (!folds.length || !Element.prototype.animate) return;
+  var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
+  var ms = Math.round(180 + 220 * anim);
+  folds.forEach(function (fold) {
+    var summary = fold.querySelector('summary');
+    var body = fold.querySelector('.card-more-body');
+    if (!summary || !body) return;
+    var running = null;
+    var closing = false;
+    function slide(from, to, done) {
+      var full = body.scrollHeight || 1;
+      body.classList.add('is-animating');
+      running = body.animate([
+        { height: from + 'px', opacity: Math.min(1, from / full) },
+        { height: to + 'px', opacity: Math.min(1, to / full) }
+      ], { duration: ms, easing: 'cubic-bezier(.2, .8, .3, 1)' });
+      running.onfinish = function () {
+        running = null;
+        body.classList.remove('is-animating');
+        if (done) done();
+      };
+    }
+    summary.addEventListener('click', function (e) {
+      e.preventDefault();
+      var from = fold.open ? body.getBoundingClientRect().height : 0;
+      if (running) { running.onfinish = null; running.cancel(); running = null; }
+      if (!fold.open || closing) {
+        closing = false;
+        fold.open = true;
+        slide(from, body.scrollHeight);
+      } else {
+        closing = true;
+        slide(from, 0, function () { fold.open = false; closing = false; });
+      }
+    });
   });
 })();
 

@@ -81,8 +81,9 @@ Each file ends with its own `@media` rules. Grep for a selector first, then read
 - **Commit only when the owner asks.** Each commit is a version: the first was 1.0.0, and each later one adds 0.0.1 (one tag + GitHub Release per commit).
 - Routine:
   1. Add a `## [Unreleased]` section at the top of `CHANGELOG.md` (under the intro and `---`). Use `### Added` / `### Changed` / `### Fixed` / `### Removed`, in plain words for business readers.
-  2. Stage the changed files with `git add <files>`, never `git add -A`.
-  3. Run `npm run release -- -m "<two plain sentences>" --session <Claude-Session url>`. Try `--dry-run` first.
+  2. Screenshots (from 1.0.10 on): for visible changes, copy 1–3 small JPGs from `tests/output/` to `docs/screenshots/<next version>/` and link each under the item it shows, by relative path (`![…](docs/screenshots/1.0.10/x.jpg)`). The script makes them work on the Release page and stops if one isn't staged. The repo is public: no admin pages with real customer data.
+  3. Stage the changed files with `git add <files>`, never `git add -A`.
+  4. Run `npm run release -- -m "<two plain sentences>" --session <Claude-Session url>`. Try `--dry-run` first.
 - The script dates the section, sets the version in `package.json`, and commits with this trailer:
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

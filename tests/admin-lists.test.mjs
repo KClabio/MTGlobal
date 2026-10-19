@@ -387,9 +387,11 @@ await suite(async (b) => {
   await part(b, 'name search', async () => {
     const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
     const wordsOf = (s) => fold(s).split(/[^a-z0-9]+/).filter(Boolean);
-    // Word-start rule: every typed word must be the start of some word in nameVi/nameEn
-    const hits = (q) => (x) => { const w = wordsOf(x.nameVi + ' ' + x.nameEn); return wordsOf(q).every((y) => w.some((z) => z.startsWith(y))); };
-    const sub = (q) => (x) => fold(x.nameVi + ' ' + x.nameEn).includes(fold(q));
+    // Word-start rule: every typed word must be the start of some word in nameVi/nameEn or the sub-list topic (after " — ")
+    const topic = (sub) => String(sub || '').split(/\s+—\s+/)[1] || '';
+    const textOf = (x) => [x.nameVi, x.nameEn, topic(x.subcategory), topic(x.subcategoryEn)].join(' ');
+    const hits = (q) => (x) => { const w = wordsOf(textOf(x)); return wordsOf(q).every((y) => w.some((z) => z.startsWith(y))); };
+    const sub = (q) => (x) => fold(textOf(x)).includes(fold(q));
     const equipment = await d.collection('products').find({ category: 'stem-equipment', nameVi: { $not: new RegExp('^' + MARK) } }).toArray();
     const expectIds = (pred) => equipment.filter(pred).map((x) => String(x._id)).sort();
     await b.login(admin.sid);
@@ -474,6 +476,10 @@ await suite(async (b) => {
       const midOnly = expectIds((x) => sub(q)(x) && !hits(q)(x));
       check(`"${q}": mid-word matches hidden (${midOnly.length} substring-only rows excluded)`, JSON.stringify(s.visible) === JSON.stringify(exp) && midOnly.length > 0 && midOnly.every((x) => !s.visible.includes(x)), { s, exp, midOnly });
     }
+    await type('ro bot');
+    s = await state();
+    const makeblock = equipment.find((x) => /Makeblock/.test(x.nameVi));
+    check('"ro bot" finds the item of the "Lập trình & Rô-bốt giáo dục" sub-list (topic searched, not shown)', makeblock && JSON.stringify(s.visible) === JSON.stringify([String(makeblock._id)]), s);
     await type('lap');
     s = await state();
     check('"lap" finds "(Laptop)" — word start after punctuation', s.visible.length >= 1 && JSON.stringify(s.visible) === JSON.stringify(expectIds(hits('lap'))), s);

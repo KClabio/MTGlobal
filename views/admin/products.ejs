@@ -27,7 +27,7 @@
   </thead>
   <tbody data-sortable="<%= section.sortType %>">
     <% products.forEach(function (p) { %>
-      <tr data-id="<%= p._id %>" data-search="<%= [p.nameVi, p.nameEn].filter(Boolean).join(' ') %>"<% if (section.key === 'equipment') { %> data-filter="<%= partSlug(p.subcategory) %>"<% } %>>
+      <tr data-id="<%= p._id %>" data-search="<%= [p.nameVi, p.nameEn].concat(section.key === 'equipment' ? [p.subcategory, p.subcategoryEn].map(function (sub) { return String(sub || '').split(/\s+—\s+/)[1] || ''; }) : []).filter(Boolean).join(' ') %>"<% if (section.key === 'equipment') { %> data-filter="<%= partSlug(p.subcategory) %>"<% } %>>
         <%- include('partials/drag-handle', { name: pick(p, 'name') }) %>
         <td><% if (p.images && p.images[0]) { %><img class="thumb" src="<%= p.images[0] %>" alt=""><% } %></td>
         <td data-search-name><%= pick(p, 'name') %></td>

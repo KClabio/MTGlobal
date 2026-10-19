@@ -2,11 +2,28 @@
 
 All notable changes to the MTGlobal website are listed here, newest first.
 
-Each commit published to GitHub is one version: the first commit is **1.0.0** and every later commit adds one to the last number (1.0.1, 1.0.2, …). The format follows [Keep a Changelog](https://keepachangelog.com/).
+Each commit published to GitHub is one version: the first commit is **1.0.0** and every later commit adds one to the last number (1.0.1, 1.0.2, …). The format follows [Keep a Changelog](https://keepachangelog.com/). From 1.0.10 on, versions with visible changes include screenshots.
 
 ---
 
-## [1.0.9] - 2026-10-18
+## [1.0.10] - 2026-10-19
+
+### Added
+- **"Xem ảnh lớn" on "Mẫu thiết kế phân khu theo cấp học"** (STEM Lab page): the whole room drawing opens in a box in the middle of the page, with "← Quay lại"; Esc, a click outside or the browser's Back button also close it. It works in Chrome, Edge, Opera, Firefox and Cốc Cốc; if an ad-blocking extension hides the box, the picture opens on its own instead, and Back returns to the page.
+
+  ![The "Xem ảnh lớn" box](docs/screenshots/1.0.10/image-box.jpg)
+- **"Thiết kế 3D" pictures** (STEM Lab page): under the mouse a picture lifts slightly, zooms in gently and shows an expand icon (on phones the icon is always shown); a click or tap opens it larger in the same box, with its caption as the title.
+
+  ![The "Thiết kế 3D" pictures, the second one under the mouse](docs/screenshots/1.0.10/3d-hover.jpg)
+- **Equipment search** (on the STEM equipment page and in Admin → Sản phẩm) also finds items by the topic of their sub-list, e.g. "rô bốt" finds the items under "Lập trình & Rô-bốt giáo dục".
+
+### Changed
+- **"Mẫu thiết kế phân khu theo cấp học"**: each school level shows its room drawing on the left and its description on the right, as a short list of the room's areas (one under the other on phones). Mầm non and THCS get a fuller description, like Tiểu học and THPT.
+
+  ![Room drawing and description side by side](docs/screenshots/1.0.10/sample-layouts.jpg)
+- **"Xem chi tiết"** on cards opens and closes smoothly instead of jumping.
+
+## [1.0.9] - 2026-10-18 · `d318fe6`
 
 ### Added
 - **Log in with Google:** a "Đăng nhập bằng Google" button on the login and sign-up pages, shown once Google keys are set in `.env` (steps in the README). Name, email and photo come from the Google account at each Google login; an existing account with the same email is joined, keeping its role and requests. A Google-only account can set a password later in Profile.

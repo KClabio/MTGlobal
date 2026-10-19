@@ -9,6 +9,8 @@
 // heading, sets package.json "version", commits (with the Co-Authored-By trailer), tags vX.Y.Z, pushes main + the tag
 // and creates the GitHub Release. Each release shows the whole changelog from its version back to 1.0.0.
 // --dry-run prints all of that and changes nothing.  --notes-only <version> prints one release's notes.
+// Screenshots (from 1.0.10 on): docs/screenshots/<version>/*.jpg, linked in the changelog by relative path
+// (`![…](docs/screenshots/…)`); they must be staged, and the release notes point them at that version's tag.
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -57,11 +59,18 @@ function repoUrl() {
   return url.replace(/^git@github\.com:/, 'https://github.com/').replace(/\.git$/, '');
 }
 
+// Relative picture links in the changelog (`![alt](docs/…)`); a Release page can't follow them, so they are rewritten
+const RELATIVE_IMAGE = /(!\[[^\]]*\]\()(?![a-z][a-z0-9+.-]*:|\/|#)([^)\s]+)\)/gi;
+const imagePaths = (text) => [...text.matchAll(RELATIVE_IMAGE)].map((m) => m[2]);
+/** Points the section's relative pictures at the copy in that version's tag (the files never change afterwards). */
+const absoluteImages = (body, version) => body.replace(RELATIVE_IMAGE, (_, open, file) =>
+  `${open}${repoUrl().replace('https://github.com/', 'https://raw.githubusercontent.com/')}/v${version}/${file})`);
+
 /** Release body for `version`: that version and every older one, newest first; headings carry their commit ids. */
 function releaseNotes(sections, version, hashFor) {
   const from = sections.findIndex((s) => s.version === version);
   if (from === -1) fail(`version ${version} is not in CHANGELOG.md`);
-  const body = sections.slice(from).map((s) => `${withHash(s.heading, hashFor(s.version))}\n${s.body.replace(/\n+$/, '')}\n`).join('\n');
+  const body = sections.slice(from).map((s) => `${withHash(s.heading, hashFor(s.version))}\n${absoluteImages(s.body, s.version).replace(/\n+$/, '')}\n`).join('\n');
   return `Full changelog up to **v${version}** (newest first).\n\n${body}\n---\n**Source:** [CHANGELOG.md](${repoUrl()}/blob/main/CHANGELOG.md)\n`;
 }
 
@@ -87,6 +96,10 @@ function main() {
   try { run('gh', ['auth', 'status']); } catch { fail('GitHub CLI is not logged in (gh auth login)'); }
   const unreleased = changelog.sections[0];
   if (!unreleased || unreleased.version !== 'Unreleased' || !unreleased.body.trim()) fail('add the changes under "## [Unreleased]" at the top of CHANGELOG.md first');
+  for (const file of imagePaths(unreleased.body)) {
+    if (!fs.existsSync(path.join(ROOT, file))) fail(`screenshot ${file} (linked in CHANGELOG.md) does not exist`);
+    if (!git('ls-files', '--', file)) fail(`screenshot ${file} is not staged (git add ${file})`);
+  }
 
   // ---- Next version ----
   const last = git('tag', '--list', 'v*', '--sort=-v:refname').split('\n')[0];

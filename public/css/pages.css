@@ -118,7 +118,8 @@
 .card-more > summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s ease; }
 .card-more[open] > summary::after { transform: translateY(1px) rotate(-135deg); }
 .card-more > summary:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; border-radius: 4px; }
-.card-more[open] > summary { margin-bottom: 8px; }
+.card-more-body { display: flow-root; padding-top: 8px; } /* flow-root: the text's margins stay inside, so the slide ends without a jump */
+.card-more-body.is-animating { overflow: hidden; } /* height animated by public/js/main.js */
 
 /* One picture at a time behind tabs (display "tabs") */
 .media-tablist { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 20px; }
@@ -126,11 +127,26 @@
 .media-tab:hover { border-color: var(--mtg-blue); color: var(--mtg-blue); }
 .media-tab:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
 .media-tab[aria-selected="true"] { background: var(--mtg-blue-solid); border-color: var(--mtg-blue-solid); color: #fff; }
-.media-tabpanel { max-width: 920px; margin: 0 auto; }
+/* Picture on the left, its description on the right, sized so tabs + picture + text fit one laptop screen */
+.media-tabpanel { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 .media-tabpanel + .media-tabpanel { margin-top: 32px; }
 .media-tabs.is-tabbed .media-tabpanel + .media-tabpanel { margin-top: 0; }
-.media-tabpanel-title { margin: 0 0 10px; font-size: 1.1rem; color: var(--mtg-heading); }
-.media-tabs.is-tabbed .media-tabpanel-title { display: none; } /* the selected tab already names it */
+.media-tabpanel .media-frame { max-height: max(300px, calc(100vh - var(--header-h, 72px) - var(--jump-h, 56px) - 120px)); }
+.media-tabpanel .media-frame img { object-fit: contain; }
+.media-tabpanel-text { display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-left: 4px solid var(--mtg-blue); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow); }
+.media-tabpanel-title { margin: 0; font-size: 1.25rem; color: var(--mtg-heading); }
+.media-tabpanel-lead { margin: 0; color: var(--mtg-ink); font-weight: 600; line-height: 1.5; }
+.media-tabpanel-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; color: var(--mtg-ink); font-size: .95rem; line-height: 1.45; }
+.media-tabpanel-list li { position: relative; padding-left: 18px; }
+.media-tabpanel-list li::before { content: ''; position: absolute; left: 2px; top: .55em; width: 7px; height: 7px; border-radius: 50%; background: var(--mtg-blue); }
+.media-tabpanel-full { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; margin-top: 4px; font-family: inherit; }
+html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <noscript> link stands in */
+.media-tabpanel-full:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
+@media (max-width: 860px) {
+  .media-tabpanel { grid-template-columns: 1fr; gap: 16px; }
+  .media-tabpanel .media-frame { max-height: none; }
+  .media-tabpanel-text { padding: 18px; }
+}
 .solution-intro p { margin: 0 0 .8em; }
 .solution-intro > :last-child { margin-bottom: 0; }
 .solution-intro + .section-cta { margin-top: 24px; }

@@ -2,7 +2,10 @@
   const ecGroup = (lang === 'en' && item.subcategoryEn) ? item.subcategoryEn : item.subcategory;
   const ecShowGroup = typeof showGroup === 'undefined' || showGroup;
   const ecIsProductShot = item.images && item.images[0] && item.images[0].indexOf('/assets/giai-phap/robot-stem/') === 0;
-%><a class="card" href="/giai-phap/thiet-bi/<%= item._id %>">
+  // Search text (public/js/main.js): both names plus the sub-list topic after " — ", never the shared "Phần …" title
+  const ecTopic = function (sub) { return String(sub || '').split(/\s+—\s+/)[1] || ''; };
+  const ecSearch = [item.nameVi, item.nameEn, ecTopic(item.subcategory), ecTopic(item.subcategoryEn)].filter(Boolean).join(' ');
+%><a class="card" href="/giai-phap/thiet-bi/<%= item._id %>" data-search="<%= ecSearch %>">
   <div class="card-media<%= ecIsProductShot ? ' is-contain' : '' %>">
     <% if (item.images && item.images[0]) { %>
       <img src="<%= item.images[0] %>" alt="<%= pick(item, 'name') %>" loading="lazy">

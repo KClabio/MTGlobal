@@ -188,15 +188,207 @@ await suite(async (b) => {
     check('clicking the title opens it (both lists shown)', await ev(`document.querySelector('.solution-fold').open && document.querySelector('.solution-fold').textContent.includes('1002/QĐ-TTg') && document.querySelector('.solution-fold .card').getBoundingClientRect().height > 50`));
     const compact = await ev(`[...document.querySelectorAll('.is-compact .card')].map((c) => ({ title: c.querySelector('h3').textContent, summary: c.querySelector('.card-text > p').textContent, more: !!c.querySelector('details.card-more'), open: c.querySelector('details.card-more').open, hiddenH: c.querySelector('details.card-more ul').checkVisibility() }))`);
     check('zone cards: a one-line summary each, details folded', compact.length === 4 && compact.every((c) => c.more && !c.open && c.hiddenH === false && c.summary.length < 90), compact);
-    await b.clickAt('.is-compact .card:nth-child(4) details.card-more summary'); await sleep(200);
-    check('"Xem chi tiết" opens the full zone details', await ev(`(() => { const d = document.querySelector('.is-compact .card:nth-child(4) details.card-more'); return d.open && d.textContent.includes('phòng cháy chữa cháy') && d.querySelector('ul').getBoundingClientRect().height > 40; })()`));
+    // "Xem chi tiết" slides open and closed (height grows from 0), also with "reduced motion" (only shorter)
+    const moreSel = '.is-compact .card:nth-child(4) details.card-more';
+    const slideState = () => ev(`(() => { const d = document.querySelector('${moreSel}'); const body = d.querySelector('.card-more-body');
+      return { open: d.open, h: Math.round(body.getBoundingClientRect().height), full: body.scrollHeight, anims: body.getAnimations().length, clipped: body.classList.contains('is-animating') }; })()`);
+    const slide = async () => { await b.clickAt(`${moreSel} summary`); await sleep(60); const mid = await slideState(); await sleep(600); return { mid, end: await slideState() }; };
+    let so = await slide();
+    check('"Xem chi tiết" slides open: part-way after a moment, then fully open', so.mid.open && so.mid.anims === 1 && so.mid.h > 0 && so.mid.h < so.mid.full && so.end.anims === 0 && !so.end.clipped && Math.abs(so.end.h - so.end.full) <= 1, so);
+    const sc = await slide();
+    check('… and slides closed again (still open part-way, closed at the end)', sc.mid.open && sc.mid.h > 0 && sc.mid.h < so.end.full && !sc.end.open, sc);
+    await b.reducedMotion(); await nav('/giai-phap/stem-lab', 500);
+    await ev(`document.querySelector('.is-compact').scrollIntoView({ block: 'center', behavior: 'instant' })`); await sleep(200);
+    so = await slide();
+    check('reduced motion: the details still slide open (shorter), then fully open', so.mid.open && so.mid.h > 0 && so.mid.h < so.mid.full && Math.abs(so.end.h - so.end.full) <= 1, so);
+    await b.reducedMotion(false);
+    check('"Xem chi tiết" opens the full zone details', await ev(`(() => { const d = document.querySelector('${moreSel}'); return d.open && d.textContent.includes('phòng cháy chữa cháy') && d.querySelector('ul').getBoundingClientRect().height > 40; })()`));
     const tabs = await ev(`(() => { const w = document.querySelector('[data-media-tabs]'); return { tabs: [...w.querySelectorAll('[role="tab"]')].map((t) => t.textContent.trim()), shown: [...w.querySelectorAll('[role="tabpanel"]')].map((p) => !p.hidden), listShown: !w.querySelector('[role="tablist"]').hidden }; })()`);
     check('sample rooms: 4 tabs (Mầm non, Tiểu học, THCS, THPT), one picture at a time', JSON.stringify(tabs.tabs) === '["Mầm non","Tiểu học","THCS","THPT"]' && JSON.stringify(tabs.shown) === '[true,false,false,false]' && tabs.listShown, tabs);
     await b.clickAt('[data-media-tabs] [role="tab"]:nth-child(4)'); await sleep(200);
-    const t4 = await ev(`(() => { const w = document.querySelector('[data-media-tabs]'); const p = [...w.querySelectorAll('[role="tabpanel"]')]; return { shown: p.map((x) => !x.hidden), caption: p[3].querySelector('figcaption') && p[3].querySelector('figcaption').textContent, sel: w.querySelector('[aria-selected="true"]').textContent.trim() }; })()`);
-    check('clicking "THPT" shows its plan with the full caption', JSON.stringify(t4.shown) === '[false,false,false,true]' && t4.sel === 'THPT' && /^Mẫu phòng THPT, 80–120 m²: hệ tủ trưng bày/.test(t4.caption || ''), t4);
+    const t4 = await ev(`(() => { const w = document.querySelector('[data-media-tabs]'); const p = [...w.querySelectorAll('[role="tabpanel"]')]; const x = p[3];
+      return { shown: p.map((y) => !y.hidden), title: x.querySelector('.media-tabpanel-title').textContent, lead: x.querySelector('.media-tabpanel-lead').textContent,
+        items: [...x.querySelectorAll('.media-tabpanel-list li')].map((li) => li.textContent), sel: w.querySelector('[aria-selected="true"]').textContent.trim() }; })()`);
+    check('clicking "THPT" shows its plan with its description beside it (lead + list; "(in 3D, CNC, khắc laser)" stays one item)', JSON.stringify(t4.shown) === '[false,false,false,true]' && t4.sel === 'THPT' && t4.title === 'THPT'
+      && t4.lead === 'Mẫu phòng THPT, 80–120 m²' && t4.items[0] === 'Hệ tủ trưng bày vừa kích thước tường' && t4.items.includes('Khu đặt máy (in 3D, CNC, khắc laser)') && t4.items.length === 5, t4);
+    // Picture left, description right: tabs + picture + description fit a laptop screen (1280×720) at once
+    const layout = () => ev(`(() => { const w = document.querySelector('[data-media-tabs]'); const p = [...w.querySelectorAll('[role="tabpanel"]')].find((x) => !x.hidden);
+      const css = getComputedStyle(document.documentElement); const top = (parseFloat(css.getPropertyValue('--header-h')) || 0) + (parseFloat(css.getPropertyValue('--jump-h')) || 0);
+      const list = w.querySelector('[role="tablist"]'); window.scrollBy(0, list.getBoundingClientRect().top - top - 8);
+      const img = p.querySelector('.media-figure').getBoundingClientRect(); const txt = p.querySelector('.media-tabpanel-text').getBoundingClientRect();
+      return { imgR: Math.round(img.right), imgB: Math.round(img.bottom), txtL: Math.round(txt.left), txtT: Math.round(txt.top), txtB: Math.round(txt.bottom), topGap: Math.round(Math.abs(img.top - txt.top)),
+        tabsTop: Math.round(list.getBoundingClientRect().top), vh: innerHeight, caption: !!p.querySelector('figcaption'), alt: p.querySelector('img').alt,
+        full: p.querySelector('.media-tabpanel-full') && p.querySelector('.media-tabpanel-full').getAttribute('data-full'), src: p.querySelector('img').getAttribute('src'), sideScroll: document.documentElement.scrollWidth > innerWidth }; })()`);
+    const tabTo = async (k) => { await b.clickAt(`[data-media-tabs] [role="tab"]:nth-child(${k})`); await sleep(200); };
+    await b.viewport(1280, 720); await sleep(300);
+    for (const k of [1, 2, 3, 4]) {
+      await tabTo(k);
+      const L = await layout();
+      check(`sample room ${k} at 1280×720: picture left, description right, top-aligned, all on screen`, L.imgR <= L.txtL && L.topGap <= 2 && L.tabsTop >= 0 && Math.max(L.imgB, L.txtB) <= L.vh && !L.caption && !L.sideScroll, L);
+      if (k === 2) check('"Xem ảnh lớn" points to the full picture; the picture keeps its whole caption as its text', L.full === L.src && /^Tiểu học — Phòng Lab STEM Tiểu học/.test(L.alt), L);
+    }
+    const listSizes = await ev(`[...document.querySelectorAll('[data-media-tabs] [role="tabpanel"]')].map((p) => p.querySelectorAll('.media-tabpanel-list li').length)`);
+    check('every sample room lists what is in it (Mầm non and THCS included)', listSizes.every((n) => n >= 5), listSizes);
+    await tabTo(2); await layout(); await shot('stemlab-sample-layouts-1280x720');
+    // "Xem ảnh lớn": a button that shows the picture full size in a pop-up on the page; "← Quay lại", Back, Esc or the dark area close it
+    const fullBtn = '[data-media-tabs] [role="tabpanel"]:not([hidden]) .media-tabpanel-full';
+    const btnInfo = await ev(`(() => { const a = document.querySelector('${fullBtn}'); const tab = document.querySelector('[data-media-tabs] [role="tab"]');
+      return { tag: a.tagName, type: a.type, href: a.getAttribute('href'), btn: a.classList.contains('btn'), text: a.textContent.trim(), font: getComputedStyle(a).fontFamily, pageFont: getComputedStyle(document.body).fontFamily, h: Math.round(a.getBoundingClientRect().height),
+        noscript: !!a.parentElement.querySelector('noscript') }; })()`);
+    check('"Xem ảnh lớn" is a real button with no link address (nothing to preview on hover), in the site font; a <noscript> link stands in without JS',
+      btnInfo.tag === 'BUTTON' && btnInfo.type === 'button' && btnInfo.href === null && btnInfo.btn && btnInfo.text === 'Xem ảnh lớn' && btnInfo.font === btnInfo.pageFont && btnInfo.h >= 34 && btnInfo.h <= 40 && btnInfo.noscript, btnInfo);
+    // Hovering it adds nothing to the page and shows no address
+    const bodyCount = await ev('document.body.querySelectorAll("*").length');
+    await b.hover(fullBtn); await sleep(800);
+    check('hovering "Xem ảnh lớn" shows no preview (nothing added to the page)', (await ev('document.body.querySelectorAll("*").length')) === bodyCount && !(await ev(`document.querySelector('${fullBtn}').closest('a')`)));
+    const viewerState = () => ev(`(() => { const v = document.querySelector('.plan-zoom'); const pageImg = document.querySelector('[data-media-tabs] [role="tabpanel"]:not([hidden]) .media-frame img');
+      const r = v && v.querySelector('.plan-zoom-img').getBoundingClientRect(); const pr = pageImg.getBoundingClientRect();
+      const fitK = Math.min(pr.width / pageImg.naturalWidth, pr.height / pageImg.naturalHeight); // the page picture is drawn "contain" in its frame
+      return { open: !!(v && v.open), src: v && v.querySelector('.plan-zoom-img').src, pageSrc: pageImg.currentSrc, title: v && v.querySelector('.plan-zoom-title').textContent,
+        back: v && v.querySelector('.plan-zoom-back').textContent.trim(), w: r ? Math.round(r.width) : 0, h: r ? Math.round(r.height) : 0, pageW: Math.round(pageImg.naturalWidth * fitK), pageH: Math.round(pageImg.naturalHeight * fitK),
+        inside: !!r && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1, url: location.pathname + location.search + location.hash, viewerStep: !!(history.state && history.state.planZoom),
+        focusBtn: document.activeElement === document.querySelector('${fullBtn}'), focusBack: !!v && document.activeElement === v.querySelector('.plan-zoom-back'), locked: document.documentElement.classList.contains('has-plan-zoom'),
+        box: v ? (() => { const q = v.getBoundingClientRect(); return { l: Math.round(q.left), t: Math.round(q.top), r: Math.round(innerWidth - q.right), b: Math.round(innerHeight - q.bottom), w: Math.round(q.width), h: Math.round(q.height),
+          imgIn: !!r && r.left >= q.left && r.right <= q.right + 0.5 && r.top >= q.top && r.bottom <= q.bottom + 0.5 }; })() : null,
+        shape: r && r.height ? +(r.width / r.height).toFixed(2) : 0,
+        natShape: v && v.querySelector('.plan-zoom-img').naturalWidth ? +(v.querySelector('.plan-zoom-img').naturalWidth / v.querySelector('.plan-zoom-img').naturalHeight).toFixed(2) : 0,
+        loading: !!v && !v.querySelector('.plan-zoom-note').hidden, note: v ? v.querySelector('.plan-zoom-note').textContent : '' }; })()`);
+    const openViewer = async () => { await b.clickAt(fullBtn); await sleep(400); return viewerState(); };
+    const urlBefore = await ev(`location.pathname + location.search + location.hash`);
+    let v = await openViewer();
+    check('pop-up opens on the page with that room\'s picture, its name and "← Quay lại"; bigger than on the page and fully on screen (1280×720)',
+      v.open && v.src === v.pageSrc && v.title === 'Tiểu học' && v.back === '← Quay lại' && v.w > v.pageW && v.h > v.pageH && v.inside && v.url === urlBefore && v.viewerStep && v.focusBack && v.locked, v);
+    check('it is a centred box, not full screen; the picture sits inside it with its own shape and the loading text gone',
+      v.box.l > 20 && v.box.t > 10 && Math.abs(v.box.l - v.box.r) <= 2 && Math.abs(v.box.t - v.box.b) <= 2 && v.box.imgIn && Math.abs(v.shape - v.natShape) <= 0.02 && !v.loading, v);
+    await shot('stemlab-image-viewer-1280x720');
+    const scrollBefore = await ev('scrollY');
+    await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 640, y: 400, deltaX: 0, deltaY: 600 }); await sleep(300);
+    check('the page behind does not scroll while the pop-up is open', (await ev('scrollY')) === scrollBefore);
+    await b.clickAt('.plan-zoom-back'); await sleep(400);
+    v = await viewerState();
+    check('"← Quay lại" closes it: same page, history step taken out, focus back on the button', !v.open && v.url === urlBefore && !v.viewerStep && v.focusBtn && !v.locked, v);
+    v = await openViewer();
+    await ev('history.back()'); await sleep(500);
+    v = await viewerState();
+    check('the browser\'s Back button closes the pop-up and stays on the page', !v.open && v.url === urlBefore && !v.viewerStep, v);
+    v = await openViewer();
+    await b.key('Escape', 'Escape', 27); await sleep(400);
+    v = await viewerState();
+    check('Esc closes it (history step taken out)', !v.open && v.url === urlBefore && !v.viewerStep, v);
+    v = await openViewer();
+    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 6, y: 700, button: 'left', buttons: 1, clickCount: 1 });
+    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 6, y: 700, button: 'left', buttons: 0, clickCount: 1 }); await sleep(400);
+    v = await viewerState();
+    check('a click on the dark area closes it', !v.open && !v.viewerStep, v);
+    // A picture that can't be loaded: the box says so (with a link) instead of staying empty
+    const realHref = await ev(`document.querySelector('${fullBtn}').getAttribute('data-full')`);
+    const setPlan = (src) => ev(`(async () => { const a = document.querySelector('${fullBtn}'); const im = a.closest('.media-tabpanel').querySelector('.media-frame img');
+      a.setAttribute('data-full', ${JSON.stringify(src)}); im.src = ${JSON.stringify(src)};
+      await new Promise((r) => { if (im.complete) r(); else { im.onload = im.onerror = r; } }); return true; })()`);
+    await setPlan('/assets/zz-missing-plan.jpg');
+    await openViewer(); await sleep(300); v = await viewerState();
+    check('a picture that cannot be loaded shows "Không tải được ảnh." with an "Mở ảnh" link', v.open && v.loading && v.note.trim() === 'Không tải được ảnh. Mở ảnh' && v.box.w > 200, v);
+    await b.clickAt('.plan-zoom-back'); await sleep(400);
+    await setPlan(realHref);
+    await b.reducedMotion();
+    v = await openViewer();
+    const rmOpen = v.open && v.inside && v.w > v.pageW && !v.loading;
+    await b.clickAt('.plan-zoom-back'); await sleep(400);
+    v = await viewerState();
+    check('reduced motion: the pop-up still opens and "← Quay lại" closes it', rmOpen && !v.open && !v.viewerStep, v);
+    await b.reducedMotion(false);
+    await b.viewport(390, 844); await sleep(300);
+    const P = await layout();
+    check('phone: the description goes under the picture, no sideways scroll', P.txtT >= P.imgB && !P.sideScroll, P);
+    await shot('stemlab-sample-layouts-390');
+    v = await openViewer();
+    check('phone: the pop-up box and its picture fit the screen', v.open && v.inside && v.w > 280 && v.box.l >= 0 && v.box.r >= 0 && v.box.imgIn, v);
+    await b.clickAt('.plan-zoom-back'); await sleep(400);
+    await b.viewport(1280, 900); await sleep(300);
+    // The owner's path: another page first, then STEM Lab in the same tab. The "← Quay lại" page links then point at the
+    // previous page; the "Xem ảnh lớn" buttons must keep pointing at their pictures (they once became "/")
+    await nav('/'); await nav('/giai-phap/stem-lab', 500);
+    const hrefs = await ev(`[...document.querySelectorAll('.media-tabpanel-full')].map((a) => a.getAttribute('data-full'))`);
+    check('coming from Trang chủ: every "Xem ảnh lớn" still points at its floor plan', hrefs.length === 4 && hrefs.every((h) => /\/mau-[a-z0-9-]+\.jpg$/.test(h)), hrefs);
+    const asked = [];
+    b.on('Network.requestWillBeSent', (q) => { if (/\/mau-[a-z0-9-]+\.jpg/.test(q.request.url)) asked.push(q.request.url); });
+    const rooms = [];
+    for (const k of [1, 2, 3, 4]) {
+      await tabTo(k); await sleep(300);
+      asked.length = 0;
+      v = await openViewer();
+      rooms.push({ k, open: v.open, same: v.src === v.pageSrc, w: v.w, loading: v.loading, failed: await ev(`document.querySelector('.plan-zoom').classList.contains('is-failed')`), downloads: asked.length });
+      await b.clickAt('.plan-zoom-back'); await sleep(400);
+    }
+    check('… and each room\'s box shows its picture, taken from the page (no new download)', rooms.every((r) => r.open && r.same && r.w > 300 && !r.loading && !r.failed && r.downloads === 0), rooms);
+    const names = await ev(`[document.querySelector('.plan-zoom'), ...document.querySelectorAll('.plan-zoom *')].map((e) => (e.className || '') + ' ' + e.id + ' ' + (e.getAttribute('aria-labelledby') || '')).join(' ') + ' ' + document.documentElement.className`);
+    check('no names in the box that blocker add-ons hide (popup, modal, overlay, lightbox)', !/popup|modal|overlay|lightbox/i.test(names), names);
+    // A blocker add-on that hides the box anyway: the picture opens in the tab itself, and Back returns to the page
+    await tabTo(2);
+    await ev(`(() => { const st = document.createElement('style'); st.textContent = '.plan-zoom { display: none !important; }'; document.head.appendChild(st); })()`);
+    { const l = b.waitLoad(); await b.clickAt(fullBtn); await l; await sleep(300); }
+    const inTab = await ev(`({ path: location.pathname, type: document.contentType })`);
+    check('if an add-on hides the box, the picture opens in the tab instead', inTab.path === '/assets/giai-phap/tu-van-thiet-ke/mau-tieu-hoc-50m2.jpg' && /^image\//.test(inTab.type), inTab);
+    await ev('history.back()'); await sleep(1200);
+    check('… and Back returns to the STEM Lab page', (await ev('location.pathname')) === '/giai-phap/stem-lab');
+    await nav('/giai-phap/stem-lab', 500);
+    await tabTo(4);
     await b.key('ArrowRight', 'ArrowRight', 39); await sleep(150);
     check('arrow keys move between tabs', await ev(`document.activeElement.textContent.trim() === 'Mầm non' && document.activeElement.getAttribute('aria-selected') === 'true'`));
+    // "Thiết kế 3D": a picture grid ('zoom' display) whose pictures react to the mouse and open larger in the same box
+    const zoomSel = (n) => `.media-figure.is-zoomable:nth-child(${n})`;
+    const zoomList = await ev(`[...document.querySelectorAll('.media-zoom')].map((z) => ({ tag: z.tagName, href: z.getAttribute('href'), full: z.getAttribute('data-full'), src: z.querySelector('img').getAttribute('src'),
+      label: z.getAttribute('aria-label'), grid: !!z.closest('.media-grid') }))`);
+    check('Thiết kế 3D: 6 pictures, each a button (no link address) that opens its own picture',
+      zoomList.length === 6 && zoomList.every((z) => z.tag === 'BUTTON' && z.href === null && z.full === z.src && /\/3d-[a-z-]+\.jpg$/.test(z.src) && /^Xem ảnh lớn: /.test(z.label) && z.grid), zoomList);
+    const zoomLook = (n) => ev(`(() => { const f = document.querySelector('${zoomSel(n)}'); const im = f.querySelector('img'); const badge = f.querySelector('.media-zoom-badge');
+      return { lift: Math.round(new DOMMatrix(getComputedStyle(f).transform).m42), scale: +new DOMMatrix(getComputedStyle(im).transform).a.toFixed(3), badge: +getComputedStyle(badge).opacity,
+        cursor: getComputedStyle(f.querySelector('.media-zoom')).cursor, border: getComputedStyle(f).borderTopColor, count: document.body.querySelectorAll('*').length }; })()`);
+    await b.point(zoomSel(2)); await b.mouse('mouseMoved', { x: 2, y: 2 }); await sleep(500);
+    const calm = await zoomLook(2);
+    await b.hover(`${zoomSel(2)} .media-zoom`); await sleep(600);
+    let hov = await zoomLook(2);
+    check('hovering a 3D picture: the card lifts, the picture grows a little, an expand badge shows, the cursor is a magnifier; nothing else is added',
+      calm.lift === 0 && calm.scale === 1 && calm.badge === 0 && hov.lift === -4 && hov.scale === 1.05 && hov.badge === 1 && hov.cursor === 'zoom-in' && hov.border !== calm.border && hov.count === calm.count, { calm, hov });
+    await shot('stemlab-3d-hover-1280');
+    await b.mouse('mouseMoved', { x: 2, y: 2 }); await sleep(600);
+    const left = await zoomLook(2);
+    check('… and it settles back when the mouse leaves', left.lift === 0 && left.scale === 1 && left.badge === 0, left);
+    await b.reducedMotion(); await sleep(100);
+    await b.hover(`${zoomSel(3)} .media-zoom`); await sleep(400);
+    hov = await zoomLook(3);
+    check('reduced motion: the same hover look (just quicker)', hov.lift === -4 && hov.scale === 1.05 && hov.badge === 1, hov);
+    await b.reducedMotion(false); await b.mouse('mouseMoved', { x: 2, y: 2 }); await sleep(500);
+    const shots3d = [];
+    b.on('Network.requestWillBeSent', (q) => { if (/\/3d-[a-z-]+\.jpg/.test(q.request.url)) shots3d.push(q.request.url); });
+    const zoomState = () => ev(`(() => { const v = document.querySelector('.plan-zoom'); const i = v && v.querySelector('.plan-zoom-img'); const r = i && i.getBoundingClientRect();
+      const g = document.querySelector('${zoomSel(2)} img').getBoundingClientRect();
+      return { open: !!(v && v.open), src: i && i.src, pageSrc: document.querySelector('${zoomSel(2)} img').currentSrc, title: v && v.querySelector('.plan-zoom-title').textContent,
+        caption: document.querySelector('${zoomSel(2)} figcaption').textContent, w: r ? Math.round(r.width) : 0, gridW: Math.round(g.width), nat: i ? i.naturalWidth : 0,
+        inside: !!r && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight + 1 && r.right <= innerWidth + 1, loading: !!v && !v.querySelector('.plan-zoom-note').hidden,
+        focus: document.activeElement === document.querySelector('${zoomSel(2)} .media-zoom') }; })()`);
+    shots3d.length = 0;
+    await b.clickAt(`${zoomSel(2)} .media-zoom`); await sleep(500);
+    let zs = await zoomState();
+    check('clicking a 3D picture opens it larger in the box: same picture, its caption as the title, whole picture on screen, no new download',
+      zs.open && zs.src === zs.pageSrc && zs.title === zs.caption && zs.title === 'Góc nhìn hướng tới hệ tủ robot' && zs.nat > 0 && zs.w > zs.gridW && zs.inside && !zs.loading && shots3d.length === 0, { ...zs, downloads: shots3d.length });
+    await b.clickAt('.plan-zoom-back'); await sleep(450);
+    zs = await zoomState();
+    check('"← Quay lại" closes it and the picture has the focus again', !zs.open && zs.focus && (await ev('location.pathname')) === '/giai-phap/stem-lab', zs);
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: String.fromCharCode(13) }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 }); await sleep(500);
+    zs = await zoomState();
+    const kbOpen = zs.open && zs.title === 'Góc nhìn hướng tới hệ tủ robot';
+    await b.key('Escape', 'Escape', 27); await sleep(450);
+    zs = await zoomState();
+    check('keyboard: Enter on a picture opens it, Esc closes it', kbOpen && !zs.open && zs.focus, zs);
+    check('other picture galleries are not clickable pictures (only the 3D one)', (await ev(`document.querySelectorAll('.media-figure.is-zoomable').length`)) === 6);
+    await b.viewport(390, 844); await sleep(300);
+    const phoneBadge = await ev(`matchMedia('(hover: none)').matches ? +getComputedStyle(document.querySelector('${zoomSel(1)} .media-zoom-badge')).opacity : 'hover device'`);
+    await b.clickAt(`${zoomSel(1)} .media-zoom`); await sleep(500);
+    const phoneBox = await ev(`(() => { const r = document.querySelector('.plan-zoom-img').getBoundingClientRect(); return { open: document.querySelector('.plan-zoom').open, w: Math.round(r.width), inside: r.left >= 0 && r.right <= innerWidth + 1 }; })()`);
+    check('phone: a tap opens the picture in a box that fits the screen', phoneBox.open && phoneBox.inside && phoneBox.w > 280, { phoneBox, phoneBadge });
+    await b.clickAt('.plan-zoom-back'); await sleep(450);
+    await b.viewport(1280, 900); await sleep(300);
     const facts = await ev(`document.body.textContent.replace(/\\s+/g, ' ')`);
     const TERMS = ['57-NQ/TW', '71-NQ/TW', '3089/BGDĐT-GDTrH', '909/BGDĐT-GDTH', '1002/QĐ-TTg', 'Thông tư 36, 37, 38, 39 và 14/2020/TT-BGDĐT', 'NGSS', 'ISTE', 'CSTA', 'CCSS Math', 'Fab Lab',
       '40 m² – 60 m² – 80 m² – 120 m²', 'người sáng tạo tri thức', 'người học thụ động', '4–8 học sinh', 'cạnh bo tròn an toàn', 'Internet vạn vật (IoT)', 'máy CNC, khắc laser', 'hạn chế rung', 'ổ cắm sạc',
@@ -275,9 +467,27 @@ await suite(async (b) => {
     check(`search without accents ("${plain}") finds "${accentName}"`, s.names.includes(accentName), s);
     s = await typeSearch('zzqx khong co');
     check('a search with no match shows the "not found" note', s.n === 0 && s.empty, s);
+    // Same rule as the admin search: each word must start a word of the names (VI + EN) or of the sub-list topic,
+    // never matched inside a word or through the shared "Phần …" title
+    const allEquip = await d.collection('products').find({ category: 'stem-equipment' }).toArray();
+    s = await typeSearch('thiet bi');
+    const withThietBi = allEquip.filter((x) => /thiết bị/i.test(x.nameVi)).length;
+    check(`search "thiet bi": only the ${withThietBi} items named "Thiết bị…" (not every Phần I/II item)`, s.n === withThietBi && s.names.every((n) => /thiết bị/i.test(n)), s);
+    s = await typeSearch('phan');
+    check('search "phan": not every item (the word "Phần" of the part titles does not count)', s.n > 0 && s.n < allEquip.length && s.names.every((n) => /phần/i.test(n)), s);
+    s = await typeSearch('in');
+    check('search "in": words starting with "in" only (Internet, industrial…), not "trình" or "sinh"', s.n > 0 && !s.names.some((n) => /^VEX 123|^Hệ sinh thái/.test(n)) && s.names.some((n) => /Internet/.test(n)), s);
+    s = await typeSearch('vex-iq');
+    check('search "vex-iq": punctuation counts as a space -> VEX IQ', s.n === 1 && /^VEX IQ/.test(s.names[0]), s);
+    s = await typeSearch('ro bot');
+    check('search "ro bot": finds the item of the "Lập trình & Rô-bốt giáo dục" sub-list', s.n === 1 && /Makeblock/.test(s.names[0]), s);
     s = await typeSearch('');
     e1 = await eq();
     check('clearing the search brings back the tab that was open', !s.results && s.panels === 1 && e1.sel === 'phan-3', { s, e1 });
+    await nav('/giai-phap/thiet-bi?lang=en', 400);
+    s = await typeSearch('may tinh');
+    check('English page: a Vietnamese search ("may tinh") still finds the laptops item', s.n === 1 && /laptops/i.test(s.names[0]), s);
+    await nav('/giai-phap/thiet-bi?lang=vi', 300);
     await b.viewport(390, 844); await nav('/giai-phap/thiet-bi', 300); await ev(`window.scrollTo(0, 240)`); await sleep(200);
     check('phone: no sideways page scroll (tabs scroll inside their own row)', !(await ev(`document.documentElement.scrollWidth > innerWidth`)));
   });

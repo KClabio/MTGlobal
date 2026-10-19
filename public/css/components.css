@@ -125,6 +125,25 @@ textarea.form-control { resize: vertical; min-height: 110px; }
 .media-figure.is-contain .media-frame { background: #fff; padding: 12px; }
 .media-figure.is-contain .media-frame img { object-fit: contain; }
 .media-figure figcaption { padding: 12px 16px; font-size: .9rem; color: var(--mtg-ink); line-height: 1.5; }
+/* 'zoom' gallery (media-figure zoom): each picture is a button that opens it larger (main.js). With a mouse, the card
+   lifts, the picture grows a little and an expand badge shows; on touch screens the badge always shows, as a tap hint */
+.media-figure.is-zoomable { transition: transform calc(250ms * var(--anim, 1)) ease, box-shadow calc(250ms * var(--anim, 1)) ease, border-color calc(250ms * var(--anim, 1)) ease; }
+.media-zoom { display: block; width: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: zoom-in; }
+.media-zoom .media-frame { position: relative; }
+.media-zoom img { transition: transform calc(400ms * var(--anim, 1)) ease; }
+.media-zoom-badge { position: absolute; top: 10px; right: 10px; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(10, 20, 35, .62); color: #fff; opacity: 0; transform: scale(.85); pointer-events: none;
+  transition: opacity calc(200ms * var(--anim, 1)) ease, transform calc(200ms * var(--anim, 1)) ease; }
+@media (hover: hover) {
+  .media-figure.is-zoomable:hover { transform: translateY(-4px); box-shadow: var(--mtg-shadow-lg); border-color: var(--mtg-blue); }
+  .media-figure.is-zoomable:hover .media-zoom img { transform: scale(1.05); }
+  .media-figure.is-zoomable:hover .media-zoom-badge { opacity: 1; transform: none; }
+}
+@media (hover: none) { .media-zoom-badge { opacity: 1; transform: none; } }
+.media-figure.is-zoomable:has(.media-zoom:focus-visible) { transform: translateY(-4px); box-shadow: var(--mtg-shadow-lg); border-color: var(--mtg-blue); }
+.media-zoom:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: -2px; }
+.media-zoom:focus-visible img { transform: scale(1.05); }
+.media-zoom:focus-visible .media-zoom-badge { opacity: 1; transform: none; }
 
 .card-media.is-contain { background: #fff; }
 .card-media.is-contain img { object-fit: contain; padding: 10px; }
@@ -221,6 +240,25 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .profile-confirm p { margin: 0 0 10px; }
 .profile-confirm-actions { display: flex; justify-content: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 .profile-confirm-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+/* "Xem ảnh lớn": the picture larger in a box over the dimmed page (main.js sets the picture's size in pixels).
+   "← Quay lại", the browser's Back, Esc or a click outside the box close it. Keep "popup", "modal", "overlay" and
+   "lightbox" out of these names: blocker add-ons hide elements named like that */
+html.has-plan-zoom { overflow: hidden; }
+.plan-zoom { width: fit-content; height: fit-content; max-width: none; max-height: none; margin: auto; padding: 0; border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius);
+  background: var(--mtg-surface); color: var(--mtg-ink); box-shadow: var(--mtg-shadow-lg); overflow: hidden; }
+.plan-zoom[open] { animation: plan-zoom-in calc(200ms * var(--anim, 1)) ease-out; }
+.plan-zoom::backdrop { background: rgba(10, 20, 35, .6); }
+@keyframes plan-zoom-in { from { transform: scale(.95); } }
+.plan-zoom-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--mtg-border); }
+.plan-zoom-title { margin: 0; font-size: 1.1rem; color: var(--mtg-heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-zoom-back { flex: none; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; cursor: pointer; }
+.plan-zoom-body { position: relative; padding: 16px; } /* 16px: PAD in main.js */
+.plan-zoom-img { display: block; max-width: none; background: #fff; border-radius: var(--mtg-radius-sm); }
+.plan-zoom-note { position: absolute; inset: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 0; padding: 16px;
+  text-align: center; color: var(--mtg-muted); font-weight: 600; }
+.plan-zoom-note[hidden] { display: none; }
+.plan-zoom.is-failed .plan-zoom-img { visibility: hidden; }
+.plan-zoom-note a { color: var(--mtg-blue); }
 
 /* "Đăng nhập bằng Google" (login, register) and Google accounts on the profile page */
 .auth-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 16px; color: var(--mtg-muted); font-size: .85rem; }

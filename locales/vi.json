@@ -777,6 +777,10 @@
   "solutionPage": {
     "onThisPage": "Trên trang này",
     "more": "Xem chi tiết",
+    "viewFull": "Xem ảnh lớn",
+    "imageLoading": "Đang tải ảnh…",
+    "imageFailed": "Không tải được ảnh.",
+    "openImage": "Mở ảnh",
     "newTab": "(mở trong thẻ mới)"
   },
   "nextSteps": {

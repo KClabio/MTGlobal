@@ -9,7 +9,7 @@
   // "Label: text" list items get a bold label, as on the original pages
   const ssFormat = function (text) { return formatText(text).replace(/<li>([^<:]{1,40}):/g, '<li><strong>$1:</strong>'); };
   const ssMedia = function (m) {
-    return include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: pick(m, 'caption'), ratio: s.ratio, contain: m.contain });
+    return include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: pick(m, 'caption'), ratio: s.ratio, contain: m.contain, zoom: s.display === 'zoom' });
   };
   const ssCentered = !sub && s.kind !== 'text';
   // display 'collapsed': the whole section folds under its title (a <details>, opened by a click — works without JS)
@@ -19,13 +19,32 @@
     if (s.display !== 'compact') return ssFormat(text);
     const parts = String(text).split(/\n\s*\n/);
     const more = parts.slice(1).join('\n\n').trim();
-    return ssFormat(parts[0]) + (more ? '<details class="card-more"><summary>' + t('solutionPage.more') + '</summary>' + ssFormat(more) + '</details>' : '');
+    // The body wrapper is what public/js/main.js animates open and closed
+    return ssFormat(parts[0]) + (more ? '<details class="card-more"><summary>' + t('solutionPage.more') + '</summary><div class="card-more-body">' + ssFormat(more) + '</div></details>' : '');
   };
-  // display 'tabs' (gallery): the tab name is the caption before the first "—", the rest stays as the caption
+  // display 'tabs' (gallery): the tab name is the caption before the first "—"; the rest is the description beside the
+  // picture: its lead before the first ":", then the parts after it as a list ("a, b (c, d), e" -> a / b (c, d) / e)
   const ssTabParts = function (m) {
     const caption = pick(m, 'caption') || '';
     const at = caption.indexOf(' — ');
-    return at > 0 ? { tab: caption.slice(0, at).trim(), caption: caption.slice(at + 3).trim() } : { tab: caption, caption: '' };
+    const tab = at > 0 ? caption.slice(0, at).trim() : caption;
+    const rest = at > 0 ? caption.slice(at + 3).trim() : '';
+    const colon = rest.indexOf(':');
+    const items = [];
+    if (colon > 0) {
+      let depth = 0, from = colon + 1;
+      for (let i = from; i <= rest.length; i++) {
+        const ch = rest[i];
+        if (ch === '(') depth++;
+        else if (ch === ')') depth = Math.max(0, depth - 1);
+        if (i === rest.length || (ch === ',' && depth === 0)) {
+          const part = rest.slice(from, i).trim().replace(/\.$/, '');
+          if (part) items.push(part.charAt(0).toUpperCase() + part.slice(1));
+          from = i + 1;
+        }
+      }
+    }
+    return { tab, caption: rest, lead: colon > 0 ? rest.slice(0, colon).trim() : rest, items };
   };
 %>
 <div class="solution-block<%= sub ? ' is-sub' : '' %><%= ssFold ? ' is-folded' : '' %>" data-section-kind="<%= s.kind %>">
@@ -111,10 +130,32 @@
                   aria-selected="<%= k === 0 %>" tabindex="<%= k === 0 ? 0 : -1 %>"><%= ssTabParts(m).tab || (k + 1) %></button>
         <% }) %>
       </div>
+      <%# Each panel: the picture on the left, its description on the right (stacked on phones), so both fit one screen %>
       <% s.media.forEach(function (m, k) { const tp = ssTabParts(m); %>
         <div class="media-tabpanel" role="tabpanel" id="mp-<%= s.uid %>-<%= k %>" aria-labelledby="mt-<%= s.uid %>-<%= k %>">
-          <% if (tp.tab) { %><h3 class="media-tabpanel-title"><%= tp.tab %></h3><% } %>
-          <%- include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: tp.caption, ratio: s.ratio, contain: m.contain }) %>
+          <%- include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: '', alt: pick(m, 'caption'), ratio: s.ratio, contain: m.contain }) %>
+          <div class="media-tabpanel-text">
+            <% if (tp.tab) { %><h3 class="media-tabpanel-title"><%= tp.tab %></h3><% } %>
+            <% if (tp.lead) { %><p class="media-tabpanel-lead"><%= tp.lead %></p><% } %>
+            <% if (tp.items.length) { %>
+              <ul class="media-tabpanel-list">
+                <% tp.items.forEach(function (x) { %><li><%= x %></li><% }) %>
+              </ul>
+            <% } %>
+            <% if (m.type !== 'video') { %>
+              <%# Opens the picture larger in a box on the page (public/js/main.js). A button, not a link to the picture file:
+                  nothing to preview on hover (browsers show a link's address, some add-ons pop up a picture link's image).
+                  Without JS the <noscript> link shows the picture instead (pages.css hides the button then).
+                  Not data-back: that marks the "← Quay lại" page links, whose href main.js rewrites to the previous page. %>
+              <button type="button" class="btn btn-ghost btn-sm media-tabpanel-full" data-image-view data-full="<%= m.src %>"
+                 data-title="<%= tp.tab %>" data-alt="<%= pick(m, 'caption') %>" data-back-label="<%= t('common.back') %>"
+                 data-loading="<%= t('solutionPage.imageLoading') %>" data-failed="<%= t('solutionPage.imageFailed') %>" data-open="<%= t('solutionPage.openImage') %>">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                <%= t('solutionPage.viewFull') %></button>
+              <noscript><a class="btn btn-ghost btn-sm media-tabpanel-full" href="<%= m.src %>"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                <%= t('solutionPage.viewFull') %></a></noscript>
+            <% } %>
+          </div>
         </div>
       <% }) %>
     </div>

@@ -6,8 +6,9 @@ const SLUGS = ['stem-lab', 'workshop', 'dao-tao', 'tap-huan'];
 const SECTION_KINDS = ['text', 'cards', 'steps', 'gallery', 'stats', 'buttons'];
 const RATIOS = ['16/9', '4/3', '3/2', '1/1', '3/4'];
 // How a section is shown: '' as usual; 'collapsed' folded under its title; 'compact' (cards) first paragraph + "more";
-// 'tabs' (gallery) one picture at a time behind tabs named after the caption (text before the first "—")
-const DISPLAYS = { collapsed: ['text', 'cards', 'steps', 'gallery'], compact: ['cards'], tabs: ['gallery'] };
+// 'tabs' (gallery) one picture at a time behind tabs named after the caption (text before the first "—");
+// 'zoom' (gallery) the usual picture grid, each picture opening larger in a box on the page when clicked
+const DISPLAYS = { collapsed: ['text', 'cards', 'steps', 'gallery'], compact: ['cards'], tabs: ['gallery'], zoom: ['gallery'] };
 
 const itemSchema = new mongoose.Schema({
   titleVi: { type: String, default: '', trim: true },

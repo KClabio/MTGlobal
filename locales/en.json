@@ -777,6 +777,10 @@
   "solutionPage": {
     "onThisPage": "On this page",
     "more": "Read more",
+    "viewFull": "View full size",
+    "imageLoading": "Loading the picture…",
+    "imageFailed": "The picture could not be loaded.",
+    "openImage": "Open the picture",
     "newTab": "(opens in a new tab)"
   },
   "nextSteps": {
