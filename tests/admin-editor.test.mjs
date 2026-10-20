@@ -25,7 +25,9 @@ await suite(async (b) => {
   const pub = async (p, lang = 'vi') => (await fetch(BASE + p, { headers: { cookie: `lang=${lang}` } })).text();
   const signIn = async () => { await b.login(admin.sid); await b.setCookie('adminLang', 'vi'); };
   const nav = (p) => b.nav(p, 400);
-  const click = (sel) => b.clickAt(sel);
+  // Sections, cards and banners slide open and shut: wait for any slide to end (at most 1.5 s) before acting or reading
+  const settled = () => ev(`Promise.race([Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 1500))]).then(() => true)`);
+  const click = async (sel) => { await settled(); return b.clickAt(sel); };
   const setVal = (selector, value) => ev(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
   const setFiles = async (selector, files) => { const doc = await send('DOM.getDocument', { depth: -1 }); const n = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector }); await send('DOM.setFileInputFiles', { nodeId: n.nodeId, files }); };
   await send('DOM.enable');
@@ -129,7 +131,7 @@ await suite(async (b) => {
       check('Vietnamese box on the left, English on the right (section and step); a new section is not joined to the one above', side.section && side.item && side.cont === '0', side);
       // Gallery: open it (the steps section closes), then a real drag of the 2nd photo tile onto the 1st
       const gallerySel = '[data-section-list] > [data-section][data-kind="gallery"]';
-      await click(`${gallerySel} .ps-summary`); await sleep(300);
+      await click(`${gallerySel} .ps-summary`); await settled(); await sleep(600); // the slide, then its scroll into view
       check('opening the gallery closes the other section', await ev(`document.querySelectorAll('[data-section].is-open').length === 1 && document.querySelector('${gallerySel}').classList.contains('is-open')`));
       const mediaBefore = await ev(`[...document.querySelectorAll('${gallerySel} [data-media] [data-media-field="src"]')].map(i => i.value)`);
       const pts = await ev(`(() => { const m = document.querySelectorAll('${gallerySel} [data-media]'); m[1].scrollIntoView({ block: 'center' }); const h = m[1].querySelector('.media-drag').getBoundingClientRect(); const t = m[0].getBoundingClientRect(); return { x: h.left + h.width / 2, y: h.top + h.height / 2, tx: h.left + h.width / 2, ty: t.top + t.height * 0.3 }; })()`);
@@ -237,6 +239,49 @@ await suite(async (b) => {
     }
   });
 
+  await part(b, 'page editors: sections and cards slide open and shut (all 4 Giải pháp pages)', async () => {
+    await signIn();
+    const S = (n) => `[data-section-list] > [data-section]:nth-child(${n})`;
+    // Each body's height, how far open it is, and whether it ends hidden
+    const still = async () => { await settled(); await sleep(650); }; // the slide, then the scroll that brings the section into view
+    const bodies = (sels) => ev(`${JSON.stringify(sels)}.map((sel) => { const e = document.querySelector(sel); return { hidden: e.hidden, h: Math.round(e.getBoundingClientRect().height), full: e.scrollHeight }; })`);
+    for (const motion of ['normal', 'reduced']) {
+      await b.reducedMotion(motion === 'reduced');
+      await nav('/admin/trang/stem-lab');
+      const cardsSec = await ev(`[...document.querySelectorAll('[data-section-list] > [data-section]')].findIndex((s) => s.getAttribute('data-kind') === 'cards') + 1`);
+      const textSec = cardsSec === 1 ? 2 : 1;
+      await click(`${S(textSec)} .ps-summary`); await still();
+      const a = `${S(textSec)} .ps-body`, c = `${S(cardsSec)} .ps-body`;
+      await click(`${S(cardsSec)} .ps-summary`); await sleep(motion === 'reduced' ? 40 : 70);
+      const mid = await bodies([c, a]); await still(); const end = await bodies([c, a]);
+      check(`[${motion}] Tư vấn, thiết kế & triển khai: clicking a section slides it open while the open one slides shut`,
+        !mid[0].hidden && mid[0].h > 0 && mid[0].h < end[0].h && !mid[1].hidden && mid[1].h > 0 && end[0].h >= end[0].full && !end[0].hidden && end[1].hidden, { mid, end });
+      // Cards inside the section fold the same way
+      const i1 = `${S(cardsSec)} [data-item]:nth-child(1) .pi-body`, i2 = `${S(cardsSec)} [data-item]:nth-child(2) .pi-body`;
+      await click(`${S(cardsSec)} [data-item]:nth-child(1) .pi-summary`); await still();
+      await click(`${S(cardsSec)} [data-item]:nth-child(2) .pi-summary`); await sleep(motion === 'reduced' ? 40 : 70);
+      const imid = await bodies([i2, i1]); await settled(); const iend = await bodies([i2, i1]);
+      if (motion === 'normal') { await sleep(650); await b.shot('admin-page-editor-open'); }
+      check(`[${motion}] … a card slides open while the open card slides shut`, imid[0].h > 0 && imid[0].h < iend[0].h && imid[1].h > 0 && !iend[0].hidden && iend[1].hidden, { imid, iend });
+    }
+    await b.reducedMotion(false);
+    // A click during the slide turns it around
+    await nav('/admin/trang/stem-lab');
+    await click(`${S(1)} .ps-summary`); await sleep(120);
+    const half = await bodies([`${S(1)} .ps-body`]);
+    await b.clickAt(`${S(1)} .ps-summary`); await sleep(60);
+    const back = await bodies([`${S(1)} .ps-body`]); await settled(); const shut = await bodies([`${S(1)} .ps-body`]);
+    check('a click during the slide turns it around (from where it was, back to shut)', half[0].h > 0 && back[0].h < half[0].h && back[0].h > 0 && shut[0].hidden, { half, back, shut });
+    // The other three pages use the same editor
+    for (const slug of ['workshop', 'dao-tao', 'tap-huan']) {
+      await nav(`/admin/trang/${slug}`);
+      await click(`${S(1)} .ps-summary`); await sleep(70);
+      const m = await bodies([`${S(1)} .ps-body`]); await still(); const e = await bodies([`${S(1)} .ps-body`]);
+      await click(`${S(2)} .ps-summary`); await still(); const after = await bodies([`${S(1)} .ps-body`, `${S(2)} .ps-body`]);
+      check(`${slug}: sections slide open and shut too`, m[0].h > 0 && m[0].h < e[0].h && after[0].hidden && !after[1].hidden, { m, e, after });
+    }
+  });
+
   await part(b, 'page editor: outline, VI | EN side by side, undo, ▲▼, unsaved changes', async () => {
     const workshop = () => d.collection('solutionpages').findOne({ slug: 'workshop' });
     const S = (n) => `[data-section-list] > [data-section]:nth-child(${n})`;
@@ -252,7 +297,7 @@ await suite(async (b) => {
       await click(`${S(2)} .ps-summary`);
       check('reduced motion: the section opens straight away', await ev(`document.querySelector('${S(2)}').classList.contains('is-open')`));
       // Cards fold inside the section: one line each, one open at a time
-      const itemState = (n) => ev(`[...document.querySelectorAll('${S(n)} [data-item]')].map((it) => (it.classList.contains('is-open') && !it.querySelector('.pi-body').hidden ? 'o:' : '-:') + it.querySelector('[data-item-summary]').textContent)`);
+      const itemState = async (n) => (await settled()) && ev(`[...document.querySelectorAll('${S(n)} [data-item]')].map((it) => (it.classList.contains('is-open') && !it.querySelector('.pi-body').hidden ? 'o:' : '-:') + it.querySelector('[data-item-summary]').textContent)`);
       let cardsNow = await itemState(2);
       check('cards start closed, each line shows its title', cardsNow.length === 3 && cardsNow.every((x) => x.startsWith('-:') && x.length > 3), cardsNow);
       await click(`${S(2)} [data-item]:nth-child(1) .pi-summary`);
@@ -419,8 +464,21 @@ await suite(async (b) => {
       let rows = await rowsNow();
       check(`one row per page (${BANNERS.length}); only the Workshop row is open; all show "Mặc định" and today's line`, rows.length === BANNERS.length && rows.filter((r) => r.open && r.editor).map((r) => r.key).join() === 'workshop'
         && rows.every((r) => r.badges === 'default') && rows.find((r) => r.key === 'workshop').line === BANNERS.find((x) => x.key === 'workshop').defaultVi, rows.filter((r) => r.open || r.badges !== 'default'));
-      // Opening another row closes this one; typing updates the preview, the row line and the badge
-      await click('#banner-dao-tao [data-banner-toggle]'); await sleep(150);
+      // Switching tab: the opened tab's content fades in
+      const tabLook = (key) => ev(`(() => { const p = document.querySelector('[data-panel="${key}"]'); return { shown: !p.hidden, opacity: +getComputedStyle(p).opacity }; })()`);
+      const otherTab = await ev(`document.querySelector('[data-tabbed-form] [data-tab]:not([data-tab="banners"])').dataset.tab`);
+      await click(`[data-tab="${otherTab}"]`); await sleep(40);
+      const tMid = await tabLook(otherTab); await sleep(450); const tEnd = await tabLook(otherTab);
+      await click('[data-tab="banners"]'); await sleep(40);
+      const bMid = await tabLook('banners'); await sleep(450); const bEnd = await tabLook('banners');
+      check(`switching Cài đặt chung tabs (${otherTab}, banners): the opened tab fades in`, tMid.shown && tMid.opacity < 1 && tEnd.opacity === 1 && bMid.shown && bMid.opacity < 1 && bEnd.opacity === 1, { tMid, tEnd, bMid, bEnd });
+      // Opening another row closes this one, both sliding; typing updates the preview, the row line and the badge
+      const slideLook = () => ev(`['dao-tao', 'workshop'].map((k) => { const e = document.querySelector('#banner-' + k + ' .banner-editor'); return { key: k, hidden: e.hidden, h: Math.round(e.getBoundingClientRect().height), full: e.scrollHeight }; })`);
+      await click('#banner-dao-tao [data-banner-toggle]'); await sleep(70);
+      const sMid = await slideLook(); await sleep(500); const sEnd = await slideLook();
+      await b.shot('admin-banner-open');
+      check('opening another banner: it slides open while the open one slides shut', !sMid[0].hidden && sMid[0].h > 0 && sMid[0].h < sEnd[0].h && sEnd[0].h === sEnd[0].full
+        && !sMid[1].hidden && sMid[1].h > 0 && sEnd[1].hidden, { sMid, sEnd });
       await click('#bannerVi_dao-tao'); await b.type('ZZ thử');
       rows = await rowsNow();
       const dt = rows.find((r) => r.key === 'dao-tao');
@@ -434,7 +492,7 @@ await suite(async (b) => {
       await click('#bannerEn_dao-tao'); await sleep(100);
       const enView = await ev(`({ live: document.querySelector('#banner-dao-tao [data-banner-live-line]').textContent, title: [...document.querySelectorAll('#banner-dao-tao [data-live-title]')].filter((x) => !x.hidden).map((x) => x.textContent).join(), line: document.querySelector('#banner-dao-tao [data-banner-summary]').textContent })`);
       check('typing in the English box: the preview shows English; the row line stays Vietnamese', enView.live === BANNERS.find((x) => x.key === 'dao-tao').defaultEn && enView.title === 'STEM training' && enView.line === BANNERS.find((x) => x.key === 'dao-tao').defaultVi, enView);
-      await click('#banner-workshop [data-banner-toggle]'); await sleep(150);
+      await click('#banner-workshop [data-banner-toggle]'); await sleep(500);
       // Workshop: text + image; Services: image
       await setVal('#bannerVi_workshop', 'ZZ Banner workshop mới');
       await setVal('#bannerEn_workshop', 'ZZ New workshop banner');
@@ -462,7 +520,7 @@ await suite(async (b) => {
       await nav('/admin/cai-dat?tab=banners');
       const savedRow = (await rowsNow()).find((r) => r.key === 'workshop');
       check('after saving, the Workshop row shows "Đã sửa" + "Có ảnh" and the new line', savedRow.badges === 'custom,image' && savedRow.line === 'ZZ Banner workshop mới' && !savedRow.open, savedRow);
-      await click('#banner-workshop [data-banner-toggle]'); await sleep(150);
+      await click('#banner-workshop [data-banner-toggle]'); await sleep(500);
       await setVal('#bannerVi_workshop', ''); await setVal('#bannerEn_workshop', '');
       await click('input[name="removeBanner_workshop"]');
       await save();

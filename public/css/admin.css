@@ -127,6 +127,7 @@ button.user-avatar:hover, button.user-avatar:focus-visible { outline: none; tran
 .banner-chevron { transition: transform var(--anim, .2s) ease; }
 .banner-row-head[aria-expanded="true"] .banner-chevron { transform: rotate(180deg); }
 .banner-editor { padding: 4px 16px 18px 94px; }
+.banner-editor.is-sliding, .ps-body.is-sliding, .pi-body.is-sliding { overflow: hidden; } /* slid open and shut by public/js/admin.js */
 .banner-live { display: grid; gap: 6px; justify-items: center; align-content: center; min-height: 120px; padding: 18px 20px; border-radius: var(--mtg-radius-sm); text-align: center; color: #fff;
   background-color: var(--mtg-navy); background-image: linear-gradient(rgba(12, 20, 33, .74), rgba(12, 20, 33, .74)), var(--hero-image, none); background-size: cover; background-position: center; }
 .banner-live strong { font-size: 1.3rem; color: #fff; }

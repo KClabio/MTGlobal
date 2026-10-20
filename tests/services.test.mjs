@@ -1,6 +1,6 @@
 // Request forms (Liên hệ, robot pages: checks in the browser, saved category, success message, admin label)
 // and the Dịch vụ landing page with its single home-slider card.
-import { suite, part, check, db, BASE, ROOT, appRequire, removeLater, stamp, createUser } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, appRequire, removeLater, restoreLater, stamp, createUser } from './lib/index.mjs';
 
 const ejs = appRequire('ejs');
 const { makeTranslator } = appRequire('./lib/i18n.js');
@@ -288,6 +288,108 @@ await suite(async (b) => {
     await b.nav(`/tai-khoan/yeu-cau/${robotReq._id}/sua`, 300);
     check('edit page in the browser: form ready, "Cập nhật yêu cầu" next to "Hủy"', await ev(`!!document.querySelector('[data-quote-form] .form-actions-row .btn-primary') && document.querySelector('[data-quote-form] [name=message]').value === 'Đổi nội dung'`));
     await b.shot('request-edit');
+  });
+
+  await part(b, 'choice boxes slide open; Dịch vụ questions slide (Liên hệ, Dịch vụ pages)', async () => {
+    await b.login(requester.sid);
+    await b.nav('/lien-he?lang=vi', 300);
+    const SEL = '[data-quote-form] select[name=interestedIn]';
+    const boxState = () => ev(`(() => {
+      const sel = document.querySelector('${SEL}'); const box = sel.closest('.choice-box'); const btn = box.querySelector('.choice-box-button'); const list = box.querySelector('.choice-box-list');
+      const act = list.querySelector('.is-active'); const lr = list.getBoundingClientRect(); const br = btn.getBoundingClientRect();
+      return { value: sel.value, text: btn.textContent.trim(), expanded: btn.getAttribute('aria-expanded'), hidden: list.hidden, opacity: +getComputedStyle(list).opacity,
+        below: lr.top >= br.bottom, focus: document.activeElement === btn, active: act && act.textContent, chosen: (list.querySelector('[aria-selected=true]') || {}).textContent }; })()`);
+    const look = await ev(`(() => {
+      const sel = document.querySelector('${SEL}'); const btn = sel.closest('.choice-box').querySelector('.choice-box-button'); const list = btn.nextElementSibling;
+      const other = document.querySelector('[data-quote-form] [name=email]');
+      return { selHidden: +getComputedStyle(sel).opacity === 0 && sel.tabIndex === -1, role: btn.getAttribute('role'), named: (btn.getAttribute('aria-labelledby') || '').split(' ').every((id) => document.getElementById(id)),
+        h: Math.round(btn.getBoundingClientRect().height), otherH: Math.round(other.getBoundingClientRect().height), font: getComputedStyle(btn).fontFamily === getComputedStyle(other).fontFamily,
+        groups: [...list.querySelectorAll('.choice-box-group')].map((g) => g.textContent), rows: list.querySelectorAll('[role=option]').length, options: sel.options.length }; })()`);
+    check('Liên hệ "Bạn quan tâm đến": a box over the real (hidden) list, same height and font as the other boxes, named by its label',
+      look.selHidden && look.role === 'combobox' && look.named && Math.abs(look.h - look.otherH) <= 2 && look.font, look);
+    check('… its list has the same options, under the group headings', look.rows === look.options && JSON.stringify(look.groups) === JSON.stringify(['Giải pháp STEM', 'Sản phẩm', 'Dịch vụ']), look);
+    let st = await boxState();
+    check('… closed, showing the chosen "Khác"', st.hidden && st.expanded === 'false' && st.text === 'Khác' && st.value === 'khac', st);
+    await b.clickAt(`${SEL} ~ .choice-box-button`); await sleep(40);
+    const mid = await boxState(); await sleep(500); st = await boxState();
+    check('a click opens the list under the box, fading in (not at once)', !mid.hidden && mid.opacity > 0 && mid.opacity < 1 && st.opacity === 1 && st.expanded === 'true' && st.below && st.active === 'Khác', { mid, st });
+    await b.shot('choice-box-open');
+    // Clicks the option of the open list with this text
+    const clickOption = async (text) => { const p = await ev(`(() => { const o = [...document.querySelectorAll('.choice-box-list:not([hidden]) [role=option]')].find((x) => x.textContent === ${JSON.stringify(text)}); o.scrollIntoView({ block: 'nearest' }); const r = o.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+      await b.mouse('mouseMoved', p); await b.mouse('mousePressed', p, { button: 'left', clickCount: 1 }); await b.mouse('mouseReleased', p, { button: 'left', clickCount: 1 }); };
+    await clickOption('Workshop trải nghiệm STEM');
+    const picked = await ev(`document.querySelectorAll('${SEL} option')[2].textContent`);
+    await sleep(40); const closing = await boxState(); await sleep(500); st = await boxState();
+    check('clicking an option chooses it (the real list too) and the list fades out, focus stays on the box',
+      st.value === 'workshop-stem' && st.text === picked && picked === 'Workshop trải nghiệm STEM' && !closing.hidden && closing.opacity < 1 && st.hidden && st.focus, { closing, st });
+    await b.key('ArrowDown', 'ArrowDown', 40); await sleep(450); st = await boxState();
+    check('keyboard: ↓ opens it at the chosen option', st.expanded === 'true' && st.active === 'Workshop trải nghiệm STEM', st);
+    await b.key('ArrowDown', 'ArrowDown', 40); await b.key('Enter', 'Enter', 13); await sleep(450); st = await boxState();
+    check('… ↓ then Enter chooses the next one and closes', st.value === 'dao-tao-stem' && st.hidden, st);
+    await b.key('ArrowDown', 'ArrowDown', 40); await b.key('ArrowDown', 'ArrowDown', 40); await b.key('Escape', 'Escape', 27); await sleep(450); st = await boxState();
+    check('… Esc closes without changing it', st.value === 'dao-tao-stem' && st.hidden && st.focus, st);
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'k', code: 'KeyK', text: 'k' }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'k', code: 'KeyK' }); await sleep(100); st = await boxState();
+    check('… typing a letter jumps to the option starting with it ("k" → Khác)', st.value === 'khac' && st.hidden, st);
+    await b.clickAt(`${SEL} ~ .choice-box-button`); await sleep(450);
+    await b.mouse('mousePressed', { x: 5, y: 300 }, { button: 'left', clickCount: 1 }); await b.mouse('mouseReleased', { x: 5, y: 300 }, { button: 'left', clickCount: 1 }); await sleep(450); st = await boxState();
+    check('a click outside closes it', st.hidden && st.expanded === 'false', st);
+    await b.reducedMotion();
+    await b.clickAt(`${SEL} ~ .choice-box-button`); await sleep(30);
+    const rmMid = await boxState(); await sleep(350); const rmEnd = await boxState();
+    check('reduced motion: it still fades, just quicker', rmMid.opacity < 1 && rmEnd.opacity === 1, { rmMid, rmEnd });
+    await b.key('Escape', 'Escape', 27); await b.reducedMotion(false); await sleep(300);
+    // Sent with the box's choice
+    await ev(`(() => { const f = document.querySelector('[data-quote-form]'); f.elements.name.value = ${JSON.stringify(MARK + '-choice')}; f.elements.message.value = 'Chọn qua hộp'; })()`);
+    await b.clickAt(`${SEL} ~ .choice-box-button`); await sleep(450);
+    await clickOption('Tư vấn, thiết kế & triển khai phòng Lab STEM'); await sleep(450);
+    { const l = b.waitLoad(); await ev(`document.querySelector('[data-quote-form] button[type=submit]').click()`); await l; await sleep(200); }
+    const sent = await (await db()).collection('quoterequests').findOne({ name: MARK + '-choice' });
+    check('the request is saved with the option chosen in the box', sent && sent.interestedIn === 'giai-phap-stem-lab', sent && sent.interestedIn);
+    // Dark mode: the list keeps the dark card colours
+    await b.setCookie('theme', 'dark');
+    await b.nav('/lien-he?lang=vi', 300);
+    await b.clickAt(`${SEL} ~ .choice-box-button`); await sleep(450);
+    const dark = await ev(`(() => { const list = document.querySelector('.choice-box-list'); const o = list.querySelector('[role=option]');
+      const lum = (c) => { const [r, g, b] = c.match(/\\d+/g).map(Number).map((v) => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
+      const bg = getComputedStyle(list).backgroundColor; const fg = getComputedStyle(o).color; const a = lum(bg), c = lum(fg);
+      return { bg, fg, ratio: +((Math.max(a, c) + .05) / (Math.min(a, c) + .05)).toFixed(2) }; })()`);
+    check('dark mode: a dark list with readable options', dark.ratio >= 4.5 && dark.bg !== 'rgb(255, 255, 255)', dark);
+    await b.shot('choice-box-dark');
+    await b.key('Escape', 'Escape', 27);
+    await b.setCookie('theme', 'light');
+
+    // A Dịch vụ page with packages, a required choice question and questions (FAQ), on a service put back afterwards
+    const services = (await db()).collection('services');
+    const svc = await services.findOne({ slug: 'tu-van-du-hoc' }) || await services.findOne({});
+    await restoreLater('services', { _id: svc._id });
+    await services.updateOne({ _id: svc._id }, { $set: {
+      packages: [{ nameVi: 'ZZ Gói A', nameEn: 'ZZ Package A', featuresVi: ['Một'], featuresEn: ['One'], highlighted: false }, { nameVi: 'ZZ Gói B', nameEn: 'ZZ Package B', featuresVi: ['Hai'], featuresEn: ['Two'], highlighted: true }],
+      questions: [{ key: 'zzcountry', labelVi: 'ZZ Quốc gia', labelEn: 'ZZ Country', type: 'choice', options: [{ vi: 'Úc', en: 'Australia' }, { vi: 'Nhật Bản', en: 'Japan' }], required: true }],
+      faqs: [{ questionVi: 'ZZ Câu hỏi một?', questionEn: 'ZZ Question one?', answerVi: 'ZZ Trả lời một.\n\nĐoạn thứ hai của câu trả lời.', answerEn: 'ZZ Answer one.' }],
+    } });
+    await b.nav(`/dich-vu/${svc.slug}?lang=vi`, 300);
+    const boxes = await ev(`[...document.querySelectorAll('[data-quote-form] .choice-box')].map((x) => x.querySelector('select').name)`);
+    check(`Dịch vụ page (${svc.slug}): the package and its own question are choice boxes`, ['q__package', 'q_zzcountry'].every((n) => boxes.includes(n)), boxes);
+    // Real clicks: focus only moves while the page has the focus, as it does for a visitor
+    await b.clickAt('[data-choose-package]'); await ev(`document.querySelectorAll('[data-choose-package]')[1].click()`); await sleep(300);
+    const pkg = await ev(`(() => { const s = document.getElementById('q__package'); const btn = s.closest('.choice-box').querySelector('.choice-box-button'); return { value: s.value, text: btn.textContent.trim(), focus: document.activeElement === btn }; })()`);
+    check('"Chọn gói này" shows the package in its box and puts the focus there', pkg.value === '1' && pkg.text === 'ZZ Gói B' && pkg.focus, pkg);
+    await ev(`(() => { const f = document.querySelector('[data-quote-form]'); f.elements.name.value = 'ZZ'; f.elements.phone.value = '0912345678'; f.elements.message.value = 'x'; })()`);
+    await b.clickAt('[data-quote-form] button[type=submit]'); await sleep(300);
+    const req = await ev(`(() => { const s = document.getElementById('q_zzcountry'); const btn = s.closest('.choice-box').querySelector('.choice-box-button');
+      return { invalid: s.classList.contains('is-invalid'), border: getComputedStyle(btn).borderTopColor, focus: document.activeElement === btn, error: (s.closest('.form-group').querySelector('[data-error-for=q_zzcountry]') || {}).textContent, inBox: !!s.closest('.choice-box').querySelector('.field-error') }; })()`);
+    check('a required question left empty: its box turns red, gets the focus, the message shows under it', req.invalid && req.border === 'rgb(192, 57, 43)' && req.focus && !!req.error && !req.inBox, req);
+    await b.key('ArrowDown', 'ArrowDown', 40); await b.key('ArrowDown', 'ArrowDown', 40); await b.key('Enter', 'Enter', 13); await sleep(450);
+    const fixed = await ev(`(() => { const s = document.getElementById('q_zzcountry'); return { value: s.value, invalid: s.classList.contains('is-invalid'), error: !!s.closest('.form-group').querySelector('[data-error-for=q_zzcountry]') }; })()`);
+    check('… choosing an answer clears the red box and the message', fixed.value === '0' && !fixed.invalid && !fixed.error, fixed);
+    // The questions (FAQ) slide open and shut
+    const faq = () => ev(`(() => { const d = document.querySelector('.faq-item'); const a = d.querySelector('.prose-text'); return { open: d.open, h: Math.round(a.getBoundingClientRect().height), full: a.scrollHeight, seen: a.checkVisibility() }; })()`);
+    await b.clickAt('.faq-item summary'); await sleep(90);
+    const fMid = await faq(); await sleep(500); const fEnd = await faq();
+    check('a question (FAQ) slides open: part way after a moment, then the whole answer', fMid.open && fMid.h > 0 && fMid.h < fEnd.h && fEnd.h === fEnd.full, { fMid, fEnd });
+    await b.clickAt('.faq-item summary'); await sleep(90);
+    const fShut = await faq(); await sleep(500); const fGone = await faq();
+    check('… and slides shut, leaving nothing showing', fShut.open && fShut.h < fEnd.h && fShut.h > 0 && !fGone.open && !fGone.seen, { fShut, fGone });
   });
 
   await part(b, 'Dịch vụ landing page', async () => {

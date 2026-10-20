@@ -18,7 +18,10 @@ await suite(async (b) => {
     const clickAt = async (p) => { await mouse('mousePressed', p.x, p.y, { button: 'left', buttons: 1, clickCount: 1 }); await mouse('mouseReleased', p.x, p.y, { button: 'left', buttons: 0, clickCount: 1 }); await sleep(150); };
     const away = async () => { await mouse('mouseMoved', 640, 700); await sleep(150); };
     const key = async (k) => { const code = k === 'Tab' ? 9 : 0; await send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code: k, windowsVirtualKeyCode: code }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code: k, windowsVirtualKeyCode: code }); await sleep(120); };
-    const shown = (i) => ev(`(() => { const d = document.querySelectorAll('.main-nav .nav-dropdown')[${i}]; const m = d.querySelector('.nav-dropdown-menu'); return { shown: getComputedStyle(m).display !== 'none' && m.getBoundingClientRect().height > 0, aria: d.querySelector('.nav-dropdown-trigger').getAttribute('aria-expanded'), inline: m.getAttribute('style') }; })()`);
+    // Menus fade in and out: wait for that to end, then a shown menu is visible with a real height
+    const shown = (i) => ev(`(async () => { const d = document.querySelectorAll('.main-nav .nav-dropdown')[${i}]; const m = d.querySelector('.nav-dropdown-menu');
+      await Promise.all(m.getAnimations().map((a) => a.finished.catch(() => {})));
+      return { shown: getComputedStyle(m).visibility === 'visible' && +getComputedStyle(m).opacity === 1 && m.getBoundingClientRect().height > 0, aria: d.querySelector('.nav-dropdown-trigger').getAttribute('aria-expanded'), inline: m.getAttribute('style') }; })()`);
     const markIds = (i) => ev(`(() => { const d = document.querySelectorAll('.main-nav .nav-dropdown')[${i}]; d.querySelector('.nav-dropdown-trigger').id = 'zzTrig${i}'; d.querySelector('.nav-dropdown-menu a:last-child').id = 'zzLast${i}'; return true; })()`);
 
     await nav('/');
@@ -83,10 +86,32 @@ await suite(async (b) => {
     { const l = waitLoad(); await clickAt(pg); await l; await sleep(150); } await away();
     check('mouse click on a title after keyboard use: opens /giai-phap, menu not kept open', (await ev('location.pathname')) === '/giai-phap' && !(await shown(1)).shown);
 
+    // Smooth: a menu fades and slides in while its ▾ turns; on leaving it waits a moment, then fades out. Also with reduced motion.
+    const look = (sel, caret) => ev(`(() => { const m = document.querySelector('${sel}'); const c = document.querySelector('${caret}');
+      return { vis: getComputedStyle(m).visibility, opacity: +(+getComputedStyle(m).opacity).toFixed(2), y: Math.round(new DOMMatrix(getComputedStyle(m).transform).m42), caret: Math.round(Math.atan2(new DOMMatrix(getComputedStyle(c).transform).b, new DOMMatrix(getComputedStyle(c).transform).a) * 180 / Math.PI) }; })()`);
+    for (const motion of ['normal', 'reduced']) {
+      await b.reducedMotion(motion === 'reduced');
+      await nav('/'); await away(); await sleep(300); await markIds(1);
+      const rest = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret');
+      const p = await center('#zzTrig1'); await mouse('mouseMoved', p.x, p.y); await sleep(motion === 'reduced' ? 25 : 50);
+      const opening = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret'); await sleep(400);
+      const open = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret');
+      if (motion === 'normal') await b.shot('nav-menu-open');
+      await mouse('mouseMoved', 640, 700); await sleep(motion === 'reduced' ? 15 : 40);
+      const pause = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret'); await sleep(motion === 'reduced' ? 60 : 130);
+      const closing = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret'); await sleep(500);
+      const closed = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret');
+      check(`[${motion}] "Giải pháp" menu fades and slides in while ▾ turns; leaving waits a moment, then it fades out and is gone`,
+        rest.vis === 'hidden' && rest.opacity === 0 && rest.caret === 0 && opening.vis === 'visible' && opening.opacity > 0 && opening.opacity < 1 && opening.y < 0
+        && open.opacity === 1 && open.y === 0 && Math.abs(open.caret) === 180 && pause.opacity >= .95 && (motion === 'reduced' || (closing.vis === 'visible' && closing.opacity < 1)) && closed.vis === 'hidden' && closed.opacity === 0 && closed.caret === 0,
+        { rest, opening, open, pause, closing, closed });
+    }
+    await b.reducedMotion(false);
+
     // Account menu (logged in)
     await b.login(user.sid);
     await nav('/'); await away();
-    const um = () => ev(`getComputedStyle(document.querySelector('.user-menu-dropdown')).display !== 'none'`);
+    const um = () => ev(`(async () => { const m = document.querySelector('.user-menu-dropdown'); await Promise.all(m.getAnimations().map((a) => a.finished.catch(() => {}))); return getComputedStyle(m).visibility === 'visible' && +getComputedStyle(m).opacity === 1; })()`);
     check('account menu hidden at rest', !(await um()));
     const up = await moveTo('.user-menu-trigger');
     check('account menu: hover opens it', await um());
@@ -103,14 +128,29 @@ await suite(async (b) => {
     await clickAt(tt); await sleep(300); // switch back
     await away();
     check('account menu: closes when the pointer leaves', !(await um()));
+    { const p = await center('.user-menu-trigger'); await away(); await sleep(300); await mouse('mouseMoved', p.x, p.y); await sleep(50); }
+    const uOpening = await look('.user-menu-dropdown', '.user-menu-trigger .nav-caret'); await sleep(400);
+    const uOpen = await look('.user-menu-dropdown', '.user-menu-trigger .nav-caret');
+    const uTrigger = await ev(`getComputedStyle(document.querySelector('.user-menu-trigger')).backgroundColor`);
+    await b.shot('account-menu-open');
+    await away(); await sleep(500);
+    const uClosed = await look('.user-menu-dropdown', '.user-menu-trigger .nav-caret');
+    check('account menu fades and slides in (▾ turns, the name turns blue-tinted), then fades out',
+      uOpening.opacity > 0 && uOpening.opacity < 1 && uOpen.opacity === 1 && Math.abs(uOpen.caret) === 180 && uClosed.vis === 'hidden' && uClosed.caret === 0 && uTrigger !== 'rgb(255, 255, 255)', { uOpening, uOpen, uClosed, uTrigger });
     await b.clearCookie('connect.sid');
 
     // Phone drawer
     await viewport(390, 844);
     await nav('/');
-    await ev(`document.getElementById('navToggle').click()`); await sleep(200);
-    const drawer = await ev(`({ menus: [...document.querySelectorAll('.main-nav .nav-dropdown-menu')].map((m) => getComputedStyle(m).display !== 'none' && m.getBoundingClientRect().height > 0), titles: [...document.querySelectorAll('.nav-dropdown-trigger')].map((a) => a.getAttribute('href') + ':' + (a.getBoundingClientRect().height > 0)) })`);
+    await ev(`document.getElementById('navToggle').click()`); await sleep(400);
+    const drawer = await ev(`({ menus: [...document.querySelectorAll('.main-nav .nav-dropdown-menu')].map((m) => getComputedStyle(m).visibility === 'visible' && +getComputedStyle(m).opacity === 1 && m.getBoundingClientRect().height > 0), titles: [...document.querySelectorAll('.nav-dropdown-trigger')].map((a) => a.getAttribute('href') + ':' + (a.getBoundingClientRect().height > 0)) })`);
     check('phone: the ☰ drawer lists all 3 submenus, with the titles as visible links', drawer.menus.length === 3 && drawer.menus.every(Boolean) && JSON.stringify(drawer.titles) === '["/san-pham:true","/giai-phap:true","/dich-vu:true"]', drawer);
+    const drawerLook = () => ev(`(() => { const n = document.querySelector('.main-nav'); return { open: document.body.classList.contains('nav-open'), shown: getComputedStyle(n).display !== 'none', opacity: +(+getComputedStyle(n).opacity).toFixed(2) }; })()`);
+    await ev(`document.getElementById('navToggle').click()`); await sleep(60);
+    const dClosing = await drawerLook(); await sleep(500); const dGone = await drawerLook();
+    await ev(`document.getElementById('navToggle').click()`); await sleep(60);
+    const dOpening = await drawerLook(); await sleep(450); const dOpen = await drawerLook();
+    check('phone: ☰ slides the drawer shut (then it is gone) and open again', dClosing.shown && dClosing.opacity < 1 && !dGone.open && !dGone.shown && dOpening.shown && dOpening.opacity < 1 && dOpen.opacity === 1, { dClosing, dGone, dOpening, dOpen });
     const tp = await center('.main-nav .nav-dropdown:nth-of-type(2) .nav-dropdown-trigger');
     { const l = waitLoad();
       await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tp.x, y: tp.y }] });

@@ -186,6 +186,21 @@ await suite(async (b) => {
     check('legal basis is folded under its title', fold.n === 1 && !fold.open && fold.title === 'Các căn cứ và tiêu chuẩn khi xây dựng phòng Lab STEM' && fold.visibleCards === false, fold);
     await b.clickAt('.solution-fold summary'); await sleep(200);
     check('clicking the title opens it (both lists shown)', await ev(`document.querySelector('.solution-fold').open && document.querySelector('.solution-fold').textContent.includes('1002/QĐ-TTg') && document.querySelector('.solution-fold .card').getBoundingClientRect().height > 50`));
+    // It slides shut and open again (part way after a moment); nothing of it shows while shut. Also with reduced motion.
+    const foldBody = () => ev(`(() => { const d = document.querySelector('.solution-fold'); const body = d.querySelector('.solution-fold-body'); return { open: d.open, h: Math.round(body.getBoundingClientRect().height), full: body.scrollHeight, seen: body.checkVisibility() }; })()`);
+    for (const motion of ['normal', 'reduced']) {
+      if (motion === 'reduced') await b.reducedMotion();
+      await sleep(450);
+      const fOpen = await foldBody();
+      await b.clickAt('.solution-fold summary'); await sleep(70);
+      const fClosing = await foldBody(); await sleep(500); const fClosed = await foldBody();
+      await b.clickAt('.solution-fold summary'); await sleep(70);
+      const fOpening = await foldBody(); await sleep(500); const fOpened = await foldBody();
+      if (motion === 'normal') await b.shot('stemlab-fold-open');
+      check(`[${motion}] "Các căn cứ…" slides shut and open again, nothing showing while shut`, fOpen.h === fOpen.full && fClosing.open && fClosing.h > 0 && fClosing.h < fOpen.h
+        && !fClosed.open && !fClosed.seen && fOpening.open && fOpening.h > 0 && fOpening.h < fOpened.h && fOpened.h === fOpened.full, { fOpen, fClosing, fClosed, fOpening, fOpened });
+    }
+    await b.reducedMotion(false);
     const compact = await ev(`[...document.querySelectorAll('.is-compact .card')].map((c) => ({ title: c.querySelector('h3').textContent, summary: c.querySelector('.card-text > p').textContent, more: !!c.querySelector('details.card-more'), open: c.querySelector('details.card-more').open, hiddenH: c.querySelector('details.card-more ul').checkVisibility() }))`);
     check('zone cards: a one-line summary each, details folded', compact.length === 4 && compact.every((c) => c.more && !c.open && c.hiddenH === false && c.summary.length < 90), compact);
     // "Xem chi tiết" slides open and closed (height grows from 0), also with "reduced motion" (only shorter)
@@ -335,6 +350,11 @@ await suite(async (b) => {
     await tabTo(4);
     await b.key('ArrowRight', 'ArrowRight', 39); await sleep(150);
     check('arrow keys move between tabs', await ev(`document.activeElement.textContent.trim() === 'Mầm non' && document.activeElement.getAttribute('aria-selected') === 'true'`));
+    // Switching level: the picture and its description fade in (the description a moment after the picture)
+    const levelLook = () => ev(`(() => { const p = [...document.querySelectorAll('.media-tabpanel')].find((x) => !x.hidden); return { tab: document.querySelector('.media-tab[aria-selected=true]').textContent.trim(), pic: +getComputedStyle(p.children[0]).opacity, text: +getComputedStyle(p.children[1]).opacity }; })()`);
+    await ev(`[...document.querySelectorAll('.media-tab')].find((t) => t.textContent.trim() === 'THCS').click()`); await sleep(40);
+    const lvMid = await levelLook(); await sleep(500); const lvEnd = await levelLook();
+    check('switching level (THCS): picture and description fade in, the description just after', lvMid.tab === 'THCS' && lvMid.pic < 1 && lvMid.text <= lvMid.pic && lvEnd.pic === 1 && lvEnd.text === 1, { lvMid, lvEnd });
     // "Thiết kế 3D": a picture grid ('zoom' display) whose pictures react to the mouse and open larger in the same box
     const zoomSel = (n) => `.media-figure.is-zoomable:nth-child(${n})`;
     const zoomList = await ev(`[...document.querySelectorAll('.media-zoom')].map((z) => ({ tag: z.tagName, href: z.getAttribute('href'), full: z.getAttribute('data-full'), src: z.querySelector('img').getAttribute('src'),
@@ -445,6 +465,17 @@ await suite(async (b) => {
     await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
     e1 = await eq();
     check('arrow key moves to the next tab (Phần IV, 2 items) and focuses it', e1.sel === 'phan-4' && e1.visible[0].cards === 2 && await ev(`document.activeElement.dataset.tab`) === 'phan-4', e1);
+    // Switching part: its cards fade in one after another (the first 8); the search results show at once
+    const partLook = () => ev(`[...document.querySelectorAll('[data-panel="phan-1"] .card')].map((c) => +getComputedStyle(c).opacity)`);
+    await ev(`document.querySelector('.equip-tab[data-tab="phan-1"]').click()`); await sleep(40);
+    const pMid = await partLook(); await sleep(700); const pEnd = await partLook();
+    await b.shot('equipment-tab-switch');
+    check('switching part (Phần I): the cards fade in one after another', pMid[0] > 0 && pMid[0] < 1 && pMid[7] < pMid[0] && pEnd.every((o) => o === 1), { pMid, pEnd });
+    await ev(`(() => { const i = document.querySelector('[data-equip-search]'); i.value = 'vex'; i.dispatchEvent(new Event('input')); })()`); await sleep(40);
+    const instant = await ev(`[...document.querySelectorAll('[data-equip-grid] .card')].map((c) => +getComputedStyle(c).opacity)`);
+    check('… while typing a search the results show at once (no fade on every key)', instant.length > 0 && instant.every((o) => o === 1), instant);
+    await ev(`(() => { const i = document.querySelector('[data-equip-search]'); i.value = ''; i.dispatchEvent(new Event('input')); })()`);
+    await ev(`document.querySelector('.equip-tab[data-tab="phan-4"]').click()`); await sleep(600);
     await nav('/lien-he'); await nav('/giai-phap/thiet-bi#phan-4', 300); e1 = await eq();
     check('opening the page at #phan-4 shows Phần IV', e1.sel === 'phan-4', e1);
     // Back from an item returns to its tab

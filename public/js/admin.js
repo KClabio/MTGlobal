@@ -2,6 +2,46 @@
 (function () {
   var I18N = window.ADMIN_I18N || { orderSaved: 'Saved', orderError: 'Error' };
 
+  // ---- Motion shared by tabs, filtered lists and banner rows: ~0.4 s ease-out, shorter with "reduced motion" ----
+  var ANIM = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
+  var MOTION = { duration: Math.round(180 + 220 * ANIM), easing: 'cubic-bezier(.2, .8, .3, 1)' };
+  // Backstop: an animation that hasn't run by its end (a background tab, a page not being drawn) is jumped to its end,
+  // so nothing is left half shown or invisible
+  function settle(a, ms) {
+    setTimeout(function () { if (a && a.playState === 'running') a.finish(); }, ms + 250);
+  }
+  // Newly shown content fades in and rises a little; items (e.g. table rows) follow one after another, the first 12
+  function revealIn(el, items) {
+    var frames = [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }];
+    if (items) {
+      Array.prototype.forEach.call(items, function (item, i) {
+        var delay = Math.min(i, 11) * 20 * ANIM;
+        if (item.animate) settle(item.animate(frames, { duration: MOTION.duration, easing: MOTION.easing, delay: delay, fill: 'backwards' }), MOTION.duration + delay);
+      });
+    } else if (el && el.animate) settle(el.animate(frames, MOTION), MOTION.duration);
+  }
+  // Slides a block open (shown first) or shut (hidden at the end), with its top/bottom padding; a new slide takes over
+  // from where the last one was
+  function slideTo(el, open) {
+    var from = el.hidden ? 0 : el.getBoundingClientRect().height;
+    if (el._slide) { el._slide.onfinish = null; el._slide.cancel(); el._slide = null; }
+    if (!el.animate) { el.hidden = !open; return; }
+    el.hidden = false;
+    var full = el.scrollHeight || 1;
+    var to = open ? full : 0;
+    var cs = getComputedStyle(el);
+    var pad = function (h, side) { return Math.min(parseFloat(cs[side]) || 0, h / 2) + 'px'; };
+    var frame = function (h) { return { height: h + 'px', paddingTop: pad(h, 'paddingTop'), paddingBottom: pad(h, 'paddingBottom'), opacity: Math.min(1, h / full) }; };
+    el.classList.add('is-sliding');
+    el._slide = el.animate([frame(from), frame(to)], MOTION);
+    el._slide.onfinish = function () {
+      el._slide = null;
+      el.classList.remove('is-sliding');
+      if (!open) el.hidden = true;
+    };
+    settle(el._slide, MOTION.duration);
+  }
+
   // ---- Notifications: green (success) / red (error), with icon, close button and auto-hide ----
   var toast = document.getElementById('adminToast');
   var toastTimer = null;
@@ -326,6 +366,7 @@
     if (!form.querySelector('[data-tabs]')) return function () {};
     var tabs = Array.prototype.slice.call(form.querySelectorAll('[data-tab]'));
     var panels = Array.prototype.slice.call(form.querySelectorAll('[data-panel]'));
+    var first = true;
     function openTab(key) {
       tabs.forEach(function (tab) {
         var on = tab.getAttribute('data-tab') === key;
@@ -333,7 +374,12 @@
         tab.setAttribute('aria-selected', on ? 'true' : 'false');
         tab.tabIndex = on ? 0 : -1;
       });
-      panels.forEach(function (panel) { panel.hidden = panel.getAttribute('data-panel') !== key; });
+      panels.forEach(function (panel) {
+        var on = panel.getAttribute('data-panel') === key;
+        if (on && panel.hidden && !first) revealIn(panel); // the opened tab's content fades in (not on the first load)
+        panel.hidden = !on;
+      });
+      first = false;
       form.dispatchEvent(new CustomEvent('tabchange', { detail: key }));
     }
     tabs.forEach(function (tab, i) {
@@ -442,21 +488,25 @@
       row.querySelector('[data-banner-default]').hidden = !custom;
     }
 
-    // Opens one row and closes the others; clicking the open row's head closes it
-    function toggle(row, focus) {
+    // Opens one row and closes the others; clicking the open row's head closes it. animate: the editors slide open and
+    // shut (a click; not when a link opens a row on arrival)
+    function toggle(row, focus, animate) {
       var opening = !row.classList.contains('is-open');
       rows.forEach(function (other) {
         var on = other === row && opening;
+        var was = other.classList.contains('is-open');
         other.classList.toggle('is-open', on);
         other.querySelector('[data-banner-toggle]').setAttribute('aria-expanded', on ? 'true' : 'false');
-        other.querySelector('.banner-editor').hidden = !on;
+        var editor = other.querySelector('.banner-editor');
+        if (animate && was !== on) slideTo(editor, on);
+        else if (!animate) editor.hidden = !on;
       });
       if (opening && focus) textBox(row, 'vi').focus({ preventScroll: true });
     }
 
     rows.forEach(function (row) {
       update(row);
-      row.querySelector('[data-banner-toggle]').addEventListener('click', function () { toggle(row, true); });
+      row.querySelector('[data-banner-toggle]').addEventListener('click', function () { toggle(row, true, true); });
       row.addEventListener('input', function () { update(row); });
       row.addEventListener('focusin', function (e) {
         var box = e.target.closest('[data-banner-text]');
@@ -682,14 +732,15 @@
       item.querySelector('[data-item-flag-en]').hidden = !missingEnglish(item);
     }
 
-    // Opens one item and closes the others in the same section; clicking the open one again closes it
-    function toggleItem(item, open) {
+    // Opens one item and closes the others in the same section; clicking the open one again closes it.
+    // animate: the bodies slide open and shut (a click); without it they switch at once (opened after a failed save)
+    function toggleItem(item, open, animate) {
       var opening = open === undefined ? !item.classList.contains('is-open') : open;
       children(item.parentNode, '[data-item]').forEach(function (other) {
         var on = other === item && opening;
         if (other.classList.contains('is-open') === on) return;
         other.classList.toggle('is-open', on);
-        other.querySelector('.pi-body').hidden = !on;
+        if (animate) slideTo(other.querySelector('.pi-body'), on); else other.querySelector('.pi-body').hidden = !on;
         other.querySelectorAll('[data-item-toggle]').forEach(function (b) { b.setAttribute('aria-expanded', on ? 'true' : 'false'); });
       });
     }
@@ -698,19 +749,22 @@
       sectionsOnScreen().forEach(summarise);
     }
 
-    // Opens one section and closes the others; clicking the open one again closes it
-    function toggleSection(section, open) {
+    // Opens one section and closes the others; clicking the open one again closes it. animate: as for toggleItem
+    function toggleSection(section, open, animate) {
       var opening = open === undefined ? !section.classList.contains('is-open') : open;
       sectionsOnScreen().forEach(function (other) {
         var on = other === section && opening;
         if (other.classList.contains('is-open') === on) return;
         other.classList.toggle('is-open', on);
-        other.querySelector('.ps-body').hidden = !on;
+        if (animate) slideTo(other.querySelector('.ps-body'), on); else other.querySelector('.ps-body').hidden = !on;
         other.querySelectorAll('[data-section-toggle]').forEach(function (b) { b.setAttribute('aria-expanded', on ? 'true' : 'false'); });
       });
+      // Brought into view once the slides have ended (a section above may still be shrinking until then)
       if (opening) {
-        var r = section.getBoundingClientRect();
-        if (r.top < 0 || r.top > window.innerHeight - 120) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        setTimeout(function () {
+          var r = section.getBoundingClientRect();
+          if (r.top < 0 || r.top > window.innerHeight - 120) section.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }, animate ? MOTION.duration + 20 : 0);
       }
     }
 
@@ -799,6 +853,7 @@
         picker.hidden = !show;
         addBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
         if (show) {
+          revealIn(picker); // the type picker fades and slides in
           picker.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           picker.querySelector('[data-add-kind]').focus({ preventScroll: true });
         }
@@ -813,16 +868,16 @@
         initSection(section);
         refresh();
         markDirty();
-        toggleSection(section, true);
+        toggleSection(section, true, true);
         var first = section.querySelector('.ps-body input:not([type="hidden"]):not([type="checkbox"]), .ps-body textarea');
         var visible = Array.prototype.filter.call(section.querySelectorAll('.ps-body input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]), .ps-body textarea'), function (el) { return el.offsetParent !== null; })[0];
         if (visible || first) (visible || first).focus({ preventScroll: true });
         return;
       }
       var toggle = e.target.closest('[data-section-toggle]');
-      if (toggle) { toggleSection(toggle.closest('[data-section]')); return; }
+      if (toggle) { toggleSection(toggle.closest('[data-section]'), undefined, true); return; }
       var itemToggle = e.target.closest('[data-item-toggle]');
-      if (itemToggle) { toggleItem(itemToggle.closest('[data-item]')); return; }
+      if (itemToggle) { toggleItem(itemToggle.closest('[data-item]'), undefined, true); return; }
       var move = e.target.closest('[data-move]');
       if (move) {
         var row = move.closest('[data-item]') || move.closest('[data-section]');
@@ -852,7 +907,7 @@
         var fresh = tplItem.content.firstElementChild.cloneNode(true);
         items.insertBefore(fresh, children(items, '[data-link-item]')[0] || null);
         applyItemKind(fresh, sectionEl.getAttribute('data-kind'), sectionEl);
-        toggleItem(fresh, true);
+        toggleItem(fresh, true, true);
         markDirty();
         var box = fresh.querySelector('.pi-body input');
         if (box) box.focus();
@@ -1138,8 +1193,20 @@
       });
       clearBtn.addEventListener('click', function () { input.value = ''; apply(); input.focus(); });
     }
+    // A chip click fades the rows it shows in (typing in the search box stays instant: a fade on every key would flicker)
+    var shownRows = function () { return rows.filter(function (tr) { return !tr.hidden; }); };
     chipButtons.forEach(function (b) {
-      b.addEventListener('click', function () { filterValue = b.getAttribute('data-value'); apply(); });
+      b.addEventListener('click', function () {
+        var changed = filterValue !== b.getAttribute('data-value');
+        filterValue = b.getAttribute('data-value');
+        apply();
+        if (changed) revealIn(null, shownRows());
+      });
+    });
+    // Yêu cầu tư vấn: the status tabs (Tất cả / Mới / …) load a new page, which then fades its rows in the same way
+    var REVEAL_NOTE = 'mtg-reveal-rows';
+    document.querySelectorAll('.admin-topbar a[data-keep-query]').forEach(function (a) {
+      a.addEventListener('click', function () { try { sessionStorage.setItem(REVEAL_NOTE, type); } catch (e) { /* storage blocked */ } });
     });
 
     var params = new URLSearchParams(window.location.search);
@@ -1148,6 +1215,9 @@
     if (initialF && chipButtons.some(function (b) { return b.getAttribute('data-value') === initialF; })) filterValue = initialF;
     if (initialQ) input.value = initialQ;
     if (initialQ || filterValue) apply();
+    try {
+      if (sessionStorage.getItem(REVEAL_NOTE) === type) { sessionStorage.removeItem(REVEAL_NOTE); revealIn(null, shownRows()); }
+    } catch (e) { /* storage blocked: the page just appears */ }
   });
 })();
 

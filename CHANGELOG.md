@@ -6,7 +6,36 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.0.12] - 2026-10-19
+## [1.0.13] - 2026-10-20
+
+### Changed
+Movement everywhere below works in Chrome, Edge, Opera, Cốc Cốc and Firefox. With "reduced motion" turned on in the computer's settings it is still there, only quicker. If a page is in a background tab, any movement simply jumps to its end, so nothing is left half open.
+
+- **Header menus:** "Robotics thông minh", "Giải pháp", "Dịch vụ" and the account menu fade and slide in, and fade back out when the mouse leaves. They wait a moment before closing, so a slanted mouse path onto the links doesn't shut them. The ▾ turns over while a menu is open, hover colours fade, and on phones the ☰ menu slides open and shut. Esc still closes a menu at once.
+
+  ![The "Giải pháp" menu open](docs/screenshots/1.0.13/nav-menu.jpg)
+
+  ![The account menu open](docs/screenshots/1.0.13/account-menu.jpg)
+- **Choice boxes in the request forms** (Liên hệ, Tư vấn du học, Phân phối sản phẩm công nghệ, robot pages: "Bạn quan tâm đến", "Gói dịch vụ" and the service's own questions): the list slides open under the box in every browser, groups have small headings, and ✓ marks the choice. The keyboard works as before (↑/↓, Enter, Esc, typing a letter), and requests are saved exactly as before.
+
+  ![The "Bạn quan tâm đến" list open](docs/screenshots/1.0.13/choice-box.jpg)
+- **Folds slide open and shut:** "Các căn cứ và tiêu chuẩn khi xây dựng phòng Lab STEM" (STEM Lab page) and the questions on the Dịch vụ pages, like "Xem chi tiết" already did.
+
+  ![The "Các căn cứ và tiêu chuẩn" fold open](docs/screenshots/1.0.13/fold.jpg)
+- **Tabs fade in:** on Thiết bị, học liệu, Robot STEM a part's cards come in one after another; on "Mẫu thiết kế phân khu theo cấp học" the drawing and then its description. Typing a search still shows results at once.
+
+  ![Thiết bị, học liệu, Robot STEM after switching part](docs/screenshots/1.0.13/equipment-tab.jpg)
+- **Admin lists:** the filter buttons on Thiết bị, Dự án tham khảo, Yêu cầu tư vấn and Người dùng fade the matching rows in, one after another, and so do the request status buttons (Tất cả / Mới / Đã liên hệ / Hoàn tất).
+
+  ![Admin → Thiết bị with "Phần I" chosen](docs/screenshots/1.0.13/admin-filter.jpg)
+- **Admin Giải pháp page editors** (Tư vấn, thiết kế & triển khai, Workshop, Đào tạo, Tập huấn): sections and the cards inside them slide open while the open one slides shut; a click during the slide turns it around, and an opened section that ends up off screen is scrolled into view smoothly once the slide ends.
+
+  ![Admin page editor with a section and a card open](docs/screenshots/1.0.13/admin-page-editor.jpg)
+- **Cài đặt chung:** the tabs fade in, and in "Banner các trang" opening one banner slides it open while the other slides shut.
+
+  ![Cài đặt chung → Banner các trang with a banner open](docs/screenshots/1.0.13/admin-banners.jpg)
+
+## [1.0.12] - 2026-10-19 · `f4a9b6b`
 
 ### Changed
 - **Admin menu on phones and narrow windows** (960 px wide or less): instead of a strip that scrolled sideways across the top, the menu is hidden and a round **☰** button above the page title slides it in from the left. It has the logo, every section, the VI/EN switch and the light/dark switch; **×**, a tap on the darkened page beside it or Esc closes it, and it opens scrolled to the current page. Wide screens keep the menu on the left as before.

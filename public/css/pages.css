@@ -108,6 +108,9 @@
 .solution-fold-icon { flex: none; color: var(--mtg-muted); transition: transform .2s ease; }
 .solution-fold[open] .solution-fold-icon { transform: rotate(180deg); }
 .solution-fold-body { padding: 0 20px 20px; }
+/* Height slid by public/js/main.js; flow-root keeps the text's margins inside, so the slide ends without a jump */
+.solution-fold-body, .faq-item .prose-text { display: flow-root; }
+.solution-fold-body.is-animating, .faq-item .prose-text.is-animating { overflow: hidden; }
 .solution-fold-body > .card-grid { margin-top: 4px; }
 
 /* Cards that show a short summary, with the rest under "Xem chi tiết" (display "compact") */

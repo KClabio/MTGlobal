@@ -640,6 +640,40 @@ await suite(async (b) => {
     check('"Mới" tab, cleared: every new request shown', v.shown.length === count((r) => r.status === 'moi') && !v.count, v);
   });
 
+  await part(b, 'lists fade in when switching (chips, request status tabs)', async () => {
+    const owner = await createUser('fade-owner', 'owner');
+    await b.login(owner.sid); await b.setCookie('adminLang', 'vi');
+    const rowsLook = (type) => ev(`[...document.querySelectorAll('tbody[data-sortable="${type}"] tr[data-id], tbody[data-list="${type}"] tr[data-id]')].filter((tr) => !tr.hidden).map((tr) => +getComputedStyle(tr).opacity)`);
+    for (const [path, type] of [['/admin/thiet-bi', 'equipment'], ['/admin/du-an', 'projects'], ['/admin/yeu-cau', 'requests'], ['/admin/nguoi-dung', 'users']]) {
+      await b.nav(path, 300);
+      const chip = await ev(`(() => { const c = [...document.querySelectorAll('[data-list-filter="${type}"] .filter-chip')].find((x) => x.dataset.value && +x.querySelector('.filter-chip-count').textContent > 1); return c ? c.dataset.value : null; })()`);
+      if (!chip) { check(`${path}: has a chip with 2+ rows to switch to`, false); continue; }
+      await b.clickAt(`[data-list-filter="${type}"] .filter-chip[data-value="${chip}"]`); await sleep(40);
+      const mid = await rowsLook(type); await sleep(700); const end = await rowsLook(type);
+      if (type === 'equipment') await b.shot('admin-filter-equipment');
+      check(`${path}: a chip click (${chip}) fades its rows in, one after another`, mid.length > 1 && mid[0] < 1 && mid[mid.length - 1] <= mid[0] && end.every((o) => o === 1), { mid, end });
+      await b.clickAt(`[data-list-filter="${type}"] .filter-chip[data-value=""]`); await sleep(700);
+    }
+    await b.nav('/admin/thiet-bi', 300);
+    await ev(`(() => { const i = document.querySelector('[data-list-search="equipment"] input'); i.focus(); i.value = 'vex'; i.dispatchEvent(new Event('input', { bubbles: true })); })()`); await sleep(30);
+    const typed = await rowsLook('equipment');
+    check('typing in the search box shows the rows at once (no fade on every key)', typed.length > 0 && typed.every((o) => o === 1), typed);
+    await ev(`document.querySelector('[data-list-search="equipment"] .list-search-clear').click()`);
+    // Yêu cầu tư vấn status tabs load a new page: its rows fade in (counted as row animations from the page's start)
+    const { identifier } = await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__rowFades = 0; const _a = Element.prototype.animate; Element.prototype.animate = function () { if (this.tagName === 'TR') window.__rowFades++; return _a.apply(this, arguments); };` });
+    try {
+      await b.nav('/admin/yeu-cau', 300);
+      const plain = await ev('window.__rowFades');
+      { const l = b.waitLoad(); await b.clickAt('a[data-keep-query][href*="status=moi"]'); await l; await sleep(200); }
+      const viaTab = await ev(`({ fades: window.__rowFades, rows: [...document.querySelectorAll('tbody[data-list="requests"] tr[data-id]')].filter((tr) => !tr.hidden).length, url: location.search })`);
+      await b.nav('/admin/yeu-cau?status=moi', 300);
+      const reload = await ev('window.__rowFades');
+      check('status tab "Mới": the new page fades its rows in; opening the page any other way doesn\'t', plain === 0 && viaTab.url.includes('status=moi') && viaTab.fades === viaTab.rows && viaTab.rows > 0 && reload === 0, { plain, viaTab, reload });
+    } finally {
+      await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    }
+  });
+
   await part(b, 'delete confirmation dialog', async () => {
     const custU = await createUser('confirm-cust', 'customer');
     const custId = String(custU.id);

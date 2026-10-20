@@ -103,6 +103,42 @@ textarea.form-control { resize: vertical; min-height: 110px; }
 .form-row > .form-group > label { align-self: end; }
 .form-control.is-invalid { border-color: var(--mtg-error); }
 .form-control.is-invalid:focus { box-shadow: 0 0 0 3px rgba(192,57,43,.12); }
+
+/* Choice boxes of the request forms (public/js/main.js): a button showing the choice and a list that slides open
+   under it. The real <select> stays inside, hidden, and is what the form sends. */
+.choice-box { position: relative; }
+.choice-box-native { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+.choice-box-button {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; line-height: normal;
+  text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+}
+.choice-box-button:hover { border-color: var(--mtg-blue); }
+.choice-box-button:focus-visible { border-color: var(--mtg-blue); box-shadow: 0 0 0 3px var(--mtg-blue-tint); }
+.choice-box-button.is-placeholder .choice-box-value { color: var(--mtg-muted); }
+.choice-box-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choice-box-arrow { flex: none; color: var(--mtg-muted); transition: transform calc(.28s * var(--anim, 1)) cubic-bezier(.2, .8, .3, 1); }
+.choice-box.is-open .choice-box-arrow { transform: rotate(180deg); color: var(--mtg-blue); }
+.choice-box.is-open .choice-box-button { border-color: var(--mtg-blue); }
+.choice-box:has(.choice-box-native.is-invalid) .choice-box-button { border-color: var(--mtg-error); }
+.choice-box-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+  max-height: min(320px, 55vh); overflow-y: auto; overscroll-behavior: contain; padding: 6px;
+  background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow-lg);
+  transform-origin: top center;
+}
+.choice-box.is-up .choice-box-list { top: auto; bottom: calc(100% + 6px); transform-origin: bottom center; }
+.choice-box-group { padding: 10px 12px 4px; color: var(--mtg-muted); font-size: .74rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.choice-box-option {
+  position: relative; padding: 9px 12px 9px 34px; border-radius: 6px; color: var(--mtg-ink); font-size: .95rem; cursor: pointer;
+  transition: background-color .12s, color .12s;
+}
+.choice-box-option.is-placeholder { color: var(--mtg-muted); }
+.choice-box-option.is-active { background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.choice-box-option[aria-selected="true"] { font-weight: 600; color: var(--mtg-blue); }
+.choice-box-option[aria-selected="true"]::before {
+  content: ''; position: absolute; left: 13px; top: 50%; width: 5px; height: 10px; margin-top: -7px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg);
+}
 .field-error { color: var(--mtg-error); font-size: .8rem; margin-top: 4px; }
 .field-ok { color: var(--mtg-success); font-size: .8rem; margin-top: 4px; font-weight: 600; }
 .form-optional { font-weight: 500; font-size: .8rem; color: var(--mtg-muted); }

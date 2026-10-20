@@ -71,7 +71,7 @@
       var input = field(name);
       if (!input) return;
       input.classList.remove('is-invalid');
-      var msg = input.parentNode.querySelector('[data-error-for="' + name + '"]');
+      var msg = (input.closest('.form-group') || input.parentNode).querySelector('[data-error-for="' + name + '"]');
       if (msg) msg.remove();
     }
 
@@ -83,7 +83,7 @@
       msg.className = 'field-error';
       msg.setAttribute('data-error-for', name);
       msg.textContent = text;
-      input.parentNode.appendChild(msg);
+      (input.closest('.form-group') || input.parentNode).appendChild(msg); // after a choice box, not inside it
     }
 
     function setContactError(on) {
@@ -134,6 +134,219 @@
         }
       });
     });
+  });
+})();
+
+// Request form choice boxes ("Bạn quan tâm đến", "Gói dịch vụ", a service's own questions): the list slides open under
+// the box and slides shut, the same in every browser (a browser's own <select> list can't be animated). The real
+// <select> stays in the form, hidden, and is what gets sent; this box only shows it and sets it. Keyboard as a <select>:
+// ↑/↓ (or Enter/Space) open, ↑/↓/Home/End move, Enter/Space choose, Esc/Tab close, typing jumps to an option.
+// Without JS the plain <select> shows. Styles: components.css "Choice boxes".
+(function () {
+  var selects = document.querySelectorAll('.form-card select.form-control');
+  if (!selects.length) return;
+  var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
+  var ms = Math.round(120 + 160 * anim);
+  var fold = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd'); };
+  var uid = 0;
+
+  selects.forEach(function (select) {
+    var id = 'choice-' + (++uid);
+    var label = select.id ? document.querySelector('label[for="' + select.id + '"]') : null;
+    if (!label && select.parentNode.querySelector('label')) label = select.parentNode.querySelector('label');
+    if (label && !label.id) label.id = id + '-label';
+
+    var box = document.createElement('div');
+    box.className = 'choice-box';
+    select.parentNode.insertBefore(box, select);
+    box.appendChild(select);
+    select.classList.add('choice-box-native');
+    select.tabIndex = -1;
+    select.setAttribute('aria-hidden', 'true');
+
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'form-control choice-box-button';
+    button.id = id + '-button';
+    button.setAttribute('role', 'combobox');
+    button.setAttribute('aria-haspopup', 'listbox');
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', id + '-list');
+    if (label) button.setAttribute('aria-labelledby', label.id + ' ' + id + '-value');
+    button.innerHTML = '<span class="choice-box-value" id="' + id + '-value"></span>' +
+      '<svg class="choice-box-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>';
+    var valueEl = button.firstChild;
+    box.appendChild(button);
+
+    var list = document.createElement('div');
+    list.className = 'choice-box-list';
+    list.id = id + '-list';
+    list.setAttribute('role', 'listbox');
+    if (label) list.setAttribute('aria-labelledby', label.id);
+    list.hidden = true;
+    box.appendChild(list);
+
+    // One row per <option>; <optgroup> labels become small headings
+    var options = [];
+    function addOption(opt, parent) {
+      var row = document.createElement('div');
+      row.className = 'choice-box-option' + (opt.value === '' ? ' is-placeholder' : '');
+      row.id = id + '-o' + options.length;
+      row.setAttribute('role', 'option');
+      row.textContent = opt.textContent;
+      parent.appendChild(row);
+      options.push({ opt: opt, row: row, text: fold(opt.textContent.trim()) });
+    }
+    Array.prototype.forEach.call(select.children, function (child) {
+      if (child.tagName === 'OPTGROUP') {
+        var group = document.createElement('div');
+        group.setAttribute('role', 'group');
+        var head = document.createElement('div');
+        head.className = 'choice-box-group';
+        head.id = id + '-g' + list.children.length;
+        head.textContent = child.label;
+        group.setAttribute('aria-labelledby', head.id);
+        group.appendChild(head);
+        list.appendChild(group);
+        Array.prototype.forEach.call(child.children, function (opt) { addOption(opt, group); });
+      } else if (child.tagName === 'OPTION') {
+        addOption(child, list);
+      }
+    });
+
+    var active = -1;
+    var running = null;
+    function chosen() { return Math.max(0, select.selectedIndex); }
+
+    // The box follows the <select>, also when code changes it ("Chọn gói này", the browser restoring the form)
+    function sync() {
+      var i = select.selectedIndex;
+      var opt = select.options[i];
+      valueEl.textContent = opt ? opt.textContent : '';
+      button.classList.toggle('is-placeholder', !opt || opt.value === '');
+      options.forEach(function (o, k) { o.row.setAttribute('aria-selected', k === i ? 'true' : 'false'); });
+    }
+
+    function setActive(i) {
+      if (active >= 0 && options[active]) options[active].row.classList.remove('is-active');
+      active = i;
+      var row = options[i] && options[i].row;
+      if (!row) { button.removeAttribute('aria-activedescendant'); return; }
+      row.classList.add('is-active');
+      button.setAttribute('aria-activedescendant', row.id);
+      // Scroll inside the list only (never the page)
+      if (row.offsetTop < list.scrollTop) list.scrollTop = row.offsetTop - 6;
+      else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight + 6;
+    }
+
+    function isOpen() { return button.getAttribute('aria-expanded') === 'true'; }
+
+    function open() {
+      if (isOpen()) return;
+      if (running) { running.onfinish = null; running.cancel(); running = null; }
+      button.setAttribute('aria-expanded', 'true');
+      box.classList.add('is-open');
+      list.hidden = false;
+      // Opens upward when there is no room below but more above
+      box.classList.remove('is-up');
+      var r = button.getBoundingClientRect();
+      var below = window.innerHeight - r.bottom;
+      if (below < list.offsetHeight + 12 && r.top > below) box.classList.add('is-up');
+      var up = box.classList.contains('is-up');
+      setActive(chosen());
+      if (list.animate) {
+        running = list.animate([
+          { opacity: 0, transform: 'translateY(' + (up ? 8 : -8) + 'px) scaleY(.94)' },
+          { opacity: 1, transform: 'none' }
+        ], { duration: ms, easing: 'cubic-bezier(.2, .8, .3, 1)' });
+        running.onfinish = function () { running = null; };
+        settleAnimation(running, ms);
+      }
+    }
+
+    function close() {
+      if (!isOpen()) return;
+      button.setAttribute('aria-expanded', 'false');
+      button.removeAttribute('aria-activedescendant');
+      box.classList.remove('is-open');
+      if (running) { running.onfinish = null; running.cancel(); running = null; }
+      var up = box.classList.contains('is-up');
+      if (!list.animate) { list.hidden = true; return; }
+      running = list.animate([
+        { opacity: 1, transform: 'none' },
+        { opacity: 0, transform: 'translateY(' + (up ? 6 : -6) + 'px) scaleY(.96)' }
+      ], { duration: Math.round(ms * 0.8), easing: 'cubic-bezier(.4, 0, .6, 1)' });
+      running.onfinish = function () { running = null; list.hidden = true; };
+      settleAnimation(running, ms);
+    }
+
+    function choose(i) {
+      var changed = select.selectedIndex !== options[i].opt.index;
+      select.selectedIndex = options[i].opt.index;
+      sync();
+      if (changed) {
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+
+    // Typing letters jumps to the next option starting with them (accents don't matter), as in a <select>
+    var typed = '';
+    var typedTimer = null;
+    function typeAhead(ch) {
+      typed += fold(ch);
+      clearTimeout(typedTimer);
+      typedTimer = setTimeout(function () { typed = ''; }, 700);
+      var from = isOpen() ? active : chosen();
+      var start = typed.length === 1 ? from + 1 : from;
+      for (var n = 0; n < options.length; n++) {
+        var k = (start + n) % options.length;
+        if (options[k].opt.value !== '' && options[k].text.indexOf(typed) === 0) {
+          if (isOpen()) setActive(k); else choose(k);
+          return;
+        }
+      }
+    }
+
+    button.addEventListener('click', function () { if (isOpen()) close(); else open(); });
+    button.addEventListener('keydown', function (e) {
+      var k = e.key;
+      if (!isOpen()) {
+        if (k === 'ArrowDown' || k === 'ArrowUp' || k === 'Enter' || k === ' ') { e.preventDefault(); open(); }
+        else if (k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); typeAhead(k); }
+        return;
+      }
+      if (k === 'ArrowDown') { e.preventDefault(); setActive(Math.min(options.length - 1, active + 1)); }
+      else if (k === 'ArrowUp') { e.preventDefault(); setActive(Math.max(0, active - 1)); }
+      else if (k === 'Home' || k === 'PageUp') { e.preventDefault(); setActive(0); }
+      else if (k === 'End' || k === 'PageDown') { e.preventDefault(); setActive(options.length - 1); }
+      else if (k === 'Enter' || k === ' ') { e.preventDefault(); if (active >= 0) choose(active); close(); }
+      else if (k === 'Escape') { e.preventDefault(); close(); }
+      else if (k === 'Tab') close();
+      else if (k.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); typeAhead(k); }
+    });
+    // Choosing with the mouse; mousedown is cancelled so the focus stays on the box
+    list.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    list.addEventListener('click', function (e) {
+      var row = e.target.closest('[role="option"]');
+      if (!row) return;
+      choose(options.findIndex(function (o) { return o.row === row; }));
+      close();
+      button.focus();
+    });
+    list.addEventListener('mousemove', function (e) {
+      var row = e.target.closest('[role="option"]');
+      if (row && !row.classList.contains('is-active')) setActive(options.findIndex(function (o) { return o.row === row; }));
+    });
+    document.addEventListener('pointerdown', function (e) { if (isOpen() && !box.contains(e.target)) close(); });
+    button.addEventListener('blur', function () { setTimeout(function () { if (!box.contains(document.activeElement)) close(); }, 0); });
+
+    // Focus sent to the <select> (its label, the form's error check, "Chọn gói này") goes to the box
+    select.addEventListener('focus', function () { sync(); button.focus(); });
+    select.addEventListener('change', sync);
+    window.addEventListener('pageshow', sync);
+    sync();
+    box.classList.add('is-ready');
   });
 })();
 
@@ -320,11 +533,32 @@
   });
 })();
 
+// ☰ menu: slides down when opened; when closed it slides back up first (layout.css: body.nav-closing), then goes
 (function () {
   var toggle = document.getElementById('navToggle');
   if (!toggle) return;
+  var body = document.body;
+  var timer = null;
+  function finish() {
+    clearTimeout(timer);
+    body.classList.remove('nav-open', 'nav-closing');
+  }
   toggle.addEventListener('click', function () {
-    document.body.classList.toggle('nav-open');
+    if (!body.classList.contains('nav-open') || body.classList.contains('nav-closing')) {
+      clearTimeout(timer);
+      body.classList.remove('nav-closing');
+      body.classList.add('nav-open');
+      return;
+    }
+    var nav = document.querySelector('.main-nav');
+    var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
+    body.classList.add('nav-closing');
+    if (nav) nav.addEventListener('animationend', function done(e) {
+      if (e.target !== nav) return;
+      nav.removeEventListener('animationend', done);
+      if (body.classList.contains('nav-closing')) finish();
+    });
+    timer = setTimeout(finish, Math.round(220 * anim) + 250); // in case animationend doesn't come
   });
 })();
 
@@ -342,10 +576,10 @@
     function sync() {
       if (btn) btn.setAttribute('aria-expanded', String(hovered || menu.classList.contains('is-kbd-open')));
     }
-    menu.addEventListener('mouseenter', function () { hovered = true; sync(); });
+    menu.addEventListener('mouseenter', function () { hovered = true; menu.classList.remove('is-shut'); sync(); });
     menu.addEventListener('mouseleave', function () { hovered = false; sync(); });
     menu.addEventListener('focusin', function () {
-      if (keyboard) menu.classList.add('is-kbd-open');
+      if (keyboard) { menu.classList.add('is-kbd-open'); menu.classList.remove('is-shut'); }
       sync();
     });
     menu.addEventListener('focusout', function () {
@@ -357,6 +591,7 @@
     menu.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && menu.classList.contains('is-kbd-open')) {
         menu.classList.remove('is-kbd-open');
+        menu.classList.add('is-shut'); // gone at once (no fade), so the next Tab can't land in the closing menu
         keyboard = false; // returning focus to the title must not reopen the menu
         if (btn) btn.focus();
         sync();
@@ -411,6 +646,7 @@
       var select = document.getElementById('q__package');
       if (!select) return;
       select.value = link.getAttribute('data-choose-package');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
       setTimeout(function () { select.focus({ preventScroll: true }); }, 0);
     });
   });
@@ -635,6 +871,27 @@
   updateArrows();
 })();
 
+// Backstop for the animations below: one that hasn't run by its end (a background tab, a page not being drawn) is
+// jumped to its end, so nothing is left half shown or invisible
+function settleAnimation(a, ms) {
+  setTimeout(function () { if (a && a.playState === 'running') a.finish(); }, ms + 250);
+  return a;
+}
+
+// A tab's newly shown content fades in and rises a little (equipment parts, "Mẫu thiết kế phân khu theo cấp học").
+// items: optional children that follow one after another (the first 8, 30 ms apart). Shorter with "reduced motion".
+function revealIn(el, items) {
+  if (!el || !el.animate) return;
+  var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
+  var opts = { duration: Math.round(180 + 220 * anim), easing: 'cubic-bezier(.2, .8, .3, 1)' };
+  var frames = [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }];
+  if (!items || !items.length) { settleAnimation(el.animate(frames, opts), opts.duration); return; }
+  Array.prototype.forEach.call(items, function (item, i) {
+    var delay = Math.min(i, 7) * 30 * anim;
+    settleAnimation(item.animate(frames, { duration: opts.duration, easing: opts.easing, delay: delay, fill: 'backwards' }), opts.duration + delay);
+  });
+}
+
 // STEM equipment catalog: one Phần per tab (Phần I first, #phan-N opens another) plus a search across every part.
 // Without JS the page keeps showing all parts as one list (the tools and tab panels are only switched on here).
 (function () {
@@ -656,23 +913,29 @@
       .split(/[^a-z0-9]+/).filter(Boolean);
   }
 
-  function select(slug, focus) {
+  // reveal: the part's cards fade in (a tab click or key, not the first load or the end of a search)
+  function select(slug, focus, reveal) {
     var tab = tabs.filter(function (t) { return t.getAttribute('data-tab') === slug; })[0] || tabs[0];
+    var changed = tab.getAttribute('data-tab') !== current;
     current = tab.getAttribute('data-tab');
     tabs.forEach(function (t) {
       var on = t === tab;
       t.setAttribute('aria-selected', on ? 'true' : 'false');
       t.tabIndex = on ? 0 : -1;
     });
-    panels.forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== current; });
+    panels.forEach(function (p) {
+      p.hidden = p.getAttribute('data-panel') !== current;
+      if (!p.hidden && reveal && (changed || reveal === 'always')) revealIn(p, p.querySelectorAll('.card'));
+    });
     if (focus) tab.focus();
     try { history.replaceState(history.state, '', '#' + current); } catch (err) { /* file:// or sandboxed */ }
   }
 
   tabs.forEach(function (tab, i) {
     tab.addEventListener('click', function () {
-      if (input.value) { input.value = ''; search(); } // picking a part ends the search
-      select(tab.getAttribute('data-tab'));
+      var searching = !!input.value;
+      if (searching) { input.value = ''; search(); } // picking a part ends the search
+      select(tab.getAttribute('data-tab'), false, searching ? 'always' : true);
     });
     tab.addEventListener('keydown', function (e) {
       var to = null;
@@ -682,8 +945,9 @@
       else if (e.key === 'End') to = tabs[tabs.length - 1];
       if (!to) return;
       e.preventDefault();
-      if (input.value) { input.value = ''; search(); }
-      select(to.getAttribute('data-tab'), true);
+      var searching = !!input.value;
+      if (searching) { input.value = ''; search(); }
+      select(to.getAttribute('data-tab'), true, searching ? 'always' : true);
     });
   });
 
@@ -732,7 +996,7 @@
   select(tabs.some(function (t) { return t.getAttribute('data-tab') === fromHash; }) ? fromHash : tabs[0].getAttribute('data-tab'));
   window.addEventListener('hashchange', function () {
     var h = window.location.hash.slice(1);
-    if (tabs.some(function (t) { return t.getAttribute('data-tab') === h; })) { input.value = ''; search(); select(h); }
+    if (tabs.some(function (t) { return t.getAttribute('data-tab') === h; })) { input.value = ''; search(); select(h, false, true); }
   });
 })();
 
@@ -791,24 +1055,26 @@ document.addEventListener('contextmenu', function (e) {
     var list = wrap.querySelector('[role="tablist"]');
     var tabs = Array.prototype.slice.call(list.querySelectorAll('[role="tab"]'));
     var panels = Array.prototype.slice.call(wrap.querySelectorAll('[role="tabpanel"]'));
-    function select(i, focus) {
+    // reveal: the shown picture and its description fade in (a tab click or key, not the first load)
+    function select(i, focus, reveal) {
       tabs.forEach(function (tab, k) {
         var on = k === i;
         tab.setAttribute('aria-selected', on ? 'true' : 'false');
         tab.tabIndex = on ? 0 : -1;
+        if (on && reveal && panels[k].hidden) revealIn(panels[k], panels[k].children);
         panels[k].hidden = !on;
         if (!on) panels[k].querySelectorAll('video').forEach(function (v) { v.pause(); });
       });
       if (focus) tabs[i].focus();
     }
     tabs.forEach(function (tab, i) {
-      tab.addEventListener('click', function () { select(i); });
+      tab.addEventListener('click', function () { select(i, false, true); });
       tab.addEventListener('keydown', function (e) {
         var to = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
           : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
         if (to < 0) return;
         e.preventDefault();
-        select(to, true);
+        select(to, true, true);
       });
     });
     list.hidden = false;
@@ -958,31 +1224,36 @@ document.addEventListener('contextmenu', function (e) {
   });
 })();
 
-// Giải pháp cards: "Xem chi tiết" slides its text open and closed instead of jumping. A click during the slide turns it
-// around. Without JS the <details> still opens, just at once; with "reduced motion" the slide stays, only shorter (--anim).
+// Folds slide open and closed instead of jumping: "Xem chi tiết" on Giải pháp cards, folded sections ("Các căn cứ và
+// tiêu chuẩn…") and the questions on the Dịch vụ pages. A click during the slide turns it around. Without JS the
+// <details> still opens, just at once; with "reduced motion" the slide stays, only shorter (--anim).
 (function () {
-  var folds = document.querySelectorAll('details.card-more');
+  var folds = document.querySelectorAll('details.card-more, details.solution-fold, details.faq-item');
   if (!folds.length || !Element.prototype.animate) return;
   var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
   var ms = Math.round(180 + 220 * anim);
   folds.forEach(function (fold) {
     var summary = fold.querySelector('summary');
-    var body = fold.querySelector('.card-more-body');
+    var body = fold.querySelector('.card-more-body, .solution-fold-body, .prose-text');
     if (!summary || !body) return;
     var running = null;
     var closing = false;
+    // The body's own top/bottom padding slides with it, so nothing is left showing while it is closed
     function slide(from, to, done) {
       var full = body.scrollHeight || 1;
+      var cs = getComputedStyle(body);
+      var pad = function (h, side) { return Math.min(parseFloat(cs[side]) || 0, h / 2) + 'px'; };
       body.classList.add('is-animating');
       running = body.animate([
-        { height: from + 'px', opacity: Math.min(1, from / full) },
-        { height: to + 'px', opacity: Math.min(1, to / full) }
+        { height: from + 'px', paddingTop: pad(from, 'paddingTop'), paddingBottom: pad(from, 'paddingBottom'), opacity: Math.min(1, from / full) },
+        { height: to + 'px', paddingTop: pad(to, 'paddingTop'), paddingBottom: pad(to, 'paddingBottom'), opacity: Math.min(1, to / full) }
       ], { duration: ms, easing: 'cubic-bezier(.2, .8, .3, 1)' });
       running.onfinish = function () {
         running = null;
         body.classList.remove('is-animating');
         if (done) done();
       };
+      settleAnimation(running, ms);
     }
     summary.addEventListener('click', function (e) {
       e.preventDefault();
