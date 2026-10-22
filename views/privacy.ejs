@@ -1,0 +1,26 @@
+<%- include('partials/header', { title: t('privacy.title') + ' - MTG' }) %>
+
+<%- include('partials/page-banner', {
+  pill: 'MTG',
+  heading: t('privacy.title'),
+  bannerKey: 'privacy'
+}) %>
+
+<section class="section">
+  <div class="container">
+    <%# Plain text (lib/privacy-policy.js or the admin's own text); a paragraph that is only a short numbered line
+        ("1. Chúng tôi là ai") becomes a section heading %>
+    <div class="prose-text privacy-text" data-privacy-text>
+      <% String(policy).replace(/\r\n?/g, '\n').split(/\n\s*\n/).forEach(function (block) {
+           const b = block.trim();
+           if (!b) return;
+           if (/^\d{1,2}\.\s+[^\n]{1,80}$/.test(b)) { %>
+        <h2><%= b %></h2>
+      <% } else { %>
+        <%- formatText(b) %>
+      <% } }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -12,13 +12,14 @@ const User = require('../models/User');
 const SiteSettings = require('../models/SiteSettings');
 
 const { requireAdmin } = require('../middleware/auth');
-const { uploadMedia, uploadServiceMedia, uploadPageMedia, uploadSingleImage, uploadSettingsImages, fileUrl, fileUrls, wrapUpload, removeLocalUpload, removeLocalMedia, PAGE_MEDIA_PREFIX } = require('../middleware/upload');
+const { uploadMedia, uploadServiceMedia, uploadPageMedia, uploadSingleImage, uploadSettingsImages, fileUrl, fileUrls, wrapUpload, removeLocalUpload, removeUpload, removeLocalMedia, PAGE_MEDIA_PREFIX } = require('../middleware/upload');
 const { clearSiteSettingsCache } = require('../lib/settings');
 const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
 const { isNonEmpty } = require('../lib/validators');
 const { canDeleteUser, canChangeRole } = require('../lib/roles');
 const { getDashboardData } = require('../lib/dashboard');
 const { toPlainText, slugify } = require('../lib/text');
+const { defaultPolicy } = require('../lib/privacy-policy');
 const { PRODUCT_SECTIONS, sectionForCategory } = require('../lib/admin-sections');
 const { parseServiceSections } = require('../lib/service-content');
 const SolutionPage = require('../models/SolutionPage');
@@ -604,7 +605,7 @@ router.post('/nguoi-dung/:id/xoa', async (req, res) => {
   await QuoteRequest.updateMany({ user: target._id }, { $set: { user: null } });
   // Log them out everywhere: connect-mongo stores each session as a JSON string
   await mongoose.connection.collection('sessions').deleteMany({ session: { $regex: `"userId":"${target._id}"` } });
-  removeLocalUpload(target.avatar);
+  removeUpload(target.avatar); // also the Cloudinary copy
   await User.deleteOne({ _id: target._id });
   done(req, res, 'admin.flash.userDeleted', { name: target.name }, safeBack(req, '/admin/nguoi-dung'));
 });
@@ -698,16 +699,26 @@ router.post('/cai-dat', wrapUpload(uploadSettingsImages, async (req, res) => {
 }));
 
 // ---- Thông tin công ty (Về MTG & Liên hệ): company profile + contact details ----
+// The Chính sách bảo mật boxes start with the default draft, filled with the current contact details
+const privacyDefaults = (settings) => ({ vi: defaultPolicy('vi', settings), en: defaultPolicy('en', settings) });
+
 router.get('/thong-tin-cong-ty', async (req, res) => {
-  res.render('admin/settings', { settings: settingsView(await loadSettings()), error: null });
+  const settings = await loadSettings();
+  res.render('admin/settings', { settings: settingsView(settings), privacyDefault: privacyDefaults(settings), error: null });
 });
 
 router.post('/thong-tin-cong-ty', async (req, res) => {
   const settings = await loadSettings();
-  const { companyProfile, companyProfileEn, address, phone, email, mapEmbedUrl } = req.body;
+  const { companyProfile, companyProfileEn, privacyPolicy, privacyPolicyEn, address, phone, email, mapEmbedUrl } = req.body;
   // Plain text only: any tags typed or pasted in are stripped; the About page formats the paragraphs
   settings.companyProfile = toPlainText(companyProfile);
   settings.companyProfileEn = toPlainText(companyProfileEn);
+  // The draft sent back unchanged is stored as empty, so the page keeps following the contact details.
+  // A post without the boxes (an older form) leaves the saved policy alone.
+  const before = privacyDefaults(settings);
+  const ownText = (sent, draft) => (toPlainText(sent) === toPlainText(draft) ? '' : toPlainText(sent));
+  if (typeof privacyPolicy === 'string') settings.privacyPolicy = ownText(privacyPolicy, before.vi);
+  if (typeof privacyPolicyEn === 'string') settings.privacyPolicyEn = ownText(privacyPolicyEn, before.en);
   settings.contactInfo = {
     address: (address || '').trim(),
     phone: (phone || '').trim(),

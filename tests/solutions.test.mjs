@@ -119,7 +119,7 @@ await suite(async (b) => {
       const foot = html.slice(html.lastIndexOf('<footer'));
       check(`footer Quick Links on ${p}: Giải pháp → /giai-phap`, /<a href="\/giai-phap">Giải pháp<\/a>/.test(foot) && !/href="\/giai-phap\/stem-lab">Giải pháp/.test(foot));
     }
-    check('BANNERS has the "solutions" entry first in the Giải pháp group', BANNERS.filter((x) => x.group === 'solutions')[0].key === 'solutions' && BANNERS.length === 12);
+    check('BANNERS has the "solutions" entry first in the Giải pháp group', BANNERS.filter((x) => x.group === 'solutions')[0].key === 'solutions' && BANNERS.length === 13);
     // Admin banner card + override round-trip
     await b.login(admin.sid);
     await nav('/admin/cai-dat?tab=banners', 500);
@@ -127,7 +127,7 @@ await suite(async (b) => {
       return { exists: !!card, view: card && card.querySelector('a[href="/giai-phap"]') ? true : false, placeholder: (document.getElementById('bannerVi_solutions') || {}).placeholder,
         firstInGroup: !!g && card && (g.nextElementSibling === card || (g.nextElementSibling && g.nextElementSibling.firstElementChild === card)), tabCount: (document.querySelector('[data-tab="banners"]') || {}).textContent }; })()`);
     check('Cài đặt chung → Banner các trang: "Giải pháp" card first in its group, default as placeholder, "Xem trang" → /giai-phap',
-      adminCard.exists && adminCard.view && adminCard.firstInGroup && adminCard.placeholder === bannerFor(settings, 'solutions', 'vi').subtitle && /12/.test(adminCard.tabCount), adminCard);
+      adminCard.exists && adminCard.view && adminCard.firstInGroup && adminCard.placeholder === bannerFor(settings, 'solutions', 'vi').subtitle && (adminCard.tabCount || '').replace(/\s+/g, ' ').trim().endsWith(' ' + BANNERS.length), adminCard);
     const saveForm = async () => { const l = b.waitLoad(); await ev(`document.querySelector('.page-form-actions button[type=submit], form button[type=submit].btn-primary').click()`); await l; await sleep(400); };
     const heroLine = async () => decode(((await page('/giai-phap')).match(/<section class="page-hero[^"]*"[^>]*>[\s\S]*?<p>([^<]*)<\/p>/) || [])[1] || '');
     await ev(`(() => { const el = document.getElementById('bannerVi_solutions'); el.value = 'ZZ Dòng giới thiệu giải pháp'; el.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);

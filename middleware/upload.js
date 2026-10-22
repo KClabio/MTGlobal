@@ -177,6 +177,16 @@ function removeLocalUpload(url) {
   require('fs').promises.unlink(file).catch(() => {});
 }
 
+// A personal photo (avatar) is deleted wherever it is stored: the local file, or the copy on Cloudinary.
+// Google photos and other addresses are left alone; a Cloudinary error is only logged.
+function removeUpload(url) {
+  if (!useCloudinary) return removeLocalUpload(url);
+  const asset = require('../lib/cloudinary-storage').cloudinaryPublicId(url, process.env.CLOUDINARY_CLOUD_NAME);
+  if (!asset) return;
+  cloudinary.uploader.destroy(asset.publicId, { resource_type: asset.resourceType })
+    .catch((err) => console.error('Cloudinary delete failed:', asset.publicId, err.message));
+}
+
 function friendlyUploadError(err) {
   if (err && err.code === 'LIMIT_FILE_SIZE') {
     return 'File quá dung lượng cho phép.';
@@ -211,6 +221,7 @@ module.exports = {
   AVATAR_MAX_BYTES,
   isRealImageFile,
   removeLocalUpload,
+  removeUpload,
   fileUrl,
   fileUrls,
   friendlyUploadError,

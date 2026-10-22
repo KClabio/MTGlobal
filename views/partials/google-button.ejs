@@ -5,4 +5,6 @@
     <%- include('google-logo', { size: 18 }) %>
     <span><%= t(typeof label !== 'undefined' ? label : 'auth.googleButton') %></span>
   </a>
+  <%# No form to tick: continuing with Google is the consent for a new account (routes/auth.js) %>
+  <p class="form-hint google-consent" data-google-consent><%= t('privacy.googleNotice') %> <a href="/chinh-sach-bao-mat" target="_blank" rel="noopener"><%= t('privacy.title') %></a>.</p>
 <% } %>

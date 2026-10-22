@@ -2,11 +2,33 @@
 
 All notable changes to the MTGlobal website are listed here, newest first.
 
-Each commit published to GitHub is one version: the first commit is **1.0.0** and every later commit adds one to the last number (1.0.1, 1.0.2, …). The format follows [Keep a Changelog](https://keepachangelog.com/). From 1.0.10 on, versions with visible changes include screenshots.
+Each commit published to GitHub is one version: the first commit is **1.0.0** and every later commit adds one to the last number (1.0.1, 1.0.2, …); a bigger step marks a milestone (1.1.0: every security, critical and major fix from the pre-launch test). The format follows [Keep a Changelog](https://keepachangelog.com/). From 1.0.10 on, versions with visible changes include screenshots.
 
 ---
 
-## [1.0.14] - 2026-10-22
+## [1.1.0] - 2026-10-23
+
+With this version, every security, critical and major problem found by the pre-launch test is fixed (the security fixes came in 1.0.14). Only small items remain.
+
+### Added
+- **"Chính sách bảo mật" page** (Vietnamese and English), written for Decree 13/2023 on personal data: what is collected, why, who sees it, how long it is kept and your rights. Staff can edit it in Admin → Thông tin công ty. It is linked in the footer and listed for search engines.
+  ![The Chính sách bảo mật page](docs/screenshots/1.1.0/privacy-page.jpg)
+- **"Tôi đồng ý với Chính sách bảo mật" tick**, required on sign-up and on every request form; the time of consent is saved with the account or request. Under "Đăng nhập bằng Google", a line says that continuing means agreeing.
+  ![The consent tick on the request form](docs/screenshots/1.1.0/consent-tick.jpg)
+- **"Dữ liệu của bạn" on Hồ sơ:** "Tải dữ liệu của tôi" downloads a copy of everything the website stores about you (your account and the requests you sent). "Xóa tài khoản" deletes the account, its photo, its requests and its logins on every device, after you type your password (or your email, for a Google account). Staff accounts are deleted by an owner in Admin → Người dùng.
+  ![Xóa tài khoản asks for the password first](docs/screenshots/1.1.0/account-delete-confirm.jpg)
+- **Old requests are deleted automatically** 24 months after their last change, as the policy says. Admin → Yêu cầu shows this rule.
+
+### Changed
+- **Light ↔ dark now fades** softly instead of jumping, on the website and in the admin (shorter when the device asks for less motion). The account menu stays open while you switch.
+- **VI ↔ EN now fades** from one language to the other and keeps your place on the page (Chrome, Edge and Safari; Firefox reloads as before, still keeping your place).
+- Personal photos stored on Cloudinary are now deleted too when the photo or the account is removed.
+
+### Fixed
+- On iPhone, iPad and Mac (Safari), buttons and form fields showed in Times instead of the site font.
+- Screen readers could not name the fields of the request forms and of Hồ sơ; every field is now connected to its label, and clicking a label puts the cursor in its box.
+
+## [1.0.14] - 2026-10-22 · `f84e03b`
 
 ### Added
 - **"Website đang tạm gián đoạn" page:** if the database stops, every page answers within a second with a short notice instead of hanging for 30 seconds, and the website comes back by itself a few seconds after the database returns.

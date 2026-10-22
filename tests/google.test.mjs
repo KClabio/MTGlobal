@@ -43,6 +43,7 @@ await suite(async (b) => {
     check('/dang-nhap: "Đăng nhập bằng Google" under the form, after "hoặc"', /class="auth-divider"><span>hoặc<\/span>/.test(r.text) && /href="\/dang-nhap\/google" data-google-login>[\s\S]*?Đăng nhập bằng Google/.test(r.text));
     r = await v.go('/dang-ky');
     check('/dang-ky: "Đăng ký bằng Google"', /data-google-login>[\s\S]*?Đăng ký bằng Google/.test(r.text));
+    check('under the Google button: continuing means agreeing to the Chính sách bảo mật (linked)', /data-google-consent>Khi tiếp tục với Google, bạn đồng ý với <a href="\/chinh-sach-bao-mat"/.test(r.text));
     r = await v.go('/dang-nhap/google');
     const to = r.location ? new URL(r.location) : null;
     check('the button leads to Google with this site\'s address to come back to, a state, and "choose an account"', r.status === 302 && to && to.port === String(FAKE_GOOGLE_PORT)
@@ -58,6 +59,7 @@ await suite(async (b) => {
     check('first Google login: Trang chủ, logged in', r.status === 303 && r.location === '/', r);
     check('… a customer account with the Google name, email and a sharper (256 px) photo, no password', u && u.googleId === SUB && u.role === 'customer' && u.name === 'ZZ Google Một'
       && u.avatar === `http://localhost:${FAKE_GOOGLE_PORT}/photo/one=s256-c` && !u.passwordHash && (u.avatarMode || '') === '', u);
+    check('… with the time of consent (continuing with Google)', u && u.privacyAcceptedAt instanceof Date && Date.now() - u.privacyAcceptedAt < 60000, u && u.privacyAcceptedAt);
     r = await v.go('/');
     check('… and Trang chủ says "Đăng nhập thành công. Xin chào, ZZ Google Một!"', r.text.includes('data-site-toast') && r.text.includes('Xin chào, ZZ Google Một!'));
 
@@ -177,5 +179,20 @@ await suite(async (b) => {
     const p = await b.ev(`({ name: document.querySelector('[data-google-name]').readOnly, photo: document.querySelector('.avatar-lg').tagName, note: !!document.querySelector('[data-google-note]'), del: !!document.querySelector('[data-avatar-delete]') })`);
     check('profile in the browser: name read only, Google photo, note, "Xóa ảnh"', p.name && p.photo === 'IMG' && p.note && p.del, p);
     await b.shot('google-profile');
+  });
+
+  await part(b, '"Xóa tài khoản" for a Google account (no password: the email confirms)', async () => {
+    const DEL_EMAIL = `zztest-google-delete-${stamp}@example.com`;
+    const v = visitor();
+    setNextProfile({ sub: `g-${stamp}-delete`, email: DEL_EMAIL, name: 'ZZ Google Xoá', picture: PHOTO('delete') });
+    await v.google();
+    let r = await v.go('/ho-so');
+    check('profile: the box asks for the email address (not a password)', r.text.includes('data-account-delete') && r.text.includes('Nhập địa chỉ email của bạn để xác nhận') && /type="email" id="deleteConfirm" name="confirm"/.test(r.text));
+    r = await v.go('/ho-so/xoa-tai-khoan', { method: 'POST', body: new URLSearchParams({ confirm: 'someone@example.com' }) });
+    check('another email: refused (400), the box opens again with "Email chưa khớp…", account kept', r.status === 400 && r.text.includes('data-open-now') && r.text.includes('Email chưa khớp với email của tài khoản.') && !!(await users.findOne({ email: DEL_EMAIL })));
+    r = await v.go('/ho-so/xoa-tai-khoan', { method: 'POST', body: new URLSearchParams({ confirm: '  ' + DEL_EMAIL.toUpperCase() + ' ' }) });
+    check('its own email (any case, spaces): deleted, back to Trang chủ', r.status === 302 && r.location === '/' && !(await users.findOne({ email: DEL_EMAIL })), r.status);
+    r = await v.go('/');
+    check('… which says "Đã xoá tài khoản." once, logged out', r.text.includes('data-deleted-notice') && r.text.includes('Đã xoá tài khoản.') && !r.text.includes('action="/dang-xuat"'));
   });
 }); // suite() exits the process, which also stops the fake Google

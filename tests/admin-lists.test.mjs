@@ -48,7 +48,7 @@ await suite(async (b) => {
     const id = {};
     for (const n of names) {
       c[n] = client();
-      const r = await c[n].req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1' }) });
+      const r = await c[n].req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
       if (r.status !== 303) throw new Error(`register ${n} failed: ${r.status}`);
       await c[n].req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'secret1' }) }); // signing up doesn't log in
       id[n] = String((await users.findOne({ email: mail(n) }))._id);
@@ -146,7 +146,7 @@ await suite(async (b) => {
     };
     const adminC = client(), ownerC = client();
     for (const [c, n] of [[adminC, 'admin'], [ownerC, 'owner']]) {
-      await c.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1' }) });
+      await c.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
       await c.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'secret1' }) });
       await d.collection('users').updateOne({ email: mail(n) }, { $set: { role: n } });
     }
@@ -196,7 +196,7 @@ await suite(async (b) => {
     const evil = await fetch(BASE + `/admin/yeu-cau/${reqDoc.insertedId}/trang-thai`, { method: 'POST', body: new URLSearchParams({ status: 'moi' }), redirect: 'manual', headers: { cookie: adminC.cookie(), referer: 'https://evil.example/phish' } });
     check('an outside Referer is ignored (no open redirect)', evil.headers.get('location') === '/admin/yeu-cau', evil.headers.get('location'));
     const cust = client();
-    await cust.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: 'ZZ cust', email: mail('cust'), password: 'secret1', confirmPassword: 'secret1' }) });
+    await cust.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: 'ZZ cust', email: mail('cust'), password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
     await cust.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('cust'), password: 'secret1' }) });
     const custId = await id('users', { email: mail('cust') });
     r = await ownerC.act(`/admin/nguoi-dung/${custId}/vai-tro`, new URLSearchParams({ role: 'admin' }));

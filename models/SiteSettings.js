@@ -25,6 +25,9 @@ const siteSettingsSchema = new mongoose.Schema({
   },
   companyProfile: { type: String, default: '' }, // Vietnamese
   companyProfileEn: { type: String, default: '' },
+  // Chính sách bảo mật (/chinh-sach-bao-mat): empty = the default draft of lib/privacy-policy.js
+  privacyPolicy: { type: String, default: '' }, // Vietnamese
+  privacyPolicyEn: { type: String, default: '' },
   contactInfo: {
     address: { type: String, default: '' },
     phone: { type: String, default: '' },

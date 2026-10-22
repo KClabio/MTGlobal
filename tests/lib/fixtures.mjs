@@ -20,7 +20,7 @@ export async function db() {
 export async function createUser(tag, role = 'admin') {
   const email = `zztest-${tag}-${STAMP}@example.com`;
   const password = 'secret1';
-  const res = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: `ZZ ${tag}`, email, password, confirmPassword: password }) });
+  const res = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: `ZZ ${tag}`, email, password, confirmPassword: password, agreePrivacy: '1' }) });
   if (res.status !== 303) throw new Error(`register failed for ${email} (HTTP ${res.status})`);
   // Signing up doesn't log in: log in like a visitor would
   const login = await fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ email, password }) });

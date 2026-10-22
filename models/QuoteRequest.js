@@ -18,6 +18,7 @@ const quoteRequestSchema = new mongoose.Schema({
   status: { type: String, enum: ['moi', 'da_lien_he', 'hoan_tat'], default: 'moi' }, // see STATUSES below
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   editedAt: { type: Date, default: null }, // last change by the sender ("Yêu cầu của tôi" → Sửa); staff see "Đã sửa lúc …"
+  privacyAcceptedAt: { type: Date, default: null }, // when the sender ticked "Tôi đồng ý với Chính sách bảo mật" (sent or changed)
   // Answers to a service's own questions, copied at submit time so they still read correctly after the questions change
   details: [{
     _id: false,

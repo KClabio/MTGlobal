@@ -93,7 +93,7 @@
     }
 
     form.addEventListener('submit', function (e) {
-      ['name', 'phone', 'email', 'message'].forEach(clearError);
+      ['name', 'phone', 'email', 'message', 'agreePrivacy'].forEach(clearError);
       setContactError(false);
       var invalid = [];
 
@@ -114,6 +114,9 @@
         else if (v && input.hasAttribute('data-answer-number') && !NUMBER_RE.test(v)) { setError(input.name, form.dataset.errNumber); invalid.push(input.name); }
       });
 
+      // "Tôi đồng ý với Chính sách bảo mật" must be ticked (checked again on the server: lib/quote-request.js)
+      if (field('agreePrivacy') && !field('agreePrivacy').checked) { setError('agreePrivacy', form.dataset.errAgree); invalid.push('agreePrivacy'); }
+
       if (invalid.length) {
         e.preventDefault();
         field(invalid[0]).focus();
@@ -123,6 +126,7 @@
     form.querySelectorAll('[data-required-answer], [data-answer-number]').forEach(function (input) {
       input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', function () { clearError(input.name); });
     });
+    if (field('agreePrivacy')) field('agreePrivacy').addEventListener('change', function () { clearError('agreePrivacy'); });
 
     ['name', 'phone', 'email', 'message'].forEach(function (name) {
       if (!field(name)) return;
@@ -356,12 +360,15 @@
   var PHONE_RE = /^[0-9+()\-.\s]{8,20}$/;
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   var PASSWORD_MIN = 6;
-  var FIELDS = ['name', 'email', 'phone', 'password', 'confirmPassword'];
+  var FIELDS = ['name', 'email', 'phone', 'password', 'confirmPassword', 'agreePrivacy'];
 
   document.querySelectorAll('[data-register-form]').forEach(function (form) {
     var d = form.dataset;
     var input = function (name) { return form.elements[name]; };
-    var value = function (name) { return name === 'password' || name === 'confirmPassword' ? input(name).value : input(name).value.trim(); };
+    var value = function (name) {
+      if (name === 'agreePrivacy') return input(name).checked ? '1' : ''; // the Chính sách bảo mật tick
+      return name === 'password' || name === 'confirmPassword' ? input(name).value : input(name).value.trim();
+    };
     var touched = {};
 
     function problem(name) {
@@ -371,6 +378,7 @@
       if (name === 'phone') return !v || PHONE_RE.test(v) ? '' : d.errPhone;
       if (name === 'password') return !v ? d.errPasswordRequired : v.length < PASSWORD_MIN ? d.errPasswordLength : '';
       if (name === 'confirmPassword') return !v ? d.errConfirmRequired : value('password') && v !== value('password') ? d.errPasswordMatch : '';
+      if (name === 'agreePrivacy') return v ? '' : d.errAgree;
       return '';
     }
 
@@ -520,9 +528,28 @@
       confirmBox.close();
       removeForm.submit();
     });
-    confirmBox.addEventListener('click', function (e) { // a click on the dimmed page around the box closes it
-      var r = confirmBox.getBoundingClientRect();
-      if (e.target === confirmBox && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) confirmBox.close();
+    closeOnBackdrop(confirmBox);
+  }
+
+  // "Xóa tài khoản": the box asks for the password (or the email of a Google account) and sends its own form.
+  // After a wrong answer the page comes back with the box open again (data-open-now) and the error in it.
+  var deleteButton = document.querySelector('[data-account-delete]');
+  var accountBox = document.querySelector('[data-account-confirm]');
+  if (deleteButton && accountBox && typeof accountBox.showModal === 'function') {
+    var confirmField = accountBox.querySelector('[name="confirm"]');
+    var openAccountBox = function () { accountBox.showModal(); confirmField.focus(); };
+    deleteButton.addEventListener('click', openAccountBox);
+    accountBox.querySelector('[data-confirm-cancel]').addEventListener('click', function () { accountBox.close(); deleteButton.focus(); });
+    closeOnBackdrop(accountBox);
+    if (accountBox.hasAttribute('data-open-now')) openAccountBox();
+  } else if (accountBox) {
+    accountBox.setAttribute('open', ''); // no <dialog> support: the form simply shows on the page
+  }
+
+  function closeOnBackdrop(box) { // a click on the dimmed page around the box closes it
+    box.addEventListener('click', function (e) {
+      var r = box.getBoundingClientRect();
+      if (e.target === box && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) box.close();
     });
   }
 
@@ -1398,7 +1425,34 @@ document.addEventListener('contextmenu', function (e) {
     var saved = { path: location.pathname, count: list.length, idx: idx, ratio: window.scrollY / scrollable(), at: Date.now(),
       offset: idx >= 0 ? list[idx].getBoundingClientRect().top - line : 0, top: window.scrollY };
     try { sessionStorage.setItem(KEY, JSON.stringify(saved)); } catch (err) { /* storage unavailable */ }
+    // Fade into the other language (where the browser can fade between pages): this page asks for it only now,
+    // the next page asks for it because it was opened with ?lang= (partials/header.ejs). Other links stay plain loads.
+    var fade = document.createElement('style');
+    fade.setAttribute('data-lang-fade', '');
+    fade.textContent = '@view-transition { navigation: auto; }';
+    document.head.appendChild(fade);
+    document.documentElement.classList.add('lang-fading');
   });
+  // Coming back to this page with the browser's Back: it must not fade into the next link
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    document.querySelectorAll('style[data-lang-fade]').forEach(function (s) { s.remove(); });
+    document.documentElement.classList.remove('lang-fading');
+  });
+  // The new page: once faded in, the header goes back to normal and the page stops asking for a fade
+  // (so its own links are plain page loads again)
+  if (document.documentElement.classList.contains('lang-fading')) {
+    var settle = function () {
+      document.documentElement.classList.remove('lang-fading');
+      document.querySelectorAll('style[data-lang-fade]').forEach(function (s) { s.remove(); });
+    };
+    window.addEventListener('pagereveal', function (e) {
+      if (!e.viewTransition) return settle();
+      e.viewTransition.ready.catch(function () { /* skipped: nothing to fade */ });
+      e.viewTransition.finished.then(settle, settle);
+    });
+    setTimeout(settle, 1500); // browsers without page fades
+  }
 
   var saved = null;
   try { saved = JSON.parse(sessionStorage.getItem(KEY) || 'null'); sessionStorage.removeItem(KEY); } catch (err) { /* storage unavailable */ }

@@ -10,6 +10,7 @@ const connectDB = require('./config/db');
 const { loadUser } = require('./middleware/auth');
 const { loadLanguage } = require('./lib/i18n');
 const { loadSiteSettings } = require('./lib/settings');
+const { startRetention } = require('./lib/retention');
 
 const indexRoutes = require('./routes/index');
 const authRoutes = require('./routes/auth');
@@ -124,8 +125,14 @@ app.use((req, res, next) => {
   next();
 });
 // Right after logging in (routes/auth.js): the next page shows "Đăng nhập thành công" once (partials/footer.ejs)
+// (and right after "Xóa tài khoản": "Tài khoản của bạn đã được xoá" once)
 app.use((req, res, next) => {
   res.locals.loginNotice = null;
+  res.locals.deletedNotice = false;
+  if (req.session && req.session.accountDeleted && req.method === 'GET' && req.accepts('html')) {
+    res.locals.deletedNotice = true;
+    delete req.session.accountDeleted;
+  }
   if (req.session && req.session.justLoggedIn && req.method === 'GET' && req.accepts('html') && req.user) {
     res.locals.loginNotice = req.user.name;
     delete req.session.justLoggedIn;
@@ -151,6 +158,7 @@ app.use((err, req, res, next) => {
 
 connectDB()
   .then(() => {
+    startRetention(); // deletes requests older than 24 months, now and daily
     app.listen(PORT, () => {
       console.log(`MTGlobal server running at http://localhost:${PORT}`);
     });

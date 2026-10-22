@@ -8,7 +8,11 @@ export class Client {
     const h = { accept: 'text/html', ...headers };
     if (this.cookies.size) h.cookie = this.cookieHeader();
     let payload = body;
-    if (body && !(body instanceof FormData) && typeof body === 'object' && !(body instanceof URLSearchParams)) payload = new URLSearchParams(body);
+    if (body && !(body instanceof FormData) && typeof body === 'object' && !(body instanceof URLSearchParams)) {
+      // Like a real visitor, tick "Tôi đồng ý với Chính sách bảo mật" on sign-up and request forms (unless a scenario sets it)
+      const consentForm = method === 'POST' && /^\/(dang-ky|lien-he|san-pham\/[^/]+\/yeu-cau|dich-vu\/[^/]+\/yeu-cau|tai-khoan\/yeu-cau\/[^/]+\/sua)(\?|$)/.test(pathname);
+      payload = new URLSearchParams(consentForm ? { agreePrivacy: '1', ...body } : body);
+    }
     const t0 = performance.now();
     const res = await fetch(this.base + pathname, { method, body: payload, headers: h, redirect, signal: AbortSignal.timeout(timeout) });
     for (const c of res.headers.getSetCookie()) {

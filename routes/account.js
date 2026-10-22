@@ -49,7 +49,7 @@ router.post('/yeu-cau/:id/sua', async (req, res) => {
   const { name, phone, email, schoolOrCompany, message, interestedIn } = values;
   const updated = await QuoteRequest.updateOne(
     { _id: request._id, user: req.user._id, status: EDITABLE },
-    { $set: { name, phone, email, schoolOrCompany, message, interestedIn, editedAt: new Date() } },
+    { $set: { name, phone, email, schoolOrCompany, message, interestedIn, editedAt: new Date(), privacyAcceptedAt: new Date() } },
   );
   if (!updated.matchedCount) return res.redirect(303, '/tai-khoan?khoa=1');
   res.redirect(303, `/tai-khoan?da-sua=${request._id}`);

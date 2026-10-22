@@ -11,6 +11,7 @@ body {
   background: var(--mtg-bg);
   line-height: 1.6;
 }
+button, input, select, textarea { font-family: inherit; } /* browsers don't pass the page font on to these (Safari shows Times) */
 img { max-width: 100%; display: block; }
 a { color: var(--mtg-blue); text-decoration: none; }
 h1, h2, h3, h4 { margin: 0 0 .5em; line-height: 1.25; color: var(--mtg-heading); }
@@ -41,3 +42,18 @@ ul { padding-left: 1.2em; }
 /* Chart intro animations play on open; when the device asks for less motion they still play, just quicker */
 :root { --anim: 1; }
 @media (prefers-reduced-motion: reduce) { :root { --anim: .4; } }
+
+/* Light/dark switch (theme.js): the page fades from the old colours to the new ones.
+   With view transitions: the browser's cross-fade, timed here. Without: every colour eases for that one switch. */
+:root.theme-switching::view-transition-group(*),
+:root.theme-switching::view-transition-old(*),
+:root.theme-switching::view-transition-new(*) { animation-duration: calc(.35s * var(--anim)); animation-timing-function: ease; }
+:root.theme-fading, :root.theme-fading *, :root.theme-fading *::before, :root.theme-fading *::after {
+  transition: background-color calc(.3s * var(--anim)) ease, color calc(.3s * var(--anim)) ease, border-color calc(.3s * var(--anim)) ease,
+    fill calc(.3s * var(--anim)) ease, stroke calc(.3s * var(--anim)) ease, box-shadow calc(.3s * var(--anim)) ease !important;
+}
+/* VI <-> EN (main.js + partials/header.ejs): the old text fades into the new one; the header is held still */
+:root.lang-fading .site-header { view-transition-name: site-header; }
+:root.lang-fading::view-transition-group(*),
+:root.lang-fading::view-transition-old(*),
+:root.lang-fading::view-transition-new(*) { animation-duration: calc(.3s * var(--anim)); animation-timing-function: ease; }

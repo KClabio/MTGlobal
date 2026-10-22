@@ -13,6 +13,7 @@ const { getSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS 
 const { groupProjectsByLevel } = require('../lib/project-levels');
 const { buildHomeDomains, buildSolutionCards, buildServiceCards } = require('../lib/home-domains');
 const { groupEquipmentByPart, partSlug } = require('../lib/equipment-parts');
+const { policyText } = require('../lib/privacy-policy');
 
 const ROBOT_CATEGORIES = [
   'robot-leo-cau-thang',
@@ -36,6 +37,12 @@ router.get('/', async (req, res) => {
 router.get('/ve-mtg', async (req, res) => {
   const partners = await Partner.find().sort({ order: 1, _id: 1 }).lean();
   res.render('about', { partners });
+});
+
+// Chính sách bảo mật: the admin's text (Thông tin công ty) or the default draft of lib/privacy-policy.js
+router.get('/chinh-sach-bao-mat', (req, res) => {
+  const { settings, lang } = res.locals;
+  res.render('privacy', { policy: policyText(lang, settings) });
 });
 
 // A partner's own page (opened from its logo on the home and Về MTG pages), with a button to its website
@@ -200,6 +207,7 @@ function saveQuoteRequest(values, user) {
     interestedIn: values.interestedIn,
     details: values.details || [],
     user: user ? user._id : null,
+    privacyAcceptedAt: new Date(), // the form refuses to send without the consent tick (lib/quote-request.js)
   });
 }
 

@@ -52,6 +52,42 @@ await suite(async (b) => {
       check('a new project appears in the sitemap (both languages)', (await read()).xml.includes(`/giai-phap/du-an/${insertedId}?lang=en`));
     } finally { await d.collection('projects').deleteOne({ _id: insertedId }); }
     check('… and disappears once deleted', !(await read()).xml.includes(`/giai-phap/du-an/${insertedId}`));
+    check('sitemap.xml: the Chính sách bảo mật page (both languages)', locs.includes('/chinh-sach-bao-mat') && locs.includes('/chinh-sach-bao-mat?lang=en'));
+  });
+
+  await part(b, 'Chính sách bảo mật page (lib/privacy-policy.js)', async () => {
+    const page = async (lang) => { const r = await fetch(BASE + '/chinh-sach-bao-mat', { headers: { cookie: `lang=${lang}` } }); return { status: r.status, text: await r.text() }; };
+    const body = (html) => (html.match(/data-privacy-text>([\s\S]*?)<\/div>\s*<\/div>\s*<\/section>/) || [])[1] || '';
+    const settings = await (await db()).collection('sitesettings').findOne({});
+    const ownVi = settings && settings.privacyPolicy;
+    for (const [lang, title, decree] of [['vi', 'Chính sách bảo mật', 'Nghị định 13/2023'], ['en', 'Privacy Policy', 'Decree 13/2023']]) {
+      const p = await page(lang);
+      const text = body(p.text);
+      check(`${lang}: the page opens with its title "${title}"`, p.status === 200 && p.text.includes(`>${title}</h1>`) && p.text.includes(`<title>${title} - MTG</title>`), p.status);
+      if (ownVi) continue; // the staff's own text: only the page itself is checked
+      check(`${lang}: the default draft, 12 numbered sections shown as headings, under ${decree}`, (text.match(/<h2>\d{1,2}\. /g) || []).length === 12 && text.includes(decree), (text.match(/<h2>[^<]*/g) || []).slice(0, 3));
+      check(`${lang}: says how long requests are kept (24 months, then deleted automatically) and where to download / delete in Hồ sơ`,
+        lang === 'vi' ? text.includes('24 tháng kể từ lần cập nhật cuối') && text.includes('Tải dữ liệu của tôi') && text.includes('Xóa tài khoản')
+          : text.includes('24 months from their last update') && text.includes('Download my data') && text.includes('Delete account'));
+      check(`${lang}: the company address from Thông tin công ty is filled in, no blanks left`, (!settings.contactInfo.address || text.includes(settings.contactInfo.address)) && !/\$\{|undefined|\bnull\b/.test(text));
+    }
+    const home = await (await fetch(BASE + '/')).text();
+    check('the footer links the page (after the © line)', /&copy;[\s\S]{0,200}<a class="footer-bottom-link" href="\/chinh-sach-bao-mat">Chính sách bảo mật<\/a>/.test(home));
+  });
+
+  await part(b, 'buttons and form fields use the site font (Safari showed Times)', async () => {
+    const sameFont = (url) => ev(`(() => { const body = getComputedStyle(document.body).fontFamily;
+      return [...document.querySelectorAll('button, input:not([type=hidden]), select, textarea')].filter((el) => getComputedStyle(el).fontFamily !== body)
+        .map((el) => (el.className || el.tagName) + ': ' + getComputedStyle(el).fontFamily).slice(0, 5); })()`);
+    for (const url of ['/dang-nhap', '/dang-ky', '/giai-phap/thiet-bi']) {
+      await b.nav(url, 200);
+      const odd = await sameFont(url);
+      check(`${url}: every button and box in Be Vietnam Pro, like the page`, odd.length === 0, odd);
+    }
+    await b.login(user.sid);
+    await b.nav('/', 200);
+    check('logged in: the account button too', (await ev(`getComputedStyle(document.querySelector('.user-menu-trigger')).fontFamily === getComputedStyle(document.body).fontFamily`)));
+    await b.clearCookie('connect.sid');
   });
 
   await part(b, 'header dropdowns', async () => {
@@ -438,5 +474,62 @@ await suite(async (b) => {
     await switchTo('en');
     check('switching at the top of a page stays at the top', (await spot()).y === 0);
     await switchTo('vi');
+  });
+
+  await part(b, 'smooth switches: light ↔ dark and VI ↔ EN fade', async () => {
+    const themeNow = () => ev(`document.documentElement.getAttribute('data-theme')`);
+    const toggle = () => ev(`document.querySelector('.header-actions .theme-toggle').click()`);
+    // The fade's own animations (the browser's view transition), read while it runs
+    const fadeAnims = () => ev(`document.getAnimations().filter((a) => a.effect && (a.effect.pseudoElement || '').startsWith('::view-transition'))
+      .map((a) => ({ p: a.effect.pseudoElement, d: Math.round(a.effect.getTiming().duration) }))`);
+
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+    await b.nav('/', 400);
+    const theme0 = await themeNow();
+    const other = theme0 === 'dark' ? 'light' : 'dark';
+    check('the browser fades between whole pages / states (view transitions)', await ev(`typeof document.startViewTransition === 'function'`));
+    await toggle(); await sleep(60);
+    const during = await fadeAnims();
+    check('light ↔ dark: the page cross-fades (≈ 0.35 s) instead of jumping', during.some((a) => a.p === '::view-transition-old(root)' && a.d === 350) && during.some((a) => a.p === '::view-transition-new(root)' && a.d === 350), during);
+    await sleep(500);
+    check('… then the new theme is set, the cookie and the switch follow, and the fade is over', (await themeNow()) === other && (await ev(`document.cookie.includes('theme=${other}')`))
+      && (await ev(`!document.documentElement.classList.contains('theme-switching') && document.getAnimations().every((a) => !(a.effect && a.effect.pseudoElement))`)));
+    await b.reducedMotion();
+    await toggle(); await sleep(40);
+    const reduced = await fadeAnims();
+    check('"reduced motion": still a fade, just shorter (≈ 0.14 s)', reduced.some((a) => a.p === '::view-transition-old(root)' && a.d === 140), reduced);
+    await sleep(400);
+    check('… back to the first theme', (await themeNow()) === theme0);
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+    // A browser without view transitions: every colour eases for that one switch, then normal timings come back
+    await ev(`document.startViewTransition = undefined`);
+    await toggle(); await sleep(40);
+    const fallback = await ev(`({ cls: document.documentElement.classList.contains('theme-fading'), body: getComputedStyle(document.body).transitionDuration, theme: document.documentElement.getAttribute('data-theme') })`);
+    check('older browsers: a 0.3 s colour transition on every element, theme set at once', fallback.cls && fallback.body.split(',')[0].trim() === '0.3s' && fallback.theme === other, fallback);
+    await sleep(600);
+    check('… removed again afterwards (hover effects keep their own timing)', !(await ev(`document.documentElement.classList.contains('theme-fading')`)));
+    await toggle(); await sleep(600);
+
+    // VI ↔ EN: only the language switch fades; normal links stay plain page loads
+    const { identifier } = await send('Page.addScriptToEvaluateOnNewDocument', { source: `addEventListener('pagereveal', (e) => { window.__faded = !!e.viewTransition; });` });
+    try {
+      await b.nav('/?lang=vi', 400);
+      await b.nav('/ve-mtg', 400);
+      check('a page opened by a normal link does not ask for a fade', (await ev(`window.__faded`)) === false && !(await ev(`[...document.querySelectorAll('style')].some((s) => s.textContent.includes('@view-transition'))`)));
+      let l = b.waitLoad(); await ev(`document.querySelector('.lang-switch a[href*="lang=en"]').click()`); await l; await sleep(600);
+      check('VI → EN: the old page fades into the English one', (await ev(`window.__faded`)) === true && (await ev('document.documentElement.lang')) === 'en');
+      check('… which waits for its scripts before showing (the reading position is restored first)', await ev(`!!document.querySelector('link[rel="expect"][href="#page-end"][blocking="render"]') && !!document.getElementById('page-end')`));
+      check('… and afterwards the header is back to normal (held still only during the fade)', await ev(`!document.documentElement.classList.contains('lang-fading') && getComputedStyle(document.querySelector('.site-header')).viewTransitionName === 'none'`));
+      l = b.waitLoad(); await ev(`document.querySelector('a[href="/san-pham"]').click()`); await l; await sleep(400);
+      const plain = await ev(`({ faded: window.__faded, path: location.pathname })`);
+      check('a normal link from that page: no fade', plain.faded === false && plain.path === '/san-pham', plain);
+      l = b.waitLoad(); await ev(`document.querySelector('.lang-switch a[href*="lang=vi"]').click()`); await l; await sleep(600);
+      check('EN → VI fades too', (await ev(`window.__faded`)) === true && (await ev('document.documentElement.lang')) === 'vi');
+      await ev('history.back()'); await sleep(900);
+      l = b.waitLoad(); await ev(`document.querySelector('a[href="/"]').click()`); await l; await sleep(400);
+      check('after the browser\'s Back, a normal link does not fade', (await ev(`window.__faded`)) === false);
+    } finally {
+      await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    }
   });
 });

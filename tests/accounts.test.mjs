@@ -4,7 +4,7 @@ import { existsSync, readdirSync, unlinkSync, writeFileSync, mkdtempSync, rmSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { suite, part, check, db, BASE, ROOT, createUser, stamp } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, createUser, removeLater, stamp } from './lib/index.mjs';
 
 const PUBLIC = path.join(ROOT, 'public');
 
@@ -13,7 +13,7 @@ await suite(async (b) => {
 
   await part(b, 'password eye', async () => {
     const EMAIL = `zztest-eye-${stamp}@example.com`;
-    const r0 = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: 'ZZ Eye', email: EMAIL, password: 'secret1', confirmPassword: 'secret1' }) });
+    const r0 = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: 'ZZ Eye', email: EMAIL, password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
     check('test account created', r0.status === 303);
     const posted = [];
     b.on('Network.requestWillBeSent', (p) => { if (p.request.method === 'POST') posted.push({ url: p.request.url, body: p.request.postData || '' }); });
@@ -66,6 +66,13 @@ await suite(async (b) => {
 
     // Profile: change password with boxes shown
     await nav('/ho-so');
+    const unlabelled = await ev(`[...document.querySelectorAll('main input, main select, main textarea')]
+      .filter((el) => el.type !== 'hidden' && el.getAttribute('aria-hidden') !== 'true' && !el.labels.length && !el.getAttribute('aria-label'))
+      .map((el) => el.name || el.id || el.type)`);
+    check('Hồ sơ: every field has a connected label (screen readers name it; clicking the label focuses it)', unlabelled.length === 0, unlabelled);
+    check('Hồ sơ: clicking "Họ và tên" puts the cursor in its box', await ev(`(() => { document.querySelector('label[for="pf-name"]').click(); return document.activeElement && document.activeElement.id === 'pf-name'; })()`));
+    check('Hồ sơ: "Dữ liệu của bạn" explains the download and deleting, with the Chính sách bảo mật link (underlined, not told apart by colour only)',
+      await ev(`(() => { const a = document.querySelector('[data-privacy-hint] a[href="/chinh-sach-bao-mat"]'); return !!a && getComputedStyle(a).textDecorationLine.includes('underline'); })()`));
     const prof = await ev(`(() => { const f = document.querySelector('form[action="/ho-so/mat-khau"]'); const u = f.querySelector('input[autocomplete="username"]');
       return { toggles: f.querySelectorAll('[data-password-toggle]').length, user: u && { name: u.getAttribute('name'), value: u.value, readonly: u.readOnly, hiddenVisually: u.getBoundingClientRect().width <= 1, tab: u.tabIndex },
         current: document.getElementById('currentPassword').getAttribute('autocomplete'), newAc: document.getElementById('newPassword').getAttribute('autocomplete'), confAc: document.getElementById('confirmNewPassword').getAttribute('autocomplete') }; })()`);
@@ -139,7 +146,7 @@ await suite(async (b) => {
       r = await req(articlePath, { lang: 'vi' });
       check('Article VI: original title + Vietnamese body', has(r.text, '<h1>MTG ra mat Robot leo cau thang the he 3</h1>') && has(r.text, 'Noi dung tin tuc'));
 
-      r = await req('/dang-ky', { method: 'POST', body: form({ name: 'Test Người Dùng', email: EMAIL, password: 'oldpass1', confirmPassword: 'oldpass1' }) });
+      r = await req('/dang-ky', { method: 'POST', body: form({ name: 'Test Người Dùng', email: EMAIL, password: 'oldpass1', confirmPassword: 'oldpass1', agreePrivacy: '1' }) });
       check('register test account (then the login page, not logged in yet)', r.status === 303 && r.location === '/dang-nhap', r.status);
       r = await req('/dang-nhap', { method: 'POST', body: form({ email: EMAIL, password: 'oldpass1' }) });
       r = await req('/ho-so', { lang: 'vi' });
@@ -367,12 +374,17 @@ await suite(async (b) => {
       return { status: res.status, location: res.headers.get('location'), text: await res.text() };
     };
     const errorsIn = (html) => Object.fromEntries([...html.matchAll(/data-error-for="(\w+)">([^<]*)</g)].map((m) => [m[1], m[2].replace(/&#39;/g, "'")]));
-    const ok = { name: 'ZZ Signup', email: `zztest-signup-${stamp}@example.com`, phone: '', schoolOrCompany: '', password: 'secret1', confirmPassword: 'secret1' };
+    const ok = { name: 'ZZ Signup', email: `zztest-signup-${stamp}@example.com`, phone: '', schoolOrCompany: '', password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' };
 
     // Server checks (the browser checks are bypassed here)
     let r = await post('/dang-ky', { name: ' ', email: '', password: '', confirmPassword: '' });
     let e = errorsIn(r.text);
-    check('server: empty form refused, one message per required box (name, email, password, confirmation)', r.status === 400 && e.name === 'Vui lòng nhập họ và tên.' && e.email === 'Vui lòng nhập email.' && e.password === 'Vui lòng nhập mật khẩu.' && e.confirmPassword === 'Vui lòng nhập lại mật khẩu.' && !e.phone, e);
+    check('server: empty form refused, one message per required box (name, email, password, confirmation, consent tick)', r.status === 400 && e.name === 'Vui lòng nhập họ và tên.' && e.email === 'Vui lòng nhập email.' && e.password === 'Vui lòng nhập mật khẩu.' && e.confirmPassword === 'Vui lòng nhập lại mật khẩu.' && e.agreePrivacy === 'Vui lòng đánh dấu đồng ý với Chính sách bảo mật.' && !e.phone, e);
+    const { agreePrivacy, ...noTick } = ok;
+    r = await post('/dang-ky', noTick);
+    e = errorsIn(r.text);
+    check('server: everything right but the Chính sách bảo mật tick → refused, only the tick named', r.status === 400 && Object.keys(e).join() === 'agreePrivacy', e);
+    check('… the page links the policy next to the tick', /<label class="checkbox-row consent-row" for="regAgree">[\s\S]*?href="\/chinh-sach-bao-mat"/.test(r.text));
     r = await post('/dang-ky', { ...ok, email: 'not-an-email', phone: '12ab', password: 'abc', confirmPassword: 'abd' });
     e = errorsIn(r.text);
     check('server: bad email, bad phone, short password, mismatched confirmation each named', r.status === 400 && e.email === 'Email không hợp lệ.' && e.phone === 'Số điện thoại không hợp lệ.' && e.password === 'Mật khẩu cần tối thiểu 6 ký tự.' && e.confirmPassword === 'Mật khẩu xác nhận không khớp.', e);
@@ -381,7 +393,9 @@ await suite(async (b) => {
     check('server: messages in English on the English site', r.status === 400 && errorsIn(r.text).confirmPassword === "The passwords don't match.", errorsIn(r.text));
     check('server: nothing was saved by the refused sign-ups', !(await d.collection('users').findOne({ email: ok.email })));
     r = await post('/dang-ky', ok);
-    check('server: name + email + password is enough (phone and school are optional) → login page, not logged in', r.status === 303 && r.location === '/dang-nhap', r.status);
+    check('server: name + email + password + tick is enough (phone and school are optional) → login page, not logged in', r.status === 303 && r.location === '/dang-nhap', r.status);
+    const signed = await d.collection('users').findOne({ email: ok.email });
+    check('… and the time of consent is saved with the account', signed && signed.privacyAcceptedAt instanceof Date && Date.now() - signed.privacyAcceptedAt < 60000, signed && signed.privacyAcceptedAt);
     r = await post('/dang-ky', { ...ok, email: ok.email.toUpperCase() });
     check('server: an email already registered is refused (on the email box)', r.status === 400 && /đã được đăng ký/.test(errorsIn(r.text).email || ''), errorsIn(r.text));
 
@@ -393,7 +407,10 @@ await suite(async (b) => {
     check('the optional boxes say so; the password box has a hint', await ev(`!!(document.querySelector('label[for="regPhone"] .form-optional') && document.querySelector('label[for="regSchool"] .form-optional') && document.querySelector('[data-hint-for="password"]'))`));
     await ev(`document.querySelector('[data-register-form] button[type=submit]').click()`); await sleep(300);
     let st = await ev(`({ errors: [...document.querySelectorAll('[data-register-form] [data-error-for]')].map((x) => x.getAttribute('data-error-for')), focus: document.activeElement && document.activeElement.name, path: location.pathname })`);
-    check('browser: empty form not sent; name, email, password and confirmation marked; cursor in "Họ và tên"', posts === 0 && JSON.stringify(st.errors) === JSON.stringify(['name', 'email', 'password', 'confirmPassword']) && st.focus === 'name' && st.path === '/dang-ky', { posts, st });
+    check('browser: empty form not sent; name, email, password, confirmation and the tick marked; cursor in "Họ và tên"', posts === 0 && JSON.stringify(st.errors) === JSON.stringify(['name', 'email', 'password', 'confirmPassword', 'agreePrivacy']) && st.focus === 'name' && st.path === '/dang-ky', { posts, st });
+    await ev(`document.getElementById('regAgree').click()`); await sleep(100);
+    check('browser: ticking "Tôi đồng ý" clears its message', await ev(`!document.querySelector('[data-error-for="agreePrivacy"]') && !document.getElementById('regAgree').classList.contains('is-invalid')`));
+    check('browser: clicking the words also ticks/unticks the box (label connected)', await ev(`(() => { const l = document.querySelector('label[for="regAgree"] span'); l.click(); const off = !document.getElementById('regAgree').checked; l.click(); return off && document.getElementById('regAgree').checked; })()`));
     const typeIn = async (id, text) => { await ev(`(() => { const i = document.getElementById('${id}'); i.focus(); i.select(); })()`); await send('Input.insertText', { text }); };
     await typeIn('regName', 'ZZ Signup Browser');
     check('browser: the name error goes away while typing', await ev(`!document.querySelector('[data-error-for="name"]') && !document.getElementById('regName').classList.contains('is-invalid')`));
@@ -476,6 +493,88 @@ await suite(async (b) => {
     await sleep(800);
     check('… then it is gone', (await toast()) === null);
     await b.viewport(1280, 900); await send('Emulation.setEmulatedMedia', { features: [] }); // back to the PC's own setting
+    await b.clearCookie('connect.sid');
+  });
+
+  await part(b, '"Tải dữ liệu của tôi" + "Xóa tài khoản" (HTTP)', async () => {
+    const d = await db();
+    const owner = await createUser('dataown', 'customer');
+    const other = await createUser('dataother', 'customer');
+    const staff = await createUser('datastaff', 'admin');
+    const call = async (p, sid, { method = 'GET', body } = {}) => {
+      const res = await fetch(BASE + p, { method, body, redirect: 'manual', headers: { accept: 'text/html', cookie: [sid && `connect.sid=${sid}`, 'lang=vi'].filter(Boolean).join('; ') } });
+      const set = res.headers.getSetCookie().find((c) => c.startsWith('connect.sid='));
+      return { status: res.status, location: res.headers.get('location'), headers: res.headers, text: await res.text(), sid: set ? set.split(';')[0].slice('connect.sid='.length) : null };
+    };
+    const now = new Date();
+    await d.collection('quoterequests').insertMany([
+      { name: 'ZZ Data Owner', phone: '0912345678', email: owner.email, schoolOrCompany: 'THCS Dữ Liệu', message: 'ZZ tin nhắn của tôi', interestedIn: 'khac', status: 'da_lien_he', user: owner.id, details: [{ kind: '', labelVi: 'Số lớp', labelEn: 'Classes', valueVi: '3', valueEn: '3' }], createdAt: now, updatedAt: now },
+      { name: 'ZZ Data Other', phone: '', email: other.email, schoolOrCompany: '', message: 'ZZ tin nhắn người khác', interestedIn: 'khac', status: 'moi', user: other.id, details: [], createdAt: now, updatedAt: now },
+    ]);
+    removeLater('quoterequests', { name: /^ZZ Data / });
+    // a photo, to check it goes too
+    const fd = new FormData();
+    fd.append('name', 'ZZ dataown');
+    fd.append('avatar', new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkaPhfDwAEhgHBtcs1RQAAAABJRU5ErkJggg==', 'base64')], { type: 'image/png' }), 'me.png');
+    await fetch(BASE + '/ho-so', { method: 'POST', body: fd, headers: { cookie: `connect.sid=${owner.sid}` } });
+    const photo = (await d.collection('users').findOne({ _id: owner.id })).avatar;
+
+    let r = await call('/ho-so/du-lieu', owner.sid);
+    const data = r.status === 200 ? JSON.parse(r.text) : null;
+    check('"Tải dữ liệu của tôi": a JSON file to save (mtg-du-lieu-<date>.json), never cached', r.status === 200 && /attachment; filename="mtg-du-lieu-\d{4}-\d{2}-\d{2}\.json"/.test(r.headers.get('content-disposition') || '')
+      && (r.headers.get('content-type') || '').startsWith('application/json') && r.headers.get('cache-control') === 'no-store', { status: r.status, cd: r.headers.get('content-disposition'), cc: r.headers.get('cache-control') });
+    check('… with the account (email, photo, joined, consent time) and their own request (status in words, details)', data && data.account.email === owner.email && data.account.avatar === photo && data.account.role === 'customer'
+      && !!data.account.joinedAt && !!data.account.privacyAcceptedAt && data.requests.length === 1 && data.requests[0].message === 'ZZ tin nhắn của tôi' && data.requests[0].status === 'Đã liên hệ'
+      && data.requests[0].details[0].label === 'Số lớp' && data.requests[0].details[0].value === '3', data);
+    check('… nothing of another account, no password hash, no Google id, no database ids', !r.text.includes('người khác') && !/passwordHash|googleId|"_id"|"user"|\$2[aby]\$/.test(r.text));
+    r = await call('/ho-so/du-lieu', null);
+    check('not logged in: the download sends you to Đăng nhập', r.status === 302 && r.location === '/dang-nhap', r.status);
+
+    r = await call('/ho-so', owner.sid);
+    check('Hồ sơ (customer): "Dữ liệu của bạn" with "Tải dữ liệu của tôi" and "Xóa tài khoản" (box asks for the password)', r.text.includes('data-privacy-card') && r.text.includes('href="/ho-so/du-lieu" download')
+      && r.text.includes('data-account-delete') && r.text.includes('Nhập mật khẩu để xác nhận') && /id="deleteConfirm" name="confirm" autocomplete="current-password"/.test(r.text));
+    r = await call('/ho-so/xoa-tai-khoan', owner.sid, { method: 'POST', body: new URLSearchParams({ confirm: 'wrong-one' }) });
+    check('wrong password: refused (400), the box opens again with the error, nothing deleted', r.status === 400 && r.text.includes('data-open-now') && r.text.includes('data-delete-error')
+      && !!(await d.collection('users').findOne({ _id: owner.id })) && (await d.collection('quoterequests').countDocuments({ user: owner.id })) === 1);
+
+    // a second login (another device) must stop working too
+    const second = await fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ email: owner.email, password: owner.password }) });
+    const sid2 = second.headers.getSetCookie().find((c) => c.startsWith('connect.sid=')).split(';')[0].slice('connect.sid='.length);
+    r = await call('/ho-so/xoa-tai-khoan', owner.sid, { method: 'POST', body: new URLSearchParams({ confirm: owner.password }) });
+    check('right password: deleted, back to Trang chủ', r.status === 302 && r.location === '/', r.status);
+    check('… the account and its request are gone; the other account\'s request stays', !(await d.collection('users').findOne({ _id: owner.id }))
+      && (await d.collection('quoterequests').countDocuments({ user: owner.id })) === 0 && (await d.collection('quoterequests').countDocuments({ user: other.id })) === 1);
+    check('… the photo file is deleted', !!photo && !existsSync(PUBLIC + photo), photo);
+    check('… no login of that account is left (other devices are logged out)', (await d.collection('sessions').countDocuments({ session: { $regex: String(owner.id) } })) === 0
+      && (await call('/ho-so', sid2)).location === '/dang-nhap');
+    const home = await call('/', r.sid);
+    check('Trang chủ says "Đã xoá tài khoản." once (a status notice), logged out', home.text.includes('data-deleted-notice') && home.text.includes('Đã xoá tài khoản.') && /role="status"[^>]*data-deleted-notice/.test(home.text) && !home.text.includes('action="/dang-xuat"'));
+    check('… and not again on the next page', !(await call('/', r.sid)).text.includes('data-deleted-notice'));
+
+    r = await call('/ho-so', staff.sid);
+    check('Hồ sơ (staff): download yes, no "Xóa tài khoản" (an owner deletes staff in Admin → Người dùng)', r.text.includes('href="/ho-so/du-lieu"') && !r.text.includes('data-account-delete') && r.text.includes('data-staff-no-delete'));
+    r = await call('/ho-so/xoa-tai-khoan', staff.sid, { method: 'POST', body: new URLSearchParams({ confirm: staff.password }) });
+    check('… and sending the form anyway is refused (403), account kept', r.status === 403 && !!(await d.collection('users').findOne({ _id: staff.id })), r.status);
+  });
+
+  await part(b, '"Xóa tài khoản" in the browser (asks for the password first)', async () => {
+    const user = await createUser('datadel', 'customer');
+    await b.login(user.sid);
+    await b.nav('/ho-so', 400);
+    const open = () => ev(`document.querySelector('[data-account-confirm]').open`);
+    await b.clickAt('[data-account-delete]'); await sleep(200);
+    check('"Xóa tài khoản" opens "Xóa tài khoản vĩnh viễn?" with the cursor in the password box (nothing sent)', (await open()) && (await ev(`document.activeElement.id`)) === 'deleteConfirm' && (await ev('location.pathname')) === '/ho-so');
+    await b.shot('account-delete-confirm');
+    await b.clickAt('[data-account-confirm] [data-confirm-cancel]'); await sleep(200);
+    check('"Hủy" closes it, focus back on the button', !(await open()) && (await ev(`document.activeElement.hasAttribute('data-account-delete')`)));
+    await b.clickAt('[data-account-delete]'); await sleep(200);
+    await b.type('nope123');
+    let l = b.waitLoad(); await ev(`document.querySelector('[data-account-delete-form]').requestSubmit()`); await l; await sleep(400);
+    check('a wrong password: the page comes back with the box open and the error in it', (await open()) && (await ev(`!!document.querySelector('[data-account-confirm] .field-error') && document.getElementById('deleteConfirm').classList.contains('is-invalid')`)));
+    await b.type(user.password);
+    l = b.waitLoad(); await ev(`document.querySelector('[data-account-delete-form]').requestSubmit()`); await l; await sleep(400);
+    check('the right password: Trang chủ with "Đã xoá tài khoản."', (await ev('location.pathname')) === '/' && (await ev(`!!document.querySelector('[data-deleted-notice]')`)));
+    check('… and the account is gone', !(await (await db()).collection('users').findOne({ _id: user.id })));
     await b.clearCookie('connect.sid');
   });
 });

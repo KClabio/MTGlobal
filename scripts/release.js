@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// Publishes the next version: every commit is a version (v1.0.0 was the first, each later one adds 0.0.1).
+// Publishes the next version: every commit is a version (v1.0.0 was the first, each later one adds 0.0.1,
+// unless the owner names a bigger one with --version, e.g. 1.1.0 for the release with every pre-launch fix).
 //
 //   1. Write the changes under "## [Unreleased]" at the top of CHANGELOG.md (Added / Changed / Fixed / Removed).
 //   2. git add <the changed files>
-//   3. npm run release -- -m "<commit message>" [--session <Claude-Session url>] [--dry-run]
+//   3. npm run release -- -m "<commit message>" [--version X.Y.Z] [--session <Claude-Session url>] [--dry-run]
 //
 // The script names the Unreleased section (version + today's date), adds the previous version's commit id to its
 // heading, sets package.json "version", commits (with the Co-Authored-By trailer), tags vX.Y.Z, pushes main + the tag
@@ -34,6 +35,7 @@ function parseArgs(argv) {
     else if (a === '--session') opts.session = argv[++i];
     else if (a === '--dry-run') opts.dryRun = true;
     else if (a === '--notes-only') opts.notesOnly = (argv[++i] || '').replace(/^v/, '');
+    else if (a === '--version') opts.version = (argv[++i] || '').replace(/^v/, '');
     else fail(`unknown option ${a}`);
   }
   return opts;
@@ -106,7 +108,14 @@ function main() {
   const m = last.match(/^v(\d+)\.(\d+)\.(\d+)$/);
   if (!m) fail(`cannot read the latest version tag (${last || 'none'})`);
   const prev = `${m[1]}.${m[2]}.${m[3]}`;
-  const version = `${m[1]}.${m[2]}.${+m[3] + 1}`;
+  let version = `${m[1]}.${m[2]}.${+m[3] + 1}`;
+  if (opts.version) { // a bigger step the owner asked for (e.g. 1.1.0); never the same or an older version
+    const want = opts.version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+    if (!want) fail(`--version needs a version like 1.1.0 (got "${opts.version}")`);
+    const newer = [1, 2, 3].map((i) => +want[i] - +m[i]).find((d) => d !== 0) > 0;
+    if (!newer) fail(`--version ${opts.version} is not newer than the latest version ${prev}`);
+    version = opts.version;
+  }
   const tag = `v${version}`;
 
   // ---- New file contents ----

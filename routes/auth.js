@@ -3,12 +3,15 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const router = express.Router();
 
+const mongoose = require('mongoose');
 const User = require('../models/User');
+const QuoteRequest = require('../models/QuoteRequest');
 const { requireAuth } = require('../middleware/auth');
-const { uploadAvatar, AVATAR_MAX_BYTES, isRealImageFile, fileUrl, wrapUpload, removeLocalUpload } = require('../middleware/upload');
+const { uploadAvatar, AVATAR_MAX_BYTES, isRealImageFile, fileUrl, wrapUpload, removeUpload } = require('../middleware/upload');
 const { isValidEmail, isValidPhone, isNonEmpty } = require('../lib/validators');
 const google = require('../lib/google-auth');
 const throttle = require('../lib/login-throttle');
+const { isStaff } = require('../lib/roles');
 
 const PASSWORD_MIN = 6;
 
@@ -24,6 +27,7 @@ function validateRegistration(values, password, confirmPassword, t) {
   else if (password.length < PASSWORD_MIN) errors.password = t('auth.errPasswordLength');
   if (!confirmPassword) errors.confirmPassword = t('auth.errConfirmRequired');
   else if (password && password !== confirmPassword) errors.confirmPassword = t('auth.errPasswordMatch');
+  if (!values.agreePrivacy) errors.agreePrivacy = t('privacy.errAgree'); // consent to the Chính sách bảo mật (Decree 13)
   return errors;
 }
 
@@ -37,7 +41,7 @@ router.get('/dang-ky', (req, res) => {
 router.post('/dang-ky', async (req, res) => {
   const t = res.locals.t;
   const field = (key) => (typeof req.body[key] === 'string' ? req.body[key].trim() : '');
-  const values = { name: field('name'), email: field('email').toLowerCase(), phone: field('phone'), schoolOrCompany: field('schoolOrCompany') };
+  const values = { name: field('name'), email: field('email').toLowerCase(), phone: field('phone'), schoolOrCompany: field('schoolOrCompany'), agreePrivacy: field('agreePrivacy') !== '' };
   const password = typeof req.body.password === 'string' ? req.body.password : '';
   const confirmPassword = typeof req.body.confirmPassword === 'string' ? req.body.confirmPassword : '';
 
@@ -53,6 +57,7 @@ router.post('/dang-ky', async (req, res) => {
     passwordHash: await bcrypt.hash(password, 10),
     phone: values.phone,
     schoolOrCompany: values.schoolOrCompany,
+    privacyAcceptedAt: new Date(),
   });
 
   // Signing up doesn't log in: the login page welcomes them with the new email filled in; logging in leads to Trang chủ
@@ -132,7 +137,8 @@ router.get(google.CALLBACK_PATH, async (req, res) => {
       if (user.avatar) user.avatarMode = 'own'; // a photo uploaded before joining stays
     }
   }
-  if (!user) user = new User({ googleId: profile.googleId, email: profile.email, name: profile.name });
+  // A new account agrees to the Chính sách bảo mật by continuing (the notice under the Google button)
+  if (!user) user = new User({ googleId: profile.googleId, email: profile.email, name: profile.name, privacyAcceptedAt: new Date() });
 
   user.name = profile.name;
   if (user.email !== profile.email && !(await User.exists({ email: profile.email, _id: { $ne: user._id } }))) user.email = profile.email;
@@ -147,8 +153,8 @@ router.post('/dang-xuat', (req, res) => {
 
 const BIO_MAX = 500;
 
-function renderProfile(res, { status = 200, profileState = {}, passwordState = {}, values = null } = {}) {
-  res.status(status).render('profile', { profileState, passwordState, values, avatarMaxBytes: AVATAR_MAX_BYTES });
+function renderProfile(res, { status = 200, profileState = {}, passwordState = {}, deleteState = {}, values = null } = {}) {
+  res.status(status).render('profile', { profileState, passwordState, deleteState, values, avatarMaxBytes: AVATAR_MAX_BYTES });
 }
 
 router.get('/ho-so', requireAuth, (req, res) => {
@@ -174,7 +180,7 @@ router.post('/ho-so', requireAuth, wrapUpload(uploadAvatar, async (req, res) => 
     error = t('profile.errBioLength');
   }
   if (error) {
-    removeLocalUpload(newAvatar); // don't keep a photo from a rejected submit
+    removeUpload(newAvatar); // don't keep a photo from a rejected submit
     return renderProfile(res, { status: 400, profileState: { error }, values });
   }
 
@@ -183,7 +189,7 @@ router.post('/ho-so', requireAuth, wrapUpload(uploadAvatar, async (req, res) => 
   if (newAvatar) Object.assign(update, { avatar: newAvatar, avatarMode: 'own' }); // an uploaded photo isn't replaced by Google
 
   const updated = await User.findByIdAndUpdate(req.user._id, update, { returnDocument: 'after', runValidators: true }).lean();
-  if ('avatar' in update && previousAvatar && previousAvatar !== update.avatar) removeLocalUpload(previousAvatar);
+  if ('avatar' in update && previousAvatar && previousAvatar !== update.avatar) removeUpload(previousAvatar);
 
   res.locals.user = updated;
   renderProfile(res, { profileState: { success: true } });
@@ -193,7 +199,7 @@ router.post('/ho-so', requireAuth, wrapUpload(uploadAvatar, async (req, res) => 
 router.post('/ho-so/anh-dai-dien/xoa', requireAuth, async (req, res) => {
   const previousAvatar = req.user.avatar;
   const updated = await User.findByIdAndUpdate(req.user._id, { avatar: null, avatarMode: 'none' }, { returnDocument: 'after' }).lean();
-  removeLocalUpload(previousAvatar);
+  removeUpload(previousAvatar);
   res.locals.user = updated;
   renderProfile(res, { profileState: { success: true, message: res.locals.t('profile.avatarRemoved') } });
 });
@@ -222,6 +228,77 @@ router.post('/ho-so/mat-khau', requireAuth, async (req, res) => {
     if (err) return renderProfile(res, { passwordState: done });
     req.session.userId = user._id;
     req.session.save(() => renderProfile(res, { passwordState: done }));
+  });
+});
+
+// "Tải dữ liệu của tôi" (Decree 13: a copy of your data): the account and every request sent, as one JSON file.
+// Never the password hash, the Google id or database ids.
+router.get('/ho-so/du-lieu', requireAuth, async (req, res) => {
+  const t = res.locals.t;
+  const user = await User.findById(req.user._id).lean();
+  const requests = await QuoteRequest.find({ user: user._id }).sort({ createdAt: 1 }).lean();
+  const data = {
+    website: 'MTG — Mễ Trì Global',
+    exportedAt: new Date(),
+    account: {
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      schoolOrCompany: user.schoolOrCompany || '',
+      bio: user.bio || '',
+      avatar: user.avatar || null,
+      role: user.role,
+      linkedToGoogle: !!user.googleId,
+      hasPassword: !!user.passwordHash,
+      joinedAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      privacyAcceptedAt: user.privacyAcceptedAt || null,
+    },
+    requests: requests.map((r) => ({
+      sentAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      editedAt: r.editedAt || null,
+      status: t('admin.status.' + r.status),
+      interestedIn: t('admin.interest.' + r.interestedIn),
+      name: r.name,
+      phone: r.phone,
+      email: r.email,
+      schoolOrCompany: r.schoolOrCompany,
+      message: r.message,
+      details: (r.details || []).map((d) => ({ label: d.labelVi, value: d.valueVi, labelEn: d.labelEn, valueEn: d.valueEn })),
+      privacyAcceptedAt: r.privacyAcceptedAt || null,
+    })),
+  };
+  res.set('Cache-Control', 'no-store');
+  res.attachment(`mtg-du-lieu-${new Date().toISOString().slice(0, 10)}.json`);
+  res.type('application/json').send(JSON.stringify(data, null, 2));
+});
+
+// "Xóa tài khoản": a customer deletes their own account, photo and requests for good (owner's choice, 22 Oct 2026).
+// Confirmed with the password, or the email address for a Google account without one. Staff accounts are managed in the admin.
+router.post('/ho-so/xoa-tai-khoan', requireAuth, async (req, res) => {
+  const t = res.locals.t;
+  if (isStaff(req.user.role)) return res.status(403).render('403');
+  const user = await User.findById(req.user._id);
+  const confirm = typeof req.body.confirm === 'string' ? req.body.confirm : '';
+  const confirmed = user.passwordHash
+    ? await bcrypt.compare(confirm, user.passwordHash)
+    : confirm.trim().toLowerCase() === user.email.toLowerCase();
+  if (!confirmed) {
+    const error = user.passwordHash ? t('profile.errCurrentPassword') : t('privacy.errDeleteEmail');
+    return renderProfile(res, { status: 400, deleteState: { error } });
+  }
+
+  await QuoteRequest.deleteMany({ user: user._id });
+  await mongoose.connection.collection('sessions').deleteMany({ session: { $regex: `"userId":"${user._id}"` } });
+  removeUpload(user.avatar);
+  await User.deleteOne({ _id: user._id });
+
+  // A fresh, logged-out session carries the one-time "Tài khoản đã được xoá" notice (server.js, partials/footer.ejs)
+  req.session.regenerate((err) => {
+    if (err) return res.redirect('/');
+    req.session.accountDeleted = true;
+    req.session.save(() => res.redirect('/'));
   });
 });
 

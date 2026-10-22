@@ -157,6 +157,25 @@
     "quickLinks": "Quick Links",
     "contactInfo": "Contact Information"
   },
+  "privacy": {
+    "title": "Privacy Policy",
+    "agree": "I agree to the",
+    "errAgree": "Please tick the box to agree to the Privacy Policy.",
+    "googleNotice": "By continuing with Google, you agree to the",
+    "dataTitle": "Your data",
+    "dataText": "Download a copy of everything the website stores about you (your account and the requests you sent), or delete your account for good. Details in the",
+    "download": "Download my data",
+    "deleteAccount": "Delete account",
+    "deleteTitle": "Delete your account for good?",
+    "deleteText": "Your account, profile photo and every request you sent will be deleted at once and cannot be restored.",
+    "deleteConfirmPassword": "Enter your password to confirm",
+    "deleteConfirmEmail": "Enter your email address to confirm",
+    "errDeleteEmail": "This email does not match your account’s email.",
+    "deleted": "Account deleted.",
+    "deletedText": "All your data has been removed from the website.",
+    "staffNoDelete": "Staff accounts can’t delete themselves: ask the website owner to delete it in Admin → Người dùng.",
+    "retentionNote": "Requests are deleted automatically 24 months after their last update (as stated in the Privacy Policy)."
+  },
   "admin": {
     "pageTitle": "Admin - MTG",
     "brand": "MTG Admin",
@@ -520,8 +539,14 @@
       "email": "Email",
       "map": "Map link (Google Maps embed URL)",
       "save": "Save settings",
-      "subtitle": "Company profile (About page) and contact details (Contact page, footer).",
-      "brandMoved": "The logo, home page hero and page banners are in"
+      "subtitle": "Company profile (About page), Privacy Policy and contact details (Contact page, footer).",
+      "brandMoved": "The logo, home page hero and page banners are in",
+      "privacyTitle": "Privacy Policy",
+      "privacyVi": "Privacy Policy — Vietnamese",
+      "privacyEn": "Privacy Policy — English",
+      "privacyDraft": "A draft written for Decree 13/2023 on personal data protection. Check it (ideally with a lawyer) before the website goes live.",
+      "privacyHint": "While the draft is kept as it is, the address, email and phone from Contact information are filled in. Empty the box to go back to the draft. A paragraph that is a single line starting with a number (e.g. “1. Who we are”) becomes a section title.",
+      "privacyNoEmail": "No contact email yet: the policy tells people to use the Contact page. Better to enter an email under Contact information."
     },
     "theme": {
       "dark": "Dark mode"
@@ -582,7 +607,11 @@
         "count": "Showing {shown} / {total} users",
         "none": "No user matches “{q}”.",
         "by": "Search by",
-        "fields": { "ten": "Name", "email": "Email", "ngay": "Date joined" },
+        "fields": {
+          "ten": "Name",
+          "email": "Email",
+          "ngay": "Date joined"
+        },
         "placeholders": {
           "ten": "Type a name… (sorted A → Z)",
           "email": "Type an email… (sorted A → Z)",

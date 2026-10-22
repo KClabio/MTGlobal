@@ -8,6 +8,8 @@
   const initials = ((nameParts[0] || '?')[0] + (nameParts.length > 1 ? nameParts[nameParts.length - 1][0] : '')).toUpperCase();
   const fromGoogle = !!user.googleId; // name, email and photo come from Google (routes/auth.js)
   const hasPassword = !!user.passwordHash;
+  const dState = typeof deleteState !== 'undefined' && deleteState ? deleteState : {};
+  const canDeleteSelf = user.role === 'customer'; // staff accounts are managed in Admin → Người dùng
   const memberSince = user.createdAt ? new Date(user.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN', { month: 'long', year: 'numeric' }) : '';
 %>
 
@@ -52,7 +54,7 @@
           <% if (pState.error) { %><div class="form-alert error"><%= pState.error %></div><% } %>
           <form method="POST" action="/ho-so" enctype="multipart/form-data">
             <div class="form-group">
-              <label><%= t('profile.avatar') %></label>
+              <label for="pf-avatar"><%= t('profile.avatar') %></label>
               <div class="avatar-picker">
                 <% if (user.avatar) { %>
                   <img class="avatar-sm" src="<%= user.avatar %>" alt="" data-avatar-preview>
@@ -63,7 +65,7 @@
                   <div class="avatar-actions">
                     <label class="btn btn-ghost btn-sm avatar-choose">
                       <%= t('profile.chooseAvatar') %>
-                      <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" data-avatar-input data-max-bytes="<%= avatarMaxBytes %>" data-size-error="<%= t('profile.errAvatarSize') %>" hidden>
+                      <input type="file" id="pf-avatar" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" data-avatar-input data-max-bytes="<%= avatarMaxBytes %>" data-size-error="<%= t('profile.errAvatarSize') %>" hidden>
                     </label>
                     <%# A photo chosen but not saved yet: drop it again (main.js) %>
                     <button type="button" class="btn btn-ghost btn-sm avatar-drop" data-avatar-drop hidden><%= t('profile.dropChosen') %></button>
@@ -79,31 +81,31 @@
               </div>
             </div>
             <div class="form-group">
-              <label><%= t('forms.name') %> *</label>
+              <label for="pf-name"><%= t('forms.name') %> *</label>
               <% if (fromGoogle) { %>
-                <input class="form-control" type="text" value="<%= user.name %>" readonly aria-describedby="nameFromGoogle" data-google-name>
+                <input class="form-control" type="text" id="pf-name" value="<%= user.name %>" readonly aria-describedby="nameFromGoogle" data-google-name>
                 <p class="form-hint" id="nameFromGoogle"><%= t('profile.googleNameLocked') %></p>
               <% } else { %>
-                <input class="form-control" type="text" name="name" value="<%= v.name || '' %>" required autocomplete="name">
+                <input class="form-control" type="text" id="pf-name" name="name" value="<%= v.name || '' %>" required autocomplete="name">
               <% } %>
             </div>
             <div class="form-group">
-              <label><%= t('forms.email') %></label>
-              <input class="form-control" type="email" value="<%= user.email %>" disabled>
+              <label for="pf-email"><%= t('forms.email') %></label>
+              <input class="form-control" type="email" id="pf-email" value="<%= user.email %>" disabled>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label><%= t('forms.phone') %></label>
-                <input class="form-control" type="tel" name="phone" value="<%= v.phone || '' %>" autocomplete="tel">
+                <label for="pf-phone"><%= t('forms.phone') %></label>
+                <input class="form-control" type="tel" id="pf-phone" name="phone" value="<%= v.phone || '' %>" autocomplete="tel">
               </div>
               <div class="form-group">
-                <label><%= t('forms.schoolOrCompany') %></label>
-                <input class="form-control" type="text" name="schoolOrCompany" value="<%= v.schoolOrCompany || '' %>" autocomplete="organization">
+                <label for="pf-school"><%= t('forms.schoolOrCompany') %></label>
+                <input class="form-control" type="text" id="pf-school" name="schoolOrCompany" value="<%= v.schoolOrCompany || '' %>" autocomplete="organization">
               </div>
             </div>
             <div class="form-group">
-              <label><%= t('profile.bio') %></label>
-              <textarea class="form-control" name="bio" rows="4" maxlength="500" placeholder="<%= t('profile.bioPlaceholder') %>" data-count="bioCount"><%= v.bio || '' %></textarea>
+              <label for="pf-bio"><%= t('profile.bio') %></label>
+              <textarea class="form-control" id="pf-bio" name="bio" rows="4" maxlength="500" placeholder="<%= t('profile.bioPlaceholder') %>" data-count="bioCount"><%= v.bio || '' %></textarea>
               <div class="char-count"><span id="bioCount"><%= (v.bio || '').length %></span>/500</div>
             </div>
             <button type="submit" class="btn btn-primary btn-block"><%= t('common.update') %></button>
@@ -150,6 +152,41 @@
             <p class="form-hint" style="margin:-8px 0 18px;"><%= t('profile.passwordHint') %></p>
             <button type="submit" class="btn btn-primary btn-block"><%= t(hasPassword ? 'profile.changePassword' : 'profile.setPassword') %></button>
           </form>
+        </div>
+
+        <%# "Dữ liệu của bạn" (Decree 13): a copy of everything stored, and deleting the account (routes/auth.js) %>
+        <div class="form-card profile-data-card" data-privacy-card>
+          <h2 class="form-card-title"><%= t('privacy.dataTitle') %></h2>
+          <p class="form-hint profile-data-hint" data-privacy-hint><%= t('privacy.dataText') %> <a href="/chinh-sach-bao-mat"><%= t('privacy.title') %></a>.</p>
+          <% if (dState.error) { %><div class="form-alert error" data-delete-error><%= dState.error %></div><% } %>
+          <div class="profile-data-actions">
+            <a class="btn btn-ghost" href="/ho-so/du-lieu" download data-data-download><%- include('admin/partials/icon', { name: 'download', size: 16 }) %> <%= t('privacy.download') %></a>
+            <% if (canDeleteSelf) { %>
+              <button type="button" class="btn btn-ghost btn-danger-ghost" data-account-delete aria-haspopup="dialog"><%- include('admin/partials/icon', { name: 'trash', size: 16 }) %> <%= t('privacy.deleteAccount') %></button>
+            <% } %>
+          </div>
+          <% if (!canDeleteSelf) { %><p class="form-hint" data-staff-no-delete><%= t('privacy.staffNoDelete') %></p><% } %>
+          <% if (canDeleteSelf) { %>
+            <dialog class="profile-confirm account-confirm" data-account-confirm aria-labelledby="accountConfirmTitle"<%= dState.error ? ' data-open-now' : '' %>>
+              <form method="POST" action="/ho-so/xoa-tai-khoan" data-account-delete-form>
+                <h3 id="accountConfirmTitle"><%= t('privacy.deleteTitle') %></h3>
+                <p><%= t('privacy.deleteText') %></p>
+                <div class="form-group">
+                  <label for="deleteConfirm"><%= t(hasPassword ? 'privacy.deleteConfirmPassword' : 'privacy.deleteConfirmEmail') %></label>
+                  <% if (hasPassword) { %>
+                    <%- include('partials/password-input', { id: 'deleteConfirm', name: 'confirm', autocomplete: 'current-password', invalid: !!dState.error }) %>
+                  <% } else { %>
+                    <input class="form-control<%= dState.error ? ' is-invalid' : '' %>" type="email" id="deleteConfirm" name="confirm" required autocomplete="off" spellcheck="false" placeholder="<%= user.email %>">
+                  <% } %>
+                  <% if (dState.error) { %><div class="field-error"><%= dState.error %></div><% } %>
+                </div>
+                <div class="profile-confirm-actions">
+                  <button type="button" class="btn btn-ghost" data-confirm-cancel><%= t('common.cancel') %></button>
+                  <button type="submit" class="btn btn-danger" data-confirm-ok><%- include('admin/partials/icon', { name: 'trash', size: 15 }) %> <%= t('privacy.deleteAccount') %></button>
+                </div>
+              </form>
+            </dialog>
+          <% } %>
         </div>
       </div>
     </div>

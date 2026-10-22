@@ -90,7 +90,7 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
 - Don't run `npm test` and `npm run qa` at the same time (both use :3001).
 
 ## Commits and releases
-- **Commit only when the owner asks.** Each commit is a version: the first was 1.0.0, and each later one adds 0.0.1 (one tag + GitHub Release per commit).
+- **Commit only when the owner asks.** Each commit is a version: the first was 1.0.0, and each later one adds 0.0.1 (one tag + GitHub Release per commit), unless the owner names a bigger version: then add `--version X.Y.Z` to the release command (1.1.0 = every security, critical and major fix from the pre-launch test).
 - Routine:
   1. Add a `## [Unreleased]` section at the top of `CHANGELOG.md` (under the intro and `---`). Use `### Added` / `### Changed` / `### Fixed` / `### Removed`, in plain words for business readers.
   2. Screenshots (from 1.0.10 on): for visible changes, copy 1–3 small JPGs from `tests/output/` to `docs/screenshots/<next version>/` and link each under the item it shows, by relative path (`![…](docs/screenshots/1.0.10/x.jpg)`). The script makes them work on the Release page and stops if one isn't staged. The repo is public: no admin pages with real customer data.

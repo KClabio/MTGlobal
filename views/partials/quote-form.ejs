@@ -55,27 +55,28 @@
           data-err-message="<%= t('forms.errMessage') %>"
           data-err-summary="<%= t('forms.errSummary') %>"
           data-err-answer="<%= t('forms.errAnswerRequired') %>"
-          data-err-number="<%= t('forms.errAnswerNumber') %>">
+          data-err-number="<%= t('forms.errAnswerNumber') %>"
+          data-err-agree="<%= t('privacy.errAgree') %>">
       <div class="form-row">
         <div class="form-group">
-          <label><%= t('forms.name') %> *</label>
-          <input class="form-control<%= qfInvalid('name') %>" type="text" name="name" required autocomplete="name" value="<%= qfValues.name || '' %>">
+          <label for="qf-name"><%= t('forms.name') %> *</label>
+          <input class="form-control<%= qfInvalid('name') %>" type="text" id="qf-name" name="name" required autocomplete="name" value="<%= qfValues.name || '' %>">
           <% if (qfErrors.name) { %><div class="field-error" data-error-for="name"><%= qfErrors.name %></div><% } %>
         </div>
         <div class="form-group">
-          <label><%= t('forms.schoolOrCompany') %></label>
-          <input class="form-control" type="text" name="schoolOrCompany" autocomplete="organization" value="<%= qfValues.schoolOrCompany || '' %>">
+          <label for="qf-school"><%= t('forms.schoolOrCompany') %></label>
+          <input class="form-control" type="text" id="qf-school" name="schoolOrCompany" autocomplete="organization" value="<%= qfValues.schoolOrCompany || '' %>">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label><%= t('forms.phone') %> *</label>
-          <input class="form-control<%= qfInvalid('phone') %>" type="tel" name="phone" inputmode="tel" autocomplete="tel" value="<%= qfValues.phone || '' %>">
+          <label for="qf-phone"><%= t('forms.phone') %> *</label>
+          <input class="form-control<%= qfInvalid('phone') %>" type="tel" id="qf-phone" name="phone" inputmode="tel" autocomplete="tel" value="<%= qfValues.phone || '' %>">
           <% if (qfErrors.phone) { %><div class="field-error" data-error-for="phone"><%= qfErrors.phone %></div><% } %>
         </div>
         <div class="form-group">
-          <label><%= t('forms.email') %> *</label>
-          <input class="form-control<%= qfInvalid('email') %>" type="email" name="email" autocomplete="email" value="<%= qfValues.email || '' %>">
+          <label for="qf-email"><%= t('forms.email') %> *</label>
+          <input class="form-control<%= qfInvalid('email') %>" type="email" id="qf-email" name="email" autocomplete="email" value="<%= qfValues.email || '' %>">
           <% if (qfErrors.email) { %><div class="field-error" data-error-for="email"><%= qfErrors.email %></div><% } %>
         </div>
       </div>
@@ -111,8 +112,8 @@
       <% }) %>
       <% if (!qfFixedInterest) { %>
       <div class="form-group">
-        <label><%= t('forms.interestedIn') %></label>
-        <select class="form-control" name="interestedIn">
+        <label for="qf-interest"><%= t('forms.interestedIn') %></label>
+        <select class="form-control" id="qf-interest" name="interestedIn">
           <% INTEREST_GROUPS.forEach(function (g) { %>
             <optgroup label="<%= t('forms.interestGroup.' + g.key) %>">
               <% g.codes.forEach(function (code) { %><option value="<%= code %>" <%= qfInterest === code ? 'selected' : '' %>><%= t('forms.interest.' + code) %></option><% }) %>
@@ -123,9 +124,18 @@
       </div>
       <% } %>
       <div class="form-group">
-        <label><%= t('forms.message') %> *</label>
-        <textarea class="form-control<%= qfInvalid('message') %>" name="message" required><%= qfValues.message || '' %></textarea>
+        <label for="qf-message"><%= t('forms.message') %> *</label>
+        <textarea class="form-control<%= qfInvalid('message') %>" id="qf-message" name="message" required><%= qfValues.message || '' %></textarea>
         <% if (qfErrors.message) { %><div class="field-error" data-error-for="message"><%= qfErrors.message %></div><% } %>
+      </div>
+      <%# Consent (Decree 13): required; starts ticked when changing a request that was sent with it %>
+      <div class="form-group consent-group">
+        <label class="checkbox-row consent-row" for="qf-agree">
+          <input type="checkbox" class="<%= qfErrors.agreePrivacy ? 'is-invalid' : '' %>" id="qf-agree" name="agreePrivacy" value="1"
+                 <%= qfValues.agreePrivacy || qfValues.privacyAcceptedAt ? 'checked' : '' %>>
+          <span><%= t('privacy.agree') %> <a href="/chinh-sach-bao-mat" target="_blank" rel="noopener"><%= t('privacy.title') %></a> *</span>
+        </label>
+        <% if (qfErrors.agreePrivacy) { %><div class="field-error" data-error-for="agreePrivacy"><%= qfErrors.agreePrivacy %></div><% } %>
       </div>
       <% if (qfCancelHref) { %>
         <div class="form-actions-row">

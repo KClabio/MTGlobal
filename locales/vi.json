@@ -157,6 +157,25 @@
     "quickLinks": "Liên kết nhanh",
     "contactInfo": "Thông tin liên hệ"
   },
+  "privacy": {
+    "title": "Chính sách bảo mật",
+    "agree": "Tôi đồng ý với",
+    "errAgree": "Vui lòng đánh dấu đồng ý với Chính sách bảo mật.",
+    "googleNotice": "Khi tiếp tục với Google, bạn đồng ý với",
+    "dataTitle": "Dữ liệu của bạn",
+    "dataText": "Tải về một bản sao mọi thông tin website lưu về bạn (tài khoản và các yêu cầu đã gửi), hoặc xoá hẳn tài khoản. Chi tiết trong",
+    "download": "Tải dữ liệu của tôi",
+    "deleteAccount": "Xóa tài khoản",
+    "deleteTitle": "Xóa tài khoản vĩnh viễn?",
+    "deleteText": "Tài khoản, ảnh đại diện và mọi yêu cầu bạn đã gửi sẽ bị xoá ngay và không thể khôi phục.",
+    "deleteConfirmPassword": "Nhập mật khẩu để xác nhận",
+    "deleteConfirmEmail": "Nhập địa chỉ email của bạn để xác nhận",
+    "errDeleteEmail": "Email chưa khớp với email của tài khoản.",
+    "deleted": "Đã xoá tài khoản.",
+    "deletedText": "Mọi dữ liệu của bạn đã được xoá khỏi website.",
+    "staffNoDelete": "Tài khoản quản trị không tự xoá được: hãy nhờ chủ sở hữu website xoá trong Admin → Người dùng.",
+    "retentionNote": "Yêu cầu tự động bị xoá 24 tháng sau lần cập nhật cuối (theo Chính sách bảo mật)."
+  },
   "admin": {
     "pageTitle": "Quản trị - MTG",
     "brand": "MTG Admin",
@@ -520,8 +539,14 @@
       "email": "Email",
       "map": "Link bản đồ (Google Maps embed URL)",
       "save": "Lưu cài đặt",
-      "subtitle": "Giới thiệu công ty (trang Về MTG) và thông tin liên hệ (trang Liên hệ, chân trang).",
-      "brandMoved": "Logo, ảnh trang chủ và banner các trang nằm trong"
+      "subtitle": "Giới thiệu công ty (trang Về MTG), Chính sách bảo mật và thông tin liên hệ (trang Liên hệ, chân trang).",
+      "brandMoved": "Logo, ảnh trang chủ và banner các trang nằm trong",
+      "privacyTitle": "Chính sách bảo mật",
+      "privacyVi": "Chính sách bảo mật — Tiếng Việt",
+      "privacyEn": "Chính sách bảo mật — Tiếng Anh",
+      "privacyDraft": "Bản nháp viết theo Nghị định 13/2023 về bảo vệ dữ liệu cá nhân. Hãy kiểm tra (tốt nhất cùng luật sư) trước khi website chạy chính thức.",
+      "privacyHint": "Khi để nguyên bản nháp, địa chỉ, email và điện thoại ở mục Thông tin liên hệ được tự điền vào. Xoá hết chữ trong ô để quay lại bản nháp. Một đoạn chỉ có một dòng bắt đầu bằng số (vd. “1. Chúng tôi là ai”) thành tiêu đề mục.",
+      "privacyNoEmail": "Chưa có email liên hệ: chính sách đang hướng dẫn người dùng gửi yêu cầu qua trang Liên hệ. Nên nhập email ở mục Thông tin liên hệ."
     },
     "theme": {
       "dark": "Giao diện tối"
@@ -582,7 +607,11 @@
         "count": "Hiển thị {shown} / {total} người dùng",
         "none": "Không tìm thấy người dùng nào khớp “{q}”.",
         "by": "Tìm theo",
-        "fields": { "ten": "Tên", "email": "Email", "ngay": "Ngày tham gia" },
+        "fields": {
+          "ten": "Tên",
+          "email": "Email",
+          "ngay": "Ngày tham gia"
+        },
         "placeholders": {
           "ten": "Nhập tên… (xếp A → Z)",
           "email": "Nhập email… (xếp A → Z)",

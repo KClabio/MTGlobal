@@ -162,4 +162,32 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('sitemap: last change date and escaped characters', xml.includes('<lastmod>2026-10-01</lastmod>') && xml.includes('/dich-vu/a&amp;b?lang=en') && !/a&b/.test(xml));
 }
 
+// Requests are deleted 24 months after their last change (lib/retention.js); a stand-in replaces the database call
+{
+  const QuoteRequest = appRequire('./models/QuoteRequest.js');
+  const { REQUEST_KEEP_MONTHS, requestCutoff, deleteOldRequests } = appRequire('./lib/retention.js');
+  const cut = requestCutoff(new Date('2026-10-22T10:00:00Z'));
+  check('retention: requests are kept 24 months; the cut-off is the same day 24 months back', REQUEST_KEEP_MONTHS === 24 && cut.toISOString() === '2024-10-22T10:00:00.000Z', cut);
+  const real = QuoteRequest.deleteMany;
+  let asked = null;
+  QuoteRequest.deleteMany = async (filter) => { asked = filter; return { deletedCount: 3 }; };
+  try {
+    const count = await deleteOldRequests(new Date('2026-10-22T10:00:00Z'));
+    check('retention: deletes by last change (updatedAt) before the cut-off, and says how many', count === 3 && asked && asked.updatedAt && asked.updatedAt.$lt.toISOString() === '2024-10-22T10:00:00.000Z' && Object.keys(asked).length === 1, asked);
+  } finally {
+    QuoteRequest.deleteMany = real;
+  }
+}
+
+// Personal photos stored on Cloudinary are deleted with the account (middleware/upload.js removeUpload)
+{
+  const { cloudinaryPublicId } = appRequire('./lib/cloudinary-storage.js');
+  check('Cloudinary id: our photo address gives its id and type', JSON.stringify(cloudinaryPublicId('https://res.cloudinary.com/mtg/image/upload/v1712/mtglobal/images/4b1c-9f.jpg', 'mtg')) === JSON.stringify({ publicId: 'mtglobal/images/4b1c-9f', resourceType: 'image' }));
+  check('Cloudinary id: another cloud, a folder that is not ours, a Google photo or a local file give nothing',
+    cloudinaryPublicId('https://res.cloudinary.com/other/image/upload/v1/mtglobal/images/a.jpg', 'mtg') === null
+    && cloudinaryPublicId('https://res.cloudinary.com/mtg/image/upload/v1/samples/a.jpg', 'mtg') === null
+    && cloudinaryPublicId('https://lh3.googleusercontent.com/a/abc=s256-c', 'mtg') === null
+    && cloudinaryPublicId('/uploads/images/a.jpg', 'mtg') === null && cloudinaryPublicId(null, 'mtg') === null);
+}
+
 process.exit(result() ? 1 : 0);

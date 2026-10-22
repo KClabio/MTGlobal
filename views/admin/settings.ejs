@@ -24,6 +24,21 @@
         <textarea class="form-control" id="companyProfileEn" name="companyProfileEn" rows="10"><%= settings.companyProfileEn || '' %></textarea>
         <%- include('partials/plain-text-hint') %>
       </div>
+
+      <%# Chính sách bảo mật: the box shows the admin's own text, else the default draft (lib/privacy-policy.js) %>
+      <h3 id="chinh-sach-bao-mat"><%= t('admin.settings.privacyTitle') %></h3>
+      <p class="form-hint" data-privacy-draft-note><%= t('admin.settings.privacyDraft') %> <a href="/chinh-sach-bao-mat" target="_blank" rel="noopener"><%= t('admin.viewPage.item', { name: t('privacy.title') }) %> ↗</a></p>
+      <% if (!contact.email) { %><p class="form-hint" data-privacy-no-email>⚠ <%= t('admin.settings.privacyNoEmail') %></p><% } %>
+      <div class="form-group">
+        <label for="privacyPolicy"><%= t('admin.settings.privacyVi') %></label>
+        <textarea class="form-control" id="privacyPolicy" name="privacyPolicy" rows="14"><%= settings.privacyPolicy || privacyDefault.vi %></textarea>
+        <p class="form-hint"><%= t('admin.settings.privacyHint') %></p>
+      </div>
+      <div class="form-group">
+        <label for="privacyPolicyEn"><%= t('admin.settings.privacyEn') %></label>
+        <textarea class="form-control" id="privacyPolicyEn" name="privacyPolicyEn" rows="14"><%= settings.privacyPolicyEn || privacyDefault.en %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
     </div>
 
     <aside>

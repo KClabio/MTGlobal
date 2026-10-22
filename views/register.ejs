@@ -21,7 +21,8 @@
             data-err-password-length="<%= t('auth.errPasswordLength') %>"
             data-err-confirm-required="<%= t('auth.errConfirmRequired') %>"
             data-err-password-match="<%= t('auth.errPasswordMatch') %>"
-            data-password-match="<%= t('auth.passwordMatch') %>">
+            data-password-match="<%= t('auth.passwordMatch') %>"
+            data-err-agree="<%= t('privacy.errAgree') %>">
         <% if (rgForRequest) { %><input type="hidden" name="forRequest" value="1"><% } %>
         <div class="form-group">
           <label for="regName"><%= t('forms.name') %> *</label>
@@ -58,6 +59,14 @@
             <%- include('partials/password-input', { id: 'regConfirm', name: 'confirmPassword', autocomplete: 'new-password', invalid: !!rgErrors.confirmPassword }) %>
             <%- rgError('confirmPassword') %>
           </div>
+        </div>
+        <%# Consent (Decree 13): required to create an account %>
+        <div class="form-group consent-group">
+          <label class="checkbox-row consent-row" for="regAgree">
+            <input type="checkbox" class="<%= rgInvalid('agreePrivacy').trim() %>" id="regAgree" name="agreePrivacy" value="1"<%= values.agreePrivacy ? ' checked' : '' %>>
+            <span><%= t('privacy.agree') %> <a href="/chinh-sach-bao-mat" target="_blank" rel="noopener"><%= t('privacy.title') %></a> *</span>
+          </label>
+          <%- rgError('agreePrivacy') %>
         </div>
         <button type="submit" class="btn btn-primary btn-block"><%= t('forms.registerTitle') %></button>
       </form>

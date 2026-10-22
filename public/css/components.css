@@ -231,6 +231,13 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .form-hint { font-size: .8rem; color: var(--mtg-muted); margin-top: 4px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; }
 .checkbox-row input { width: auto; }
+/* "Tôi đồng ý với Chính sách bảo mật" (request forms, sign-up) and the line under the Google button */
+.consent-row { align-items: flex-start; gap: 11px; font-size: .92rem; color: var(--mtg-ink); cursor: pointer; }
+.consent-row input { flex: none; width: 18px; height: 18px; margin: 3px 0 0; accent-color: var(--mtg-blue); cursor: pointer; }
+.consent-row input.is-invalid { outline: 2px solid var(--mtg-error); outline-offset: 2px; }
+.consent-row a { text-decoration: underline; text-underline-offset: 2px; }
+.google-consent { margin: 10px 0 0; text-align: center; font-size: .82rem; }
+.google-consent a, .profile-data-hint a { text-decoration: underline; text-underline-offset: 2px; } /* a link inside a sentence */
 
 .form-card-title { font-size: 1.2rem; margin-bottom: 20px; }
 
@@ -242,6 +249,7 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .prose-text li::marker { color: var(--mtg-blue); }
 .prose-text > :last-child { margin-bottom: 0; }
 .prose-text-start { margin-left: 0; margin-right: 0; } /* left-aligned inside two-column layouts */
+.privacy-text h2 { margin: 1.8em 0 .55em; font-size: 1.2rem; } /* Chính sách bảo mật: numbered section titles */
 
 /* ---- Profile page ---- */
 .profile-page { max-width: 1040px; }
@@ -280,6 +288,13 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .profile-confirm p { margin: 0 0 10px; }
 .profile-confirm-actions { display: flex; justify-content: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 .profile-confirm-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+/* "Dữ liệu của bạn" card (Hồ sơ): "Tải dữ liệu của tôi" + "Xóa tài khoản", whose box asks for the password first */
+.profile-data-card .form-card-title { margin-bottom: 10px; }
+.profile-data-card .profile-data-hint { margin: 0 0 16px; }
+.profile-data-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.profile-data-actions .btn { display: inline-flex; align-items: center; gap: 7px; }
+.profile-data-card [data-staff-no-delete] { margin: 12px 0 0; }
+.account-confirm .form-group { text-align: left; margin: 16px 0 0; }
 /* "Xem ảnh lớn": the picture larger in a box over the dimmed page (main.js sets the picture's size in pixels).
    "← Quay lại", the browser's Back, Esc or a click outside the box close it. Keep "popup", "modal", "overlay" and
    "lightbox" out of these names: blocker add-ons hide elements named like that */

@@ -44,6 +44,11 @@ await suite(async (b) => {
 
     // --- Liên hệ (VI) ---
     await navigate(`${BASE}/lien-he?lang=vi`);
+    const unlabelled = await ev(`[...document.querySelectorAll('[data-quote-form] input, [data-quote-form] select, [data-quote-form] textarea')]
+      .filter((el) => el.type !== 'hidden' && !el.labels.length).map((el) => el.name)`);
+    check('every field of the request form has a connected label (screen readers name it)', unlabelled.length === 0, unlabelled);
+    check('clicking "Số điện thoại" puts the cursor in its box', await ev(`(() => { document.querySelector('label[for="qf-phone"]').click(); return document.activeElement && document.activeElement.name === 'phone'; })()`));
+    check('the "Tôi đồng ý với Chính sách bảo mật" tick starts empty and links the policy (new tab)', await ev(`(() => { const c = document.getElementById('qf-agree'); const a = document.querySelector('label[for="qf-agree"] a'); return !c.checked && a.getAttribute('href') === '/chinh-sach-bao-mat' && a.target === '_blank'; })()`));
     let nav = await clickSubmit(); let s = await formState();
     check('VI empty submit is blocked (no page load)', !nav);
     check('VI empty: name + message errors, contact hint red', !!(s.errs.name && s.errs.message && s.contactError), s);
@@ -62,6 +67,10 @@ await suite(async (b) => {
     await setField('phone', ''); await setField('email', 'a@b');
     nav = await clickSubmit(); s = await formState();
     check('bad email "a@b" rejected', !nav && s.errs.email === 'Email không hợp lệ.', s.errs);
+
+    check('the consent tick is required: unticked → its own message', s.errs.agreePrivacy === 'Vui lòng đánh dấu đồng ý với Chính sách bảo mật.', s.errs);
+    await ev(`document.getElementById('qf-agree').click()`); await sleep(100); s = await formState();
+    check('… ticking it clears that message', !s.errs.agreePrivacy && !s.invalid.includes('agreePrivacy'), s);
 
     await setField('name', MARK); await setField('email', ''); await setField('phone', '0912345678');
     nav = await clickSubmit();
@@ -90,7 +99,8 @@ await suite(async (b) => {
   await part(b, 'robot request form (HTTP)', async () => {
     const col = (await db()).collection('quoterequests');
     const ROBOTS = ['robot-leo-cau-thang', 'robot-di-theo-nguoi', 'robot-cat-co', 'robot-gia-dinh'];
-    const post = (path, fields, lang = 'vi') => fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams(fields), headers: asRequester(lang) });
+    // Sent with the consent tick unless a test leaves it out on purpose
+    const post = (path, fields, lang = 'vi') => fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams({ agreePrivacy: '1', ...fields }), headers: asRequester(lang) });
     const get = async (path, lang = 'vi') => (await fetch(BASE + path, { headers: asRequester(lang) })).text();
     for (const robot of ROBOTS) {
       const page = await get(`/san-pham/${robot}`);
@@ -129,6 +139,14 @@ await suite(async (b) => {
     r = await post('/lien-he', { name: `${MARK}-workshop`, email: 'an@example.com', message: 'Workshop', interestedIn: 'workshop-stem' });
     check('Liên hệ: sending → 303 to the thank-you page (/lien-he?da-gui=1)', r.status === 303 && r.headers.get('location') === '/lien-he?da-gui=1', { status: r.status, at: r.headers.get('location') });
     check('a new choice is saved as chosen (workshop-stem)', r.status === 303 && (await col.findOne({ name: `${MARK}-workshop` })).interestedIn === 'workshop-stem');
+    const consent = (await col.findOne({ name: `${MARK}-workshop` })).privacyAcceptedAt;
+    check('… with the time of consent to the Chính sách bảo mật', consent instanceof Date && Date.now() - consent < 60000, consent);
+    for (const path of ['/lien-he', '/san-pham/robot-cat-co/yeu-cau']) {
+      r = await post(path, { name: `${MARK}-no-tick`, email: 'an@example.com', message: 'Không đánh dấu', interestedIn: 'khac', agreePrivacy: '' });
+      html = await r.text();
+      check(`${path} without the consent tick → 400, only the tick named, nothing saved`, r.status === 400 && /data-error-for="agreePrivacy">Vui lòng đánh dấu đồng ý với Chính sách bảo mật\./.test(html)
+        && (html.match(/data-error-for="/g) || []).length === 1 && !(await col.findOne({ name: `${MARK}-no-tick` })), r.status);
+    }
     r = await post('/lien-he', { name: `${MARK}-contact`, email: 'an@example.com', message: 'Hỏi về du học', interestedIn: 'tu-van-du-hoc' });
     const contactSaved = await col.findOne({ name: `${MARK}-contact` });
     check('Liên hệ keeps the chosen category (tu-van-du-hoc)', r.status === 303 && contactSaved && contactSaved.interestedIn === 'tu-van-du-hoc', contactSaved && contactSaved.interestedIn);
@@ -153,7 +171,7 @@ await suite(async (b) => {
     await b.shot('robot-form-sidebar');
     const name = `${MARK}-browser`;
     await ev(`(() => { const f = document.querySelector('#yeu-cau form');
-      f.elements.name.value = ${JSON.stringify(name)}; f.elements.phone.value = '0912345678'; f.elements.message.value = 'Báo giá robot leo cầu thang'; })()`);
+      f.elements.name.value = ${JSON.stringify(name)}; f.elements.phone.value = '0912345678'; f.elements.message.value = 'Báo giá robot leo cầu thang'; f.elements.agreePrivacy.checked = true; })()`);
     const l = b.waitLoad();
     await ev(`document.querySelector('#yeu-cau button[type=submit]').click()`);
     await l; await sleep(500);
@@ -205,7 +223,7 @@ await suite(async (b) => {
       check(`logged in: ${path} opens with the profile filled in (name, email, phone, organisation), nothing locked`, JSON.stringify({ ...v, locked: undefined }) === JSON.stringify({ ...PROFILE, locked: undefined }) && !v.locked, v);
     }
     await b.nav('/lien-he', 300);
-    await ev(`(() => { const f = document.querySelector('[data-quote-form]'); f.elements.name.value = '${MARK}-own'; f.elements.email.value = 'other.zz@example.com'; f.elements.message.value = 'Email khác'; })()`);
+    await ev(`(() => { const f = document.querySelector('[data-quote-form]'); f.elements.name.value = '${MARK}-own'; f.elements.email.value = 'other.zz@example.com'; f.elements.message.value = 'Email khác'; f.elements.agreePrivacy.checked = true; })()`);
     l = b.waitLoad(); await ev(`document.querySelector('[data-quote-form] button[type=submit]').click()`); await l; await sleep(200);
     const own = await col.findOne({ name: `${MARK}-own` });
     check('a changed email is sent as typed (and the request belongs to the account)', own && own.email === 'other.zz@example.com' && own.phone === PROFILE.phone && String(own.user) === String(requester.id), own && { email: own.email, phone: own.phone });
@@ -217,7 +235,7 @@ await suite(async (b) => {
     const other = await createUser('other-customer', 'customer');
     const as = (who) => ({ cookie: `lang=vi; connect.sid=${who.sid}` });
     const get = async (path, who = requester) => { const r = await fetch(BASE + path, { redirect: 'manual', headers: as(who) }); return { status: r.status, at: r.headers.get('location'), html: await r.text() }; };
-    const post = async (path, fields, who = requester) => { const r = await fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams(fields), headers: as(who) }); return { status: r.status, at: r.headers.get('location'), html: await r.text() }; };
+    const post = async (path, fields, who = requester) => { const r = await fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams({ agreePrivacy: '1', ...fields }), headers: as(who) }); return { status: r.status, at: r.headers.get('location'), html: await r.text() }; };
 
     const NAME = `${MARK}-edit`;
     await post('/lien-he', { name: NAME, phone: '0912345678', email: '', message: 'Nội dung cũ', interestedIn: 'workshop-stem' });
@@ -229,6 +247,7 @@ await suite(async (b) => {
     r = await get(EDIT);
     check('the edit page: the Liên hệ form filled with the request', r.status === 200 && r.html.includes(`action="${EDIT}"`) && r.html.includes(`value="${NAME}"`) && r.html.includes('>Nội dung cũ</textarea>')
       && /<option value="workshop-stem" selected>/.test(r.html) && />Cập nhật yêu cầu<\/button>/.test(r.html) && r.html.includes('href="/tai-khoan">Hủy</a>') && r.html.includes('data-back>&larr; Quay lại'));
+    check('… the consent tick starts ticked (given when the request was sent)', /id="qf-agree" name="agreePrivacy" value="1"\s+checked>/.test(r.html));
 
     r = await post(EDIT, { name: NAME, phone: '0912345678', message: '   ', interestedIn: 'workshop-stem' });
     check('an empty message is refused like a new request (400, values kept, nothing saved)', r.status === 400 && r.html.includes('data-error-for="message"') && r.html.includes(`value="${NAME}"`)
@@ -339,7 +358,7 @@ await suite(async (b) => {
     check('reduced motion: it still fades, just quicker', rmMid.opacity < 1 && rmEnd.opacity === 1, { rmMid, rmEnd });
     await b.key('Escape', 'Escape', 27); await b.reducedMotion(false); await sleep(300);
     // Sent with the box's choice
-    await ev(`(() => { const f = document.querySelector('[data-quote-form]'); f.elements.name.value = ${JSON.stringify(MARK + '-choice')}; f.elements.message.value = 'Chọn qua hộp'; })()`);
+    await ev(`(() => { const f = document.querySelector('[data-quote-form]'); f.elements.name.value = ${JSON.stringify(MARK + '-choice')}; f.elements.message.value = 'Chọn qua hộp'; f.elements.agreePrivacy.checked = true; })()`);
     await b.clickAt(`${SEL} ~ .choice-box-button`); await sleep(450);
     await clickOption('Tư vấn, thiết kế & triển khai phòng Lab STEM'); await sleep(450);
     { const l = b.waitLoad(); await ev(`document.querySelector('[data-quote-form] button[type=submit]').click()`); await l; await sleep(200); }

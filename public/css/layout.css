@@ -19,7 +19,7 @@
 .nav-dropdown { position: relative; }
 .nav-caret { display: inline-block; font-size: .7em; transition: transform calc(.25s * var(--anim, 1)) cubic-bezier(.2, .8, .3, 1); }
 /* The ▾ turns over while its menu is open */
-.nav-dropdown:hover .nav-caret, .nav-dropdown.is-kbd-open .nav-caret, .user-menu:hover .nav-caret, .user-menu.is-kbd-open .nav-caret { transform: rotate(180deg); }
+.nav-dropdown:hover .nav-caret, .nav-dropdown.is-kbd-open .nav-caret, .user-menu:hover .nav-caret, .user-menu.is-kbd-open .nav-caret, .user-menu.is-held .nav-caret { transform: rotate(180deg); }
 .nav-dropdown-menu {
   position: absolute; top: 100%; left: 0; min-width: 260px; background: var(--mtg-surface); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow-lg);
   padding: 8px; display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--mtg-border); transform-origin: top left;
@@ -32,9 +32,10 @@
   transition: opacity calc(.16s * var(--anim, 1)) ease calc(.08s * var(--anim, 1)), transform calc(.16s * var(--anim, 1)) ease calc(.08s * var(--anim, 1)),
     visibility 0s linear calc(.24s * var(--anim, 1));
 }
-/* Shown while the pointer is on the item or its menu; keyboard focus (not a mouse click) also opens it: .is-kbd-open, set in main.js */
+/* Shown while the pointer is on the item or its menu; keyboard focus (not a mouse click) also opens it: .is-kbd-open, set in main.js.
+   .is-held (theme.js): the account menu stays open through its light/dark switch, until the pointer leaves it */
 .nav-dropdown:hover .nav-dropdown-menu, .nav-dropdown.is-kbd-open .nav-dropdown-menu,
-.user-menu:hover .user-menu-dropdown, .user-menu.is-kbd-open .user-menu-dropdown {
+.user-menu:hover .user-menu-dropdown, .user-menu.is-kbd-open .user-menu-dropdown, .user-menu.is-held .user-menu-dropdown {
   visibility: visible; opacity: 1; transform: none;
   transition: opacity calc(.22s * var(--anim, 1)) ease, transform calc(.22s * var(--anim, 1)) cubic-bezier(.2, .8, .3, 1), visibility 0s;
 }
@@ -55,7 +56,7 @@
 .user-menu-trigger { max-width: 180px; min-width: 0; }
 .user-menu-trigger { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--mtg-bg-alt); font-weight: 600; font-size: .88rem; cursor: pointer; border: none;
   transition: background-color calc(.18s * var(--anim, 1)) ease, color calc(.18s * var(--anim, 1)) ease; }
-.user-menu:hover .user-menu-trigger, .user-menu.is-kbd-open .user-menu-trigger { background: var(--mtg-blue-tint); color: var(--mtg-blue); }
+.user-menu:hover .user-menu-trigger, .user-menu.is-kbd-open .user-menu-trigger, .user-menu.is-held .user-menu-trigger { background: var(--mtg-blue-tint); color: var(--mtg-blue); }
 .user-menu-dropdown { position: absolute; right: 0; top: 100%; margin-top: 6px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow-lg); min-width: 180px; padding: 6px; display: flex; flex-direction: column; transform-origin: top right; }
 /* Invisible bridge over the 6px gap so :hover isn't lost while moving the mouse onto the menu */
 .user-menu-dropdown::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
@@ -97,6 +98,8 @@
 .footer-col a, .footer-col p { color: rgba(255,255,255,.72); font-size: .9rem; display: block; margin-bottom: 8px; }
 .footer-col a:hover { color: #fff; }
 .footer-bottom { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); text-align: center; font-size: .82rem; color: rgba(255,255,255,.55); }
+.footer-bottom-link { margin-left: 10px; color: rgba(255,255,255,.72); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.footer-bottom-link:hover { color: #fff; }
 
 /* ---- Light/dark theme switch ---- */
 .theme-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 0; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }

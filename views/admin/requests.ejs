@@ -2,7 +2,10 @@
 <% const interestChips = typeof interests !== 'undefined' ? interests : []; %>
 
 <div class="admin-topbar">
-  <h1><%= t('admin.requests.title') %></h1>
+  <div>
+    <h1><%= t('admin.requests.title') %></h1>
+    <p class="admin-subtitle" data-retention-note><%= t('privacy.retentionNote') %></p>
+  </div>
   <div class="row-actions">
     <a class="btn btn-sm <%= statusFilter === '' ? 'btn-primary' : 'btn-ghost' %>" href="/admin/yeu-cau" data-keep-query><%= t('admin.requests.all') %></a>
     <% statuses.forEach(function (s) { %>

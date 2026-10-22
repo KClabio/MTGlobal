@@ -40,7 +40,8 @@ await suite(async (b) => {
     await d.collection('sitesettings').replaceOne({ _id: settingsBackup._id }, settingsBackup);
     const ci = settingsBackup.contactInfo || {};
     await fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}` },
-      body: new URLSearchParams({ companyProfile: settingsBackup.companyProfile || '', companyProfileEn: settingsBackup.companyProfileEn || '', address: ci.address || '', phone: ci.phone || '', email: ci.email || '', mapEmbedUrl: ci.mapEmbedUrl || '' }) });
+      body: new URLSearchParams({ companyProfile: settingsBackup.companyProfile || '', companyProfileEn: settingsBackup.companyProfileEn || '', address: ci.address || '', phone: ci.phone || '', email: ci.email || '', mapEmbedUrl: ci.mapEmbedUrl || '',
+        privacyPolicy: settingsBackup.privacyPolicy || '', privacyPolicyEn: settingsBackup.privacyPolicyEn || '' }) });
   };
   removeLater('products', { nameVi: { $regex: '^' + MARK } });
   removeLater('projects', { titleVi: { $regex: '^' + MARK } });
@@ -595,6 +596,41 @@ await suite(async (b) => {
     }
     const back = await d.collection('sitesettings').findOne({});
     check('real introduction restored exactly', back.companyProfile === original.companyProfile && back.companyProfileEn === original.companyProfileEn);
+  });
+
+  await part(b, 'Chính sách bảo mật text (Thông tin công ty)', async () => {
+    const original = settingsBackup;
+    const ci = original.contactInfo || {};
+    const { defaultPolicy } = appRequire('./lib/privacy-policy.js');
+    const post = (fields) => fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}` },
+      body: new URLSearchParams({ companyProfile: original.companyProfile || '', companyProfileEn: original.companyProfileEn || '', address: ci.address || '', phone: ci.phone || '', email: ci.email || '', mapEmbedUrl: ci.mapEmbedUrl || '', ...fields }) });
+    const policy = async (lang) => (await fetch(BASE + '/chinh-sach-bao-mat', { headers: { cookie: `lang=${lang}` } })).text();
+    try {
+      await post({ privacyPolicy: '', privacyPolicyEn: '' });
+      const form = await (await adminGet('/admin/thong-tin-cong-ty')).text();
+      check('the admin boxes start with the draft (filled with the address), marked as a draft to check', form.includes('id="privacyPolicy" name="privacyPolicy"') && form.includes('1. Chúng tôi là ai') && form.includes('1. Who we are')
+        && form.includes('data-privacy-draft-note') && /Nghị định 13\/2023/.test(form) && (!ci.address || form.includes(ci.address)));
+      check('no contact email yet → the admin is told the policy points to the Liên hệ page', !!ci.email === !form.includes('data-privacy-no-email'));
+      // The draft sent back unchanged (a plain "Lưu" of the page) stays "default"
+      await post({ privacyPolicy: defaultPolicy('vi', original), privacyPolicyEn: defaultPolicy('en', original) });
+      let saved = await d.collection('sitesettings').findOne({});
+      check('saving the unchanged draft keeps it as the default (follows later contact changes)', saved.privacyPolicy === '' && saved.privacyPolicyEn === '', { vi: (saved.privacyPolicy || '').slice(0, 40) });
+      // Own text: plain text, a single numbered line becomes a heading
+      await post({ privacyPolicy: 'ZZ chính sách <b>thử</b>.\n\n1. Mục một\n\n- điểm a\n- điểm b', privacyPolicyEn: '' });
+      saved = await d.collection('sitesettings').findOne({});
+      check('own VI text saved as plain text', saved.privacyPolicy === 'ZZ chính sách thử.\n\n1. Mục một\n\n- điểm a\n- điểm b', saved.privacyPolicy);
+      let vi = await policy('vi');
+      check('the page shows it: paragraph, "1. Mục một" as a heading, the list', vi.includes('<p>ZZ chính sách thử.</p>') && vi.includes('<h2>1. Mục một</h2>') && vi.includes('<li>điểm a</li><li>điểm b</li>') && !vi.includes('Chúng tôi là ai'));
+      check('… English still shows the draft', (await policy('en')).includes('Decree 13/2023'));
+      check('a save without the policy boxes (older form) leaves the text alone', (await post({}), (await d.collection('sitesettings').findOne({})).privacyPolicy === saved.privacyPolicy));
+      await post({ privacyPolicy: '   ', privacyPolicyEn: '' });
+      vi = await policy('vi');
+      check('an empty box brings the draft back', vi.includes('<h2>1. Chúng tôi là ai</h2>') && !vi.includes('ZZ chính sách'));
+    } finally {
+      await restoreSettingsNow();
+    }
+    const back = await d.collection('sitesettings').findOne({});
+    check('policy text restored exactly', (back.privacyPolicy || '') === (original.privacyPolicy || '') && (back.privacyPolicyEn || '') === (original.privacyPolicyEn || ''));
   });
 
   await part(b, 'content forms save plain text', async () => {

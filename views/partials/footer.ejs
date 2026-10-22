@@ -39,6 +39,7 @@
     <div class="footer-bottom">
       <div class="container">
         &copy; <%= new Date().getFullYear() %> MTG — Mễ Trì Global. <%= t('common.allRightsReserved') %>.
+        <a class="footer-bottom-link" href="/chinh-sach-bao-mat"><%= t('privacy.title') %></a>
       </div>
     </div>
   </footer>
@@ -50,8 +51,15 @@
       <span class="site-toast-text"><strong><%= t('auth.loginDone') %></strong> <%= t('auth.loginHello', { name: loginNotice }) %></span>
       <button type="button" class="site-toast-x" data-site-toast-close aria-label="<%= t('auth.closeNotice') %>" title="<%= t('auth.closeNotice') %>">×</button>
     </div>
+  <% } else if (typeof deletedNotice !== 'undefined' && deletedNotice) { %>
+    <div class="site-toast" role="status" aria-live="polite" data-site-toast data-deleted-notice>
+      <span class="site-toast-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>
+      <span class="site-toast-text"><strong><%= t('privacy.deleted') %></strong> <%= t('privacy.deletedText') %></span>
+      <button type="button" class="site-toast-x" data-site-toast-close aria-label="<%= t('auth.closeNotice') %>" title="<%= t('auth.closeNotice') %>">×</button>
+    </div>
   <% } %>
   <script src="<%= asset('/js/theme.js') %>"></script>
   <script src="<%= asset('/js/main.js') %>"></script>
+  <div id="page-end" hidden></div>
 </body>
 </html>
