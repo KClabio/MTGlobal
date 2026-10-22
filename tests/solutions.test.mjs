@@ -240,7 +240,7 @@ await suite(async (b) => {
       await tabTo(k);
       const L = await layout();
       check(`sample room ${k} at 1280×720: picture left, description right, top-aligned, all on screen`, L.imgR <= L.txtL && L.topGap <= 2 && L.tabsTop >= 0 && Math.max(L.imgB, L.txtB) <= L.vh && !L.caption && !L.sideScroll, L);
-      if (k === 2) check('"Xem ảnh lớn" points to the full picture; the picture keeps its whole caption as its text', L.full === L.src && /^Tiểu học — Phòng Lab STEM Tiểu học/.test(L.alt), L);
+      if (k === 2) check('"Xem ảnh lớn" points to the full picture (the page shows a lighter copy of it); the picture keeps its whole caption as its text', L.full === L.src.split('?')[0] && /\?w=\d+$/.test(L.src) &&/^Tiểu học — Phòng Lab STEM Tiểu học/.test(L.alt), L);
     }
     const listSizes = await ev(`[...document.querySelectorAll('[data-media-tabs] [role="tabpanel"]')].map((p) => p.querySelectorAll('.media-tabpanel-list li').length)`);
     check('every sample room lists what is in it (Mầm non and THCS included)', listSizes.every((n) => n >= 5), listSizes);
@@ -272,7 +272,7 @@ await suite(async (b) => {
     const urlBefore = await ev(`location.pathname + location.search + location.hash`);
     let v = await openViewer();
     check('pop-up opens on the page with that room\'s picture, its name and "← Quay lại"; bigger than on the page and fully on screen (1280×720)',
-      v.open && v.src === v.pageSrc && v.title === 'Tiểu học' && v.back === '← Quay lại' && v.w > v.pageW && v.h > v.pageH && v.inside && v.url === urlBefore && v.viewerStep && v.focusBack && v.locked, v);
+      v.open && v.src === v.pageSrc.split('?')[0] && v.title === 'Tiểu học' && v.back === '← Quay lại' && v.w > v.pageW && v.h > v.pageH && v.inside && v.url === urlBefore && v.viewerStep && v.focusBack && v.locked, v);
     check('it is a centred box, not full screen; the picture sits inside it with its own shape and the loading text gone',
       v.box.l > 20 && v.box.t > 10 && Math.abs(v.box.l - v.box.r) <= 2 && Math.abs(v.box.t - v.box.b) <= 2 && v.box.imgIn && Math.abs(v.shape - v.natShape) <= 0.02 && !v.loading, v);
     await shot('stemlab-image-viewer-1280x720');
@@ -298,7 +298,7 @@ await suite(async (b) => {
     // A picture that can't be loaded: the box says so (with a link) instead of staying empty
     const realHref = await ev(`document.querySelector('${fullBtn}').getAttribute('data-full')`);
     const setPlan = (src) => ev(`(async () => { const a = document.querySelector('${fullBtn}'); const im = a.closest('.media-tabpanel').querySelector('.media-frame img');
-      a.setAttribute('data-full', ${JSON.stringify(src)}); im.src = ${JSON.stringify(src)};
+      a.setAttribute('data-full', ${JSON.stringify(src)}); im.removeAttribute('srcset'); im.src = ${JSON.stringify(src)};
       await new Promise((r) => { if (im.complete) r(); else { im.onload = im.onerror = r; } }); return true; })()`);
     await setPlan('/assets/zz-missing-plan.jpg');
     await openViewer(); await sleep(300); v = await viewerState();
@@ -332,10 +332,10 @@ await suite(async (b) => {
       await tabTo(k); await sleep(300);
       asked.length = 0;
       v = await openViewer();
-      rooms.push({ k, open: v.open, same: v.src === v.pageSrc, w: v.w, loading: v.loading, failed: await ev(`document.querySelector('.plan-zoom').classList.contains('is-failed')`), downloads: asked.length });
+      rooms.push({ k, open: v.open, same: v.src === v.pageSrc.split('?')[0], w: v.w, loading: v.loading, failed: await ev(`document.querySelector('.plan-zoom').classList.contains('is-failed')`), downloads: asked.length });
       await b.clickAt('.plan-zoom-back'); await sleep(400);
     }
-    check('… and each room\'s box shows its picture, taken from the page (no new download)', rooms.every((r) => r.open && r.same && r.w > 300 && !r.loading && !r.failed && r.downloads === 0), rooms);
+    check('… and each room\'s box shows its picture: the page copy at once, then the full picture (one download)', rooms.every((r) => r.open && r.same && r.w > 300 && !r.loading && !r.failed && r.downloads <= 1), rooms);
     const names = await ev(`[document.querySelector('.plan-zoom'), ...document.querySelectorAll('.plan-zoom *')].map((e) => (e.className || '') + ' ' + e.id + ' ' + (e.getAttribute('aria-labelledby') || '')).join(' ') + ' ' + document.documentElement.className`);
     check('no names in the box that blocker add-ons hide (popup, modal, overlay, lightbox)', !/popup|modal|overlay|lightbox/i.test(names), names);
     // A blocker add-on that hides the box anyway: the picture opens in the tab itself, and Back returns to the page
@@ -360,7 +360,7 @@ await suite(async (b) => {
     const zoomList = await ev(`[...document.querySelectorAll('.media-zoom')].map((z) => ({ tag: z.tagName, href: z.getAttribute('href'), full: z.getAttribute('data-full'), src: z.querySelector('img').getAttribute('src'),
       label: z.getAttribute('aria-label'), grid: !!z.closest('.media-grid') }))`);
     check('Thiết kế 3D: 6 pictures, each a button (no link address) that opens its own picture',
-      zoomList.length === 6 && zoomList.every((z) => z.tag === 'BUTTON' && z.href === null && z.full === z.src && /\/3d-[a-z-]+\.jpg$/.test(z.src) && /^Xem ảnh lớn: /.test(z.label) && z.grid), zoomList);
+      zoomList.length === 6 && zoomList.every((z) => z.tag === 'BUTTON' && z.href === null && z.full === z.src.split('?')[0] && /\/3d-[a-z-]+\.jpg\?w=\d+$/.test(z.src) && /^Xem ảnh lớn: /.test(z.label) && z.grid), zoomList);
     const zoomLook = (n) => ev(`(() => { const f = document.querySelector('${zoomSel(n)}'); const im = f.querySelector('img'); const badge = f.querySelector('.media-zoom-badge');
       return { lift: Math.round(new DOMMatrix(getComputedStyle(f).transform).m42), scale: +new DOMMatrix(getComputedStyle(im).transform).a.toFixed(3), badge: +getComputedStyle(badge).opacity,
         cursor: getComputedStyle(f.querySelector('.media-zoom')).cursor, border: getComputedStyle(f).borderTopColor, count: document.body.querySelectorAll('*').length }; })()`);
@@ -390,8 +390,8 @@ await suite(async (b) => {
     shots3d.length = 0;
     await b.clickAt(`${zoomSel(2)} .media-zoom`); await sleep(500);
     let zs = await zoomState();
-    check('clicking a 3D picture opens it larger in the box: same picture, its caption as the title, whole picture on screen, no new download',
-      zs.open && zs.src === zs.pageSrc && zs.title === zs.caption && zs.title === 'Góc nhìn hướng tới hệ tủ robot' && zs.nat > 0 && zs.w > zs.gridW && zs.inside && !zs.loading && shots3d.length === 0, { ...zs, downloads: shots3d.length });
+    check('clicking a 3D picture opens it larger in the box: the page copy at once, then the full picture (one download), its caption as the title, whole picture on screen',
+      zs.open && zs.src === zs.pageSrc.split('?')[0] && zs.title === zs.caption && zs.title === 'Góc nhìn hướng tới hệ tủ robot' && zs.nat > 0 && zs.w > zs.gridW && zs.inside && !zs.loading && shots3d.length <= 1, { ...zs, downloads: shots3d.length });
     await b.clickAt('.plan-zoom-back'); await sleep(450);
     zs = await zoomState();
     check('"← Quay lại" closes it and the picture has the focus again', !zs.open && zs.focus && (await ev('location.pathname')) === '/giai-phap/stem-lab', zs);

@@ -1,0 +1,26 @@
+<%# Shown while the database is unreachable (lib/db-guard.js): uses nothing from the database, so it always works.
+    Both languages, since the visitor's language setting may not be readable then. %>
+<!doctype html>
+<html lang="vi" data-theme="<%= theme %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>MTG - Smart Solutions for Life</title>
+  <link rel="stylesheet" href="<%= asset('/css/site.css') %>">
+</head>
+<body>
+  <div class="brand-bar"></div>
+  <main class="section" style="text-align:center; padding:120px 0;">
+    <div class="container">
+      <p class="logo-text" style="justify-content:center;">
+        <span style="color:var(--mtg-blue)">M</span><span style="color:var(--mtg-green)">T</span><span style="color:var(--mtg-orange)">G</span>
+      </p>
+      <h1>Website đang tạm gián đoạn</h1>
+      <p>Vui lòng thử lại sau ít phút.</p>
+      <p lang="en" style="color:var(--mtg-muted); margin-top:24px;">The website is temporarily unavailable. Please try again in a few minutes.</p>
+      <a class="btn btn-primary" href="" style="margin-top:16px;">Thử lại / Try again</a>
+    </div>
+  </main>
+</body>
+</html>

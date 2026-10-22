@@ -11,7 +11,7 @@
           <%# Search looks at the title (VI + EN) and the article text %>
           <a class="card" href="/tin-tuc/<%= article._id %>" data-search-item
              data-search="<%= [article.titleVi, article.titleEn, excerpt(pick(article, 'body'), 1500)].filter(Boolean).join(' ') %>">
-            <% if (article.coverImage) { %><div class="card-media"><img src="<%= article.coverImage %>" alt="<%= pick(article, 'title') %>"></div><% } %>
+            <% if (article.coverImage) { %><div class="card-media"><%- picture(article.coverImage, pick(article, 'title'), { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px' }) %></div><% } %>
             <div class="card-body">
               <h3><%= pick(article, 'title') %></h3>
               <p><%= new Date(article.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></p>

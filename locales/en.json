@@ -578,10 +578,16 @@
         "none": "No request matches “{q}”."
       },
       "users": {
-        "placeholder": "Search by name, email or organisation…",
         "label": "Search users",
         "count": "Showing {shown} / {total} users",
-        "none": "No user matches “{q}”."
+        "none": "No user matches “{q}”.",
+        "by": "Search by",
+        "fields": { "ten": "Name", "email": "Email", "ngay": "Date joined" },
+        "placeholders": {
+          "ten": "Type a name… (sorted A → Z)",
+          "email": "Type an email… (sorted A → Z)",
+          "ngay": "Type a date: DD/MM/YYYY (oldest → newest)"
+        }
       }
     },
     "viewPage": {
@@ -809,6 +815,7 @@
     "optional": "optional",
     "registered": "Your account is ready! Please log in with it.",
     "errLogin": "Incorrect email or password.",
+    "errTooMany": "Too many failed attempts. Please try again in {minutes} minutes.",
     "haveAccount": "Already have an account?",
     "noAccount": "Don't have an account?",
     "loginToRequest": "Please log in to request a consultation.",

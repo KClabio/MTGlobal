@@ -43,6 +43,7 @@
   --mtg-info-tint: #d6eaff;
   --mtg-info-ink: #0d47a1;
   --mtg-done-tint: #d4f5dd;
+  --mtg-done-text: #17692b;     /* "Hoàn tất" tag text on the done tint (5.8:1) */
   --mtg-danger-border: #f2c4bf;
   --mtg-checker: #f1f3f6;       /* logo-preview checkerboard (stays light so logos read in both themes) */
 
@@ -117,6 +118,7 @@
   --mtg-info-tint: #182c46;
   --mtg-info-ink: #8fc0ff;
   --mtg-done-tint: #15301f;
+  --mtg-done-text: #5fd38a;
   --mtg-danger-border: #6b2a2a;
 
   --toast-success: #1d7a36;

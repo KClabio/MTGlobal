@@ -2,7 +2,7 @@
    settings, page editor, delete dialog, dashboard charts, service editor and the "view on website" button. */
 
 /* ---- Tables (admin) ---- */
-.admin-wrap { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 0px); }
+.admin-wrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 0px); } /* minmax: a wide table scrolls in its own box instead of stretching the page */
 /* Light sidebar so the logo keeps its original colours (incl. the navy tagline) on a transparent background */
 .admin-sidebar { background: var(--mtg-surface); border-right: 1px solid var(--mtg-border); padding: 20px 0 0; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; }
 /* Admin language switch, pinned to the bottom-left of the sidebar */
@@ -316,7 +316,12 @@ body.confirm-lock { overflow: hidden; }
 
 /* Name search above long admin lists */
 .list-search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: -8px 0 16px; }
-.list-search-box { position: relative; flex: 1 1 260px; max-width: 520px; }
+.list-search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; flex: 1 1 260px; max-width: 520px; }
+.list-search.has-fields .list-search-row { max-width: 760px; }
+.list-search-box { position: relative; flex: 1 1 240px; min-width: 0; }
+/* "Tìm theo" box (users list): the search looks in that one field and sorts by it */
+.list-search-by { display: inline-flex; align-items: center; gap: 8px; flex: none; margin: 0; font-size: .9rem; font-weight: 600; color: var(--mtg-heading); white-space: nowrap; }
+.list-search-field { width: auto; min-height: 44px; padding-right: 34px; cursor: pointer; }
 .list-search-box .form-control { padding-left: 42px; padding-right: 42px; min-height: 44px; }
 .list-search-box input::-webkit-search-cancel-button { display: none; } /* we draw our own clear button */
 .list-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--mtg-muted); pointer-events: none; }
@@ -334,7 +339,7 @@ body.confirm-lock { overflow: hidden; }
 .filter-chip:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
 .filter-chip-count { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .78rem; text-align: center; }
 .filter-chip.is-active { background: var(--mtg-blue-solid); border-color: var(--mtg-blue-solid); color: #fff; }
-.filter-chip.is-active .filter-chip-count { background: rgba(255,255,255,.22); color: #fff; }
+.filter-chip.is-active .filter-chip-count { background: #fff; color: var(--mtg-blue-solid); } /* white bubble, blue number: readable at this small size */
 tbody.is-filtered .drag-handle { opacity: .35; cursor: not-allowed; }
 tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg-muted); }
 .search-hit { background: var(--mtg-blue-tint); color: inherit; font-weight: 700; border-radius: 3px; padding: 0 1px; }
@@ -537,7 +542,7 @@ body:has(.page-form-actions) .admin-toast { bottom: 96px; } /* and above a stick
   .dash-grid { grid-template-columns: 1fr; }
   .mini-grid { grid-template-columns: repeat(3, 1fr); }
   .admin-main { padding: 20px 16px; }
-  .admin-wrap { grid-template-columns: 1fr; }
+  .admin-wrap { grid-template-columns: minmax(0, 1fr); }
   /* The menu leaves the page and slides in from the left (☰ above the title; public/js/admin.js). Hidden while closed
      (visibility waits for the slide to finish) so Tab never lands in it. The speeds follow --anim like the
      notifications: shorter with "reduced motion", but still a visible slide. */

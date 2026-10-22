@@ -9,7 +9,6 @@ const useCloudinary = !!(
 );
 
 let cloudinary = null;
-let CloudinaryStorage = null;
 if (useCloudinary) {
   cloudinary = require('cloudinary').v2;
   cloudinary.config({
@@ -17,7 +16,6 @@ if (useCloudinary) {
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
-  ({ CloudinaryStorage } = require('multer-storage-cloudinary'));
 }
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
@@ -51,8 +49,8 @@ function configFor(file) {
 
 function makeStorage() {
   if (useCloudinary) {
-    return new CloudinaryStorage({
-      cloudinary,
+    return require('../lib/cloudinary-storage').cloudinaryStorage({
+      uploader: cloudinary.uploader,
       params: (req, file) => {
         const config = configFor(file) || FIELD_CONFIG.image;
         return {

@@ -1,18 +1,33 @@
 <%# Search for a long admin list; filtering happens in the browser (public/js/admin.js).
     Usage: include('partials/list-search', { target: 'equipment' }) — target is the list's data-sortable type,
     and its texts are admin.search.<target>.* (placeholder, label, count, none). Rows carry data-search; the cell
-    with data-search-name gets the matches highlighted. Works together with partials/list-filter (chips). %>
-<div class="list-search" role="search"
+    with data-search-name gets the matches highlighted. Works together with partials/list-filter (chips).
+    Optional fields: [{ value, label, placeholder }] adds a "Tìm theo" box: the search then looks in that one field
+    and sorts by it (users list: rows carry data-search-name, data-search-email and data-joined). %>
+<% const searchFields = typeof fields !== 'undefined' ? fields : null; %>
+<div class="list-search<%= searchFields ? ' has-fields' : '' %>" role="search"
      data-list-search="<%= target %>"
      data-count="<%= t('admin.search.' + target + '.count') %>"
      data-none="<%= t('admin.search.' + target + '.none') %>"
      data-none-filter="<%= t('admin.search.noneFilter') %>"
      data-drag-paused="<%= t('admin.search.dragPaused') %>">
+  <div class="list-search-row">
+  <% if (searchFields) { %>
+    <label class="list-search-by">
+      <span><%= t('admin.search.' + target + '.by') %></span>
+      <select class="form-control list-search-field" data-search-field autocomplete="off">
+        <% searchFields.forEach(function (f) { %>
+          <option value="<%= f.value %>" data-placeholder="<%= f.placeholder %>"><%= f.label %></option>
+        <% }) %>
+      </select>
+    </label>
+  <% } %>
   <div class="list-search-box">
     <%- include('icon', { name: 'search', size: 18, cls: 'list-search-icon' }) %>
     <input class="form-control" type="search" autocomplete="off" spellcheck="false"
-           placeholder="<%= t('admin.search.' + target + '.placeholder') %>" aria-label="<%= t('admin.search.' + target + '.label') %>">
+           placeholder="<%= searchFields ? searchFields[0].placeholder : t('admin.search.' + target + '.placeholder') %>" aria-label="<%= t('admin.search.' + target + '.label') %>">
     <button type="button" class="list-search-clear" hidden aria-label="<%= t('admin.search.clear') %>" title="<%= t('admin.search.clear') %>"><%- include('icon', { name: 'x', size: 16 }) %></button>
+  </div>
   </div>
   <p class="list-search-count" aria-live="polite"></p>
 </div>

@@ -173,13 +173,18 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 .equip-tab-name { grid-column: 1 / -1; grid-row: 2; font-size: .82rem; font-weight: 500; line-height: 1.35; color: var(--mtg-muted); }
 .equip-tab-count { min-width: 24px; padding: 1px 7px; border-radius: 999px; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .78rem; font-weight: 700; text-align: center; }
 .equip-tab[aria-selected="true"] { background: var(--mtg-blue-solid); border-color: var(--mtg-blue-solid); color: #fff; }
-.equip-tab[aria-selected="true"] .equip-tab-name { color: rgba(255, 255, 255, .88); }
-.equip-tab[aria-selected="true"] .equip-tab-count { background: rgba(255, 255, 255, .22); color: #fff; }
+.equip-tab[aria-selected="true"] .equip-tab-name { color: #fff; }
+.equip-tab[aria-selected="true"] .equip-tab-count { background: #fff; color: var(--mtg-blue-solid); } /* white bubble, blue number: readable at this small size */
 /* While searching, results come from every part: the tabs step back */
 .equip-tools.is-searching .equip-tabs { opacity: .55; }
 .equip-tools.is-searching .equip-tab[aria-selected="true"] { background: var(--mtg-surface); border-color: var(--mtg-border); color: var(--mtg-heading); }
 .equip-tools.is-searching .equip-tab[aria-selected="true"] .equip-tab-name, .equip-tools.is-searching .equip-tab[aria-selected="true"] .equip-tab-count { color: var(--mtg-muted); }
-.equip-tools:not([hidden]) ~ .equip-panel { margin-top: 0; }
+.equip-tools.is-searching .equip-tab[aria-selected="true"] .equip-tab-count { background: var(--mtg-bg-alt); }
+/* With scripts on, the search, the tabs and only the first Phần are in place from the first paint, so nothing jumps
+   when main.js takes over (it adds .is-ready); a #phan-N address then opens that part. Without JS all parts show. */
+.js .equip-tools[hidden] { display: grid !important; }
+.js .equip-tools:not(.is-ready) ~ .equip-panel ~ .equip-panel { display: none; }
+.js .equip-tools ~ .equip-panel { margin-top: 0; }
 @media (max-width: 640px) { .equip-tabs { grid-template-columns: 1fr 1fr; } }
 .equipment-subgroup-title { font-size: 1.05rem; margin: 30px 0 14px; color: var(--mtg-heading); }
 .equip-results-count { margin: 0 0 14px; font-weight: 600; color: var(--mtg-muted); }

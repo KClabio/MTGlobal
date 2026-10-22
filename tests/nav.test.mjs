@@ -1,12 +1,58 @@
 // Header menus (hover-only dropdowns, clickable group titles, keyboard, account menu, phone drawer)
 // and the light/dark switches (guest header, account menu, admin), shared preference, admin toasts, dark-mode contrast.
-import { suite, part, check, createUser, restoreLater } from './lib/index.mjs';
+import { suite, part, check, createUser, restoreLater, db, BASE } from './lib/index.mjs';
 
 await suite(async (b) => {
   const { send, ev, sleep } = b;
   const user = await createUser('nav', 'customer');
   const admin = await createUser('theme', 'admin');
   await restoreLater('services', {}); // the toast check moves a service with the keyboard and back
+
+  await part(b, 'security headers (lib/security-headers.js)', async () => {
+    const head = async (p) => { const r = await fetch(BASE + p, { redirect: 'manual' }); return { h: Object.fromEntries(r.headers), text: await r.text() }; };
+    for (const p of ['/', '/css/base.css', '/admin']) {
+      const { h } = await head(p);
+      const csp = h['content-security-policy'] || '';
+      check(`${p}: content policy (own scripts with a nonce, no plugins, framing only by the site)`, /script-src 'self' 'nonce-[A-Za-z0-9+/=]+'/.test(csp) && csp.includes("object-src 'none'") && csp.includes("frame-ancestors 'self'") && csp.includes("form-action 'self'"), csp);
+      check(`${p}: X-Frame-Options SAMEORIGIN, nosniff, referrer kept within the site, camera/mic/location off`, h['x-frame-options'] === 'SAMEORIGIN' && h['x-content-type-options'] === 'nosniff' && h['referrer-policy'] === 'strict-origin-when-cross-origin' && /camera=\(\)/.test(h['permissions-policy'] || ''), h);
+      check(`${p}: no "X-Powered-By", no HTTPS-only rule outside production`, !h['x-powered-by'] && !h['strict-transport-security'], h);
+    }
+    const one = await head('/'); const two = await head('/');
+    const nonceOf = (r) => ((r.h['content-security-policy'] || '').match(/'nonce-([^']+)'/) || [])[1];
+    check('each page gets its own nonce, and its inline script carries it', nonceOf(one) && nonceOf(one) !== nonceOf(two) && one.text.includes(`<script nonce="${nonceOf(one)}">`));
+    // In the browser: nothing the site needs is blocked (any refused script, style, picture or font is counted)
+    const { identifier } = await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__cspBlocked = []; document.addEventListener('securitypolicyviolation', (e) => window.__cspBlocked.push(e.violatedDirective + ' ' + (e.blockedURI || 'inline')));` });
+    try {
+      const blocked = {};
+      const visit = async (p) => { await b.nav(p, 500); const v = await ev('window.__cspBlocked'); const js = await ev(`document.documentElement.classList.contains('js')`); if (v.length || !js) blocked[p] = { v, inlineRan: js }; };
+      for (const p of ['/', '/giai-phap/stem-lab', '/giai-phap/thiet-bi', '/giai-phap/du-an', '/san-pham', '/dang-nhap', '/dang-ky']) await visit(p);
+      await b.login(admin.sid);
+      for (const p of ['/', '/lien-he', '/ho-so', '/admin', '/admin/yeu-cau', '/admin/nguoi-dung', '/admin/trang/stem-lab', '/admin/cai-dat']) await visit(p);
+      check('pages and admin: nothing blocked by the content policy, and the inline scripts ran', !Object.keys(blocked).length, blocked);
+    } finally {
+      await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+      await b.clearCookie('connect.sid');
+    }
+  });
+
+  await part(b, 'search engines: robots.txt and sitemap.xml (lib/sitemap.js)', async () => {
+    const robots = await fetch(BASE + '/robots.txt');
+    const rt = await robots.text();
+    check('robots.txt: plain text, keeps search engines out of admin / account / profile, points to the sitemap', robots.status === 200 && /text\/plain/.test(robots.headers.get('content-type')) && ['/admin', '/tai-khoan', '/ho-so'].every((p) => rt.includes(`Disallow: ${p}\n`)) && rt.includes(`Sitemap: ${BASE}/sitemap.xml`), rt);
+    const read = async () => { const r = await fetch(BASE + '/sitemap.xml'); return { status: r.status, type: r.headers.get('content-type'), xml: await r.text() }; };
+    const s = await read();
+    const locs = [...s.xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace(/&amp;/g, '&').replace(BASE, ''));
+    check('sitemap.xml: XML with the main pages in Vietnamese and English', s.status === 200 && /xml/.test(s.type) && ['/', '/giai-phap/stem-lab', '/giai-phap/thiet-bi', '/giai-phap/du-an', '/tin-tuc', '/?lang=en', '/giai-phap/stem-lab?lang=en'].every((p) => locs.includes(p)), locs.slice(0, 12));
+    check('sitemap.xml: no admin, account, login or Liên hệ pages', !locs.some((p) => /^\/(admin|tai-khoan|ho-so|dang-nhap|dang-ky|dang-xuat|lien-he)/.test(p)));
+    check('sitemap.xml: every page twice (VI + EN), each with its hreflang pair', locs.length % 2 === 0 && locs.filter((p) => p.endsWith('lang=en')).length === locs.length / 2 && (s.xml.match(/hreflang="en"/g) || []).length === locs.length);
+    // A new project shows by itself, and is gone again once deleted
+    const d = await db();
+    const { insertedId } = await d.collection('projects').insertOne({ titleVi: 'ZZ sitemap dự án', titleEn: 'ZZ sitemap project', schoolName: 'ZZ', images: [], order: 999, createdAt: new Date(), updatedAt: new Date() });
+    try {
+      check('a new project appears in the sitemap (both languages)', (await read()).xml.includes(`/giai-phap/du-an/${insertedId}?lang=en`));
+    } finally { await d.collection('projects').deleteOne({ _id: insertedId }); }
+    check('… and disappears once deleted', !(await read()).xml.includes(`/giai-phap/du-an/${insertedId}`));
+  });
 
   await part(b, 'header dropdowns', async () => {
     const nav = (p) => b.nav(p, 400);
@@ -181,6 +227,30 @@ await suite(async (b) => {
       }
     }
     check('the logo shows at full size at every width, logged in or out, in both languages; nothing spills out of the header', bad.length === 0, bad);
+
+    // A long name in the account button: shortened with "…" instead of pushing the page wider (360 px Android phones)
+    const LONG = 'ZZ Nguyễn Thị Phương Thảo – Trường THPT Chuyên Hà Nội - Amsterdam';
+    const d = await db();
+    await d.collection('users').updateOne({ _id: user.id }, { $set: { name: LONG } });
+    try {
+      await b.setCookie('lang', 'vi');
+      const wide = [];
+      for (const w of [320, 360, 390, 640, 1101, 1280]) {
+        await b.viewport(w, 800); await b.nav('/', 150);
+        const s = await ev(`(() => { const n = document.querySelector('.user-menu-name'); const t = document.querySelector('.user-menu-trigger');
+          return { over: document.documentElement.scrollWidth - document.documentElement.clientWidth, cut: n.scrollWidth > n.clientWidth + 1, title: t.title, right: Math.round(t.getBoundingClientRect().right) }; })()`);
+        if (s.over > 1 || !s.cut || s.title !== LONG || s.right > w) wide.push({ w, ...s });
+      }
+      check('a long name ends in "…" at every width (full name in the tooltip); the page never gets wider than the screen', wide.length === 0, wide);
+      await b.viewport(360, 800); await b.nav('/', 150);
+      await b.hover('.user-menu-trigger'); await sleep(400);
+      const open = await ev(`(() => { const m = document.querySelector('.user-menu-dropdown'); const r = m.getBoundingClientRect(); return { shown: getComputedStyle(m).visibility === 'visible' && r.height > 0, left: Math.round(r.left), right: Math.round(r.right) }; })()`);
+      check('360 px: the account menu still opens, inside the screen', open.shown && open.left >= 0 && open.right <= 360, open);
+    } finally {
+      await d.collection('users').updateOne({ _id: user.id }, { $set: { name: 'ZZ nav' } });
+    }
+    await b.nav('/', 100);
+    check('a short name is shown in full', !(await ev(`(() => { const n = document.querySelector('.user-menu-name'); return n.scrollWidth > n.clientWidth + 1; })()`)));
     await b.setCookie('lang', 'vi'); await b.clearCookie('connect.sid'); await b.viewport(1280, 900);
   });
 
@@ -317,6 +387,28 @@ await suite(async (b) => {
       for (const r of res) { worst = Math.min(worst, r.ratio); if (r.ratio < 4.5) bad.push(`${p} ${r.sel}: ${r.ratio}`); }
     }
     check(`dark mode: all checked text >= 4.5:1 contrast (worst ${worst}:1)`, bad.length === 0, bad);
+    // Small labels the accessibility scan flagged: "Hoàn tất" tag, the count in a selected chip / tab, the selected tab's name (both themes)
+    const small = {
+      '/admin': ['.tag.status-hoan_tat'],
+      '/admin/yeu-cau': ['.filter-chip.is-active .filter-chip-count', '.tag.status-hoan_tat'],
+      '/admin/nguoi-dung': ['.filter-chip.is-active .filter-chip-count'],
+      '/giai-phap/thiet-bi': ['.equip-tab[aria-selected="true"] .equip-tab-name', '.equip-tab[aria-selected="true"] .equip-tab-count'],
+    };
+    const smallBad = []; let smallSeen = 0;
+    for (const theme of ['light', 'dark']) {
+      await b.setCookie('theme', theme);
+      for (const [p, sels] of Object.entries(small)) {
+        await nav(p);
+        for (const r of await ev(contrastScript.replace('SELECTORS', JSON.stringify(sels)))) { smallSeen++; if (r.ratio < 4.5) smallBad.push(`${theme} ${p} ${r.sel}: ${r.ratio}`); }
+      }
+    }
+    check(`"Hoàn tất" tag, selected chip/tab counts and tab name >= 4.5:1 in light and dark (${smallSeen} checked)`, smallSeen >= 8 && smallBad.length === 0, smallBad);
+    // "Chưa có tài khoản? Đăng ký": the link is underlined, so it doesn't rely on colour (dark mode: same brightness as the text)
+    await nav('/');
+    const under = await ev(`(() => { const box = document.createElement('div'); box.innerHTML = '<p class="auth-switch">x <a href="#">a</a></p><p class="login-needed-alt">x <a href="#">b</a></p>'; document.querySelector('main').appendChild(box);
+      const r = [...box.querySelectorAll('a')].map((a) => getComputedStyle(a).textDecorationLine); box.remove(); return r; })()`);
+    check('dark mode: "Đăng ký" / "Đăng nhập" links in the login lines are underlined', under.length === 2 && under.every((d) => d.includes('underline')), under);
+    await b.setCookie('theme', 'dark');
     for (const [p, name, w] of [['/', 'theme-home-dark', 1280], ['/admin/robot', 'theme-admin-list-dark', 1280], ['/', 'theme-home-dark-mobile', 390]]) {
       await nav(p);
       await shot(name, w);

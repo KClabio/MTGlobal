@@ -8,7 +8,7 @@
 %><a class="card" href="/giai-phap/thiet-bi/<%= item._id %>" data-search="<%= ecSearch %>">
   <div class="card-media<%= ecIsProductShot ? ' is-contain' : '' %>">
     <% if (item.images && item.images[0]) { %>
-      <img src="<%= item.images[0] %>" alt="<%= pick(item, 'name') %>" loading="lazy">
+      <%- picture(item.images[0], pick(item, 'name'), { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px', eager: typeof eager !== 'undefined' && eager }) %>
     <% } %>
   </div>
   <div class="card-body">

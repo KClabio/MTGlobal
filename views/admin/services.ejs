@@ -11,7 +11,7 @@
     <% services.forEach(function (s) { %>
       <tr data-id="<%= s._id %>">
         <%- include('partials/drag-handle', { name: pick(s, 'title') }) %>
-        <td><% if (s.heroImage) { %><img class="thumb" src="<%= s.heroImage %>" alt=""><% } %></td>
+        <td><% if (s.heroImage) { %><img class="thumb" src="<%= resized(s.heroImage, 320) %>" alt="" loading="lazy"><% } %></td>
         <td>
           <%= pick(s, 'title') %>
           <% const parts = [

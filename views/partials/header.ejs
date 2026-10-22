@@ -7,15 +7,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= pageTitle %></title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/theme.css">
-  <%# Styles by area (see CLAUDE.md); the admin head adds admin.css %>
-  <% ['base', 'layout', 'components', 'home', 'pages'].forEach(function (css) { %>
-  <link rel="stylesheet" href="/css/<%= css %>.css">
-  <% }) %>
-  <script>document.documentElement.classList.add('js');</script>
+  <%# The font comes from this site (public/fonts); the regular Vietnamese/Latin weights load first %>
+  <link rel="preload" href="/fonts/be-vietnam-pro-400-vietnamese.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/be-vietnam-pro-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <%# All website styles joined into one file (lib/assets.js: fonts, theme, base, layout, components, home, pages) %>
+  <link rel="stylesheet" href="<%= asset('/css/site.css') %>">
+  <script nonce="<%= cspNonce %>">document.documentElement.classList.add('js');</script>
 </head>
 <body>
   <div class="brand-bar"></div>

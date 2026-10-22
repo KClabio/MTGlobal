@@ -13,8 +13,10 @@
   <strong><%= t('admin.roles.admin') %></strong> <%= t('admin.users.hintAdmin') %></span>
 </p>
 
-<%# Filter by role (chips, kept in the URL as ?vai-tro=) and search by name / email / organisation: public/js/admin.js %>
-<%- include('partials/list-search', { target: 'users' }) %>
+<%# Filter by role (chips, kept in the URL as ?vai-tro=) and "Tìm theo" search (Tên / Email / Ngày tham gia, kept as ?theo=)
+    that also sorts the list by that field: public/js/admin.js. Without it, the server's order: owners first, then newest. %>
+<%- include('partials/list-search', { target: 'users',
+      fields: ['ten', 'email', 'ngay'].map(function (f) { return { value: f, label: t('admin.search.users.fields.' + f), placeholder: t('admin.search.users.placeholders.' + f) }; }) }) %>
 <%- include('partials/list-filter', { target: 'users', param: 'vai-tro', label: t('admin.users.filterRole'), total: users.length,
       options: ['owner', 'admin', 'customer'].map(function (r) { return { value: r, label: t('admin.roles.' + r), count: users.filter(function (u) { return u.role === r; }).length }; }) }) %>
 
@@ -24,14 +26,18 @@
   <tbody data-list="users">
     <% users.forEach(function (u) { %>
       <% const isMe = String(u._id) === String(user._id); %>
-      <tr data-id="<%= u._id %>" data-filter="<%= u.role %>" data-search="<%= [u.name, u.email, u.schoolOrCompany].filter(Boolean).join(' ') %>">
+      <%# Ngày tham gia as DD/MM/YYYY in both languages: the format the "Tìm theo: Ngày tham gia" search takes %>
+      <% const joined = new Date(u.createdAt); const pad = function (n) { return String(n).padStart(2, '0'); };
+         const joinedText = pad(joined.getDate()) + '/' + pad(joined.getMonth() + 1) + '/' + joined.getFullYear(); %>
+      <tr data-id="<%= u._id %>" data-filter="<%= u.role %>" data-search="<%= u.name %>"
+          data-joined="<%= joinedText %>" data-joined-time="<%= joined.getTime() %>">
         <td>
           <div class="user-cell">
             <% if (u.avatar) { %>
               <%# Click to see the photo larger (public/js/admin.js, the dialog below the table) %>
               <button type="button" class="user-avatar" data-avatar-view data-src="<%= u.avatar %>" data-name="<%= u.name %>" data-email="<%= u.email %>"
                       aria-label="<%= t('admin.users.viewPhoto', { name: u.name }) %>" title="<%= t('admin.users.viewPhoto', { name: u.name }) %>">
-                <img src="<%= u.avatar %>" alt="" loading="lazy">
+                <img src="<%= resized(u.avatar, 320) %>" alt="" loading="lazy">
               </button>
             <% } else { %>
               <span class="user-avatar user-initials" aria-hidden="true"><%= initialsOf(u.name) %></span>
@@ -39,7 +45,7 @@
             <span class="user-name" data-search-name><%= u.name %></span>
           </div>
         </td>
-        <td><%= u.email %></td>
+        <td><span data-search-email><%= u.email %></span></td>
         <td><%= u.schoolOrCompany || '' %></td>
         <td>
           <span class="<%= ROLE_TAG[u.role] || 'tag' %>">
@@ -47,7 +53,7 @@
             <%= t('admin.roles.' + u.role) %>
           </span>
         </td>
-        <td><%= new Date(u.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
+        <td><%= joinedText %></td>
         <td>
           <div class="row-actions">
             <% if (isMe) { %>

@@ -5,7 +5,7 @@
     ? bannerFor(typeof settings !== 'undefined' ? settings : null, bannerKey, lang)
     : { subtitle: '', image: null };
   const pbSub = typeof subheading !== 'undefined' ? subheading : pbBanner.subtitle;
-%><section class="page-hero<%= pbBanner.image ? ' has-image' : '' %>"<% if (pbBanner.image) { %> style="--hero-image: url('<%= encodeURI(pbBanner.image) %>');"<% } %>>
+%><section class="page-hero<%= pbBanner.image ? ' has-image' : '' %>"<% if (pbBanner.image) { %> style="--hero-image: url('<%= encodeURI(resized(pbBanner.image, 1600)) %>');"<% } %>>
   <div class="container">
     <% if (typeof fromHome !== 'undefined' && fromHome) { %>
       <%# Opened from a home page area card (?from=home): straight back to that slider, not through the history trail %>

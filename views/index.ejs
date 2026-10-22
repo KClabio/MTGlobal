@@ -16,7 +16,7 @@
     </div>
     <div class="home-hero-art">
       <% if (settings && settings.heroImages && settings.heroImages.home) { %>
-        <img src="<%= settings.heroImages.home %>" alt="MTG">
+        <%- picture(settings.heroImages.home, 'MTG', { sizes: '(max-width: 900px) 100vw, 560px', eager: true }) %>
       <% } %>
     </div>
   </div>
@@ -43,7 +43,7 @@
           <a class="domain-card accent-<%= d.accent %>" href="<%= d.url %>?from=home">
             <div class="domain-media<%= d.contain ? ' is-contain' : '' %><%= d.image ? '' : ' is-art' %>">
               <% if (d.image) { %>
-                <img src="<%= d.image %>" alt="" loading="lazy" draggable="false">
+                <%- picture(d.image, '', { sizes: '(max-width: 640px) 80vw, 300px', attrs: 'draggable="false"' }) %>
               <% } else { %>
                 <%- include('admin/partials/icon', { name: d.icon, size: 64 }) %>
               <% } %>

@@ -1127,20 +1127,106 @@
     var chipButtons = chips ? Array.prototype.slice.call(chips.querySelectorAll('.filter-chip')) : [];
     var filterValue = '';
     var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-id]'));
-    rows.forEach(function (tr) {
+    // "Tìm theo" box (users list): the search looks in one field (ten / email / ngay) and sorts the list by it.
+    // Until the person types or picks a field, the list keeps the server's order (owners first, then newest).
+    var fieldSelect = box && box.querySelector('[data-search-field]');
+    var picked = false;
+    rows.forEach(function (tr, i) {
+      tr._order = i;
       tr._searchWords = words(tr.getAttribute('data-search'));
       tr._nameCell = tr.querySelector('[data-search-name]');
       if (tr._nameCell) tr._nameCell._originalText = tr._nameCell.textContent.normalize('NFC');
+      if (!fieldSelect) return;
+      tr._emailCell = tr.querySelector('[data-search-email]');
+      if (tr._emailCell) tr._emailCell._originalText = tr._emailCell.textContent.normalize('NFC');
+      tr._emailWords = words(tr._emailCell ? tr._emailCell._originalText : '');
+      tr._joined = (tr.getAttribute('data-joined') || '').split('/'); // [DD, MM, YYYY]
+      tr._joinedTime = +tr.getAttribute('data-joined-time') || 0;
     });
 
-    function setUrl(key, value) {
+    // "Ngày tham gia" takes one format, DD/MM/YYYY (the date column's), and only numbers and "/".
+    // The box tidies it while typing: "2/" becomes "02/" (so 2/7/2026 ends as 02/07/2026), a "/" comes by itself
+    // after 2 digits of day or month (15032024 → 15/03/2024), the year stops at 4 digits, anything else is dropped.
+    function formatDate(text) {
+      var parts = [''];
+      String(text).split('').forEach(function (ch) {
+        var i = parts.length - 1;
+        if (ch === '/') {
+          if (i < 2 && parts[i]) { if (parts[i].length === 1) parts[i] = '0' + parts[i]; parts.push(''); }
+        } else if (ch >= '0' && ch <= '9') {
+          if (i < 2 && parts[i].length === 2) parts.push(ch);
+          else if (i < 2 || parts[i].length < 4) parts[i] += ch;
+        }
+      });
+      return parts.join('/');
+    }
+    // Finished parts must match exactly; the part still being typed matches as a start
+    // (a lone "2" in the day: 02 or 20–29; a lone "1" in the month: 01 or 10–12)
+    function dateMatch(tr, raw) {
+      var typed = raw.split('/');
+      return typed.every(function (p, i) {
+        var row = tr._joined[i] || '';
+        if (!p) return i === typed.length - 1;
+        if (i < typed.length - 1 || p.length === (i === 2 ? 4 : 2)) return row === p;
+        return row.indexOf(p) === 0 || (i < 2 && row === '0' + p);
+      });
+    }
+    var dateMode = function () { return !!fieldSelect && fieldSelect.value === 'ngay'; };
+    // Rewrites the box in the tidy format, the cursor moving with the text (it stays at the end when typing there)
+    function tidyDate() {
+      var before = input.value;
+      var after = formatDate(before);
+      if (after === before) return;
+      var caret = input.selectionStart;
+      input.value = after;
+      var pos = caret === null || caret >= before.length ? after.length : Math.max(0, Math.min(after.length, caret + after.length - before.length));
+      try { input.setSelectionRange(pos, pos); } catch (e) { /* not focused */ }
+    }
+    // Phones show the number keypad for a date; Tên / Email get the normal keyboard back
+    function setDateMode() {
+      if (!fieldSelect) return;
+      if (dateMode()) { input.setAttribute('inputmode', 'numeric'); tidyDate(); } else input.removeAttribute('inputmode');
+    }
+
+    var collator = new Intl.Collator('vi', { sensitivity: 'base', numeric: true });
+    var textOf = function (cell) { return cell ? cell._originalText : ''; };
+    function sortRows(by) {
+      var sorted = rows.slice().sort(function (a, b) {
+        var diff = 0;
+        if (by === 'ngay') diff = a._joinedTime - b._joinedTime;
+        else if (by === 'email') diff = collator.compare(textOf(a._emailCell), textOf(b._emailCell));
+        else if (by === 'ten') diff = collator.compare(textOf(a._nameCell), textOf(b._nameCell));
+        return diff || a._order - b._order;
+      });
+      var current = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-id]'));
+      if (sorted.some(function (tr, i) { return tr !== current[i]; })) sorted.forEach(function (tr) { tbody.appendChild(tr); });
+    }
+    function setPlaceholder() {
+      input.placeholder = fieldSelect.options[fieldSelect.selectedIndex].getAttribute('data-placeholder');
+    }
+    // × and Esc: empty box, back to the first field and the server's order
+    function resetField() {
+      if (!fieldSelect) return;
+      picked = false;
+      fieldSelect.selectedIndex = 0;
+      setPlaceholder();
+      setDateMode();
+    }
+
+    // changes: { key: value } (an empty value removes the key). One address update per change, and none when it is
+    // the same: Chrome ignores updates past ~200 in 10 seconds, which fast typing would otherwise reach.
+    function setUrl(changes) {
+      var put = function (params) {
+        Object.keys(changes).forEach(function (key) { if (changes[key]) params.set(key, changes[key]); else params.delete(key); });
+      };
       var url = new URL(window.location.href);
-      if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
-      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+      put(url.searchParams);
+      var next = url.pathname + url.search + url.hash;
+      if (next !== window.location.pathname + window.location.search + window.location.hash) window.history.replaceState(window.history.state, '', next);
       // ...and through the admin VI/EN switch and the links marked data-keep-query (request status tabs)
       document.querySelectorAll('a[href*="alang="], a[data-keep-query]').forEach(function (a) {
         var link = new URL(a.href);
-        if (value) link.searchParams.set(key, value); else link.searchParams.delete(key);
+        put(link.searchParams);
         a.href = link.pathname + link.search;
       });
     }
@@ -1150,16 +1236,20 @@
       var query = words(raw);
       var searching = query.length > 0;
       var active = searching || !!filterValue;
+      var field = fieldSelect ? fieldSelect.value : '';
       var shown = 0;
       rows.forEach(function (tr) {
         var inFilter = !filterValue || tr.getAttribute('data-filter') === filterValue;
-        var match = inFilter && (!searching || query.every(function (q) {
-          return tr._searchWords.some(function (w) { return w.indexOf(q) === 0; });
-        }));
+        var match = inFilter && (!searching || (field === 'ngay' ? dateMatch(tr, raw) : query.every(function (q) {
+          return (field === 'email' ? tr._emailWords : tr._searchWords).some(function (w) { return w.indexOf(q) === 0; });
+        })));
         tr.hidden = !match;
-        if (tr._nameCell) highlight(tr._nameCell, match ? query : []);
+        if (tr._nameCell) highlight(tr._nameCell, match && field !== 'email' && field !== 'ngay' ? query : []);
+        if (tr._emailCell) highlight(tr._emailCell, match && field === 'email' ? query : []);
         if (match) shown++;
       });
+      var sorting = !!fieldSelect && (searching || picked);
+      if (fieldSelect) sortRows(sorting ? field : '');
 
       chipButtons.forEach(function (b) {
         var on = b.getAttribute('data-value') === filterValue;
@@ -1167,7 +1257,7 @@
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
       if (box) {
-        clearBtn.hidden = !input.value;
+        clearBtn.hidden = !input.value && !picked;
         count.textContent = active ? fill(box.getAttribute('data-count'), { shown: shown, total: rows.length }) : '';
       }
       if (none) {
@@ -1182,16 +1272,26 @@
       if (hint) hint.parentElement.classList.toggle('is-paused', active);
 
       // Keep the search and the chip in the URL so Back from an edit page brings them back
-      if (input) setUrl('q', searching ? raw : '');
-      if (param) setUrl(param, filterValue);
+      var changes = {};
+      if (input) changes.q = searching ? raw : '';
+      if (fieldSelect) changes.theo = sorting ? field : '';
+      if (param) changes[param] = filterValue;
+      setUrl(changes);
     }
 
     if (input) {
-      input.addEventListener('input', apply);
-      input.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && input.value) { e.preventDefault(); input.value = ''; apply(); }
+      // A date takes numbers and "/" only: other keys are refused, a paste is cleaned by tidyDate
+      input.addEventListener('beforeinput', function (e) {
+        if (dateMode() && e.inputType === 'insertText' && e.data && /[^0-9/]/.test(e.data)) e.preventDefault();
       });
-      clearBtn.addEventListener('click', function () { input.value = ''; apply(); input.focus(); });
+      input.addEventListener('input', function () { if (dateMode()) tidyDate(); apply(); });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && (input.value || picked)) { e.preventDefault(); input.value = ''; resetField(); apply(); }
+      });
+      clearBtn.addEventListener('click', function () { input.value = ''; resetField(); apply(); input.focus(); });
+    }
+    if (fieldSelect) {
+      fieldSelect.addEventListener('change', function () { picked = true; setPlaceholder(); setDateMode(); apply(); });
     }
     // A chip click fades the rows it shows in (typing in the search box stays instant: a fade on every key would flicker)
     var shownRows = function () { return rows.filter(function (tr) { return !tr.hidden; }); };
@@ -1213,8 +1313,15 @@
     var initialQ = input ? params.get('q') : '';
     var initialF = param ? params.get(param) : '';
     if (initialF && chipButtons.some(function (b) { return b.getAttribute('data-value') === initialF; })) filterValue = initialF;
+    var initialField = fieldSelect ? params.get('theo') : '';
+    if (initialField && Array.prototype.some.call(fieldSelect.options, function (o) { return o.value === initialField; })) {
+      fieldSelect.value = initialField;
+      picked = true;
+      setPlaceholder();
+    } else initialField = '';
     if (initialQ) input.value = initialQ;
-    if (initialQ || filterValue) apply();
+    setDateMode();
+    if (initialQ || filterValue || initialField) apply();
     try {
       if (sessionStorage.getItem(REVEAL_NOTE) === type) { sessionStorage.removeItem(REVEAL_NOTE); revealIn(null, shownRows()); }
     } catch (e) { /* storage blocked: the page just appears */ }

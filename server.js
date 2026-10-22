@@ -20,10 +20,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mtglobal_db';
 
+// Login cookie secret: never a value from the (public) code; production refuses to start without a proper one
+const sessionSecret = require('./lib/session-secret').resolveSessionSecret();
+if (sessionSecret.error) {
+  console.error(sessionSecret.error);
+  process.exit(1);
+}
+if (sessionSecret.warning) console.warn(sessionSecret.warning);
+
 if (process.env.NODE_ENV === 'production') {
-  const missing = ['SESSION_SECRET', 'MONGO_URI'].filter((key) => !process.env[key]);
-  if (missing.length) {
-    console.error(`Missing required production env vars: ${missing.join(', ')}`);
+  if (!process.env.MONGO_URI) {
+    console.error('Missing required production env var: MONGO_URI');
     process.exit(1);
   }
   if (!process.env.CLOUDINARY_CLOUD_NAME) {
@@ -43,8 +50,13 @@ app.locals.levelFromSchool = require('./lib/project-levels').levelFromSchool;
 app.locals.INTEREST_GROUPS = require('./models/QuoteRequest').INTEREST_GROUPS; // "Bạn quan tâm đến" list (partials/quote-form.ejs)
 app.locals.isProductLine = require('./models/QuoteRequest').isProductLine; // robot name shown with the category (request lists)
 app.locals.googleEnabled = require('./lib/google-auth').isConfigured(); // "Đăng nhập bằng Google" button (login, register)
-if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY);
+// Behind the host's HTTPS proxy (lib/trust-proxy.js turns TRUST_PROXY=1 into the number Express expects)
+const trustProxy = require('./lib/trust-proxy').parseTrustProxy(process.env.TRUST_PROXY);
+if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
 
+// Browser protections on every page and file (lib/security-headers.js); "X-Powered-By: Express" is not sent
+app.disable('x-powered-by');
+app.use(require('./lib/security-headers').securityHeaders());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -61,7 +73,16 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.static(path.join(__dirname, 'public')));
+// Speed: compressed text (Brotli/gzip; pictures and videos are already compressed), lighter copies of photos
+// (lib/images.js, "?w=800"), the website's styles as one file (lib/assets.js) and, in production, browser caching
+const assets = require('./lib/assets').createAssets();
+app.locals.asset = assets.asset; // '/js/main.js' -> '/js/main.js?v=<fingerprint>'
+app.locals.picture = require('./lib/picture').picture; // <img> with srcset (views)
+app.locals.resized = require('./lib/picture').resized; // one picture address at a width (banners, thumbnails)
+app.use(require('compression')({ threshold: 1024 }));
+app.use(require('./lib/images').createImages());
+app.use(assets.bundleRoute);
+app.use(express.static(path.join(__dirname, 'public'), { setHeaders: assets.staticHeaders }));
 // Drag-and-drop library for the admin lists, served from node_modules (no CDN)
 app.get('/vendor/sortable.min.js', (req, res) => {
   res.sendFile(path.join(__dirname, 'node_modules', 'sortablejs', 'Sortable.min.js'), { maxAge: '7d' });
@@ -72,11 +93,21 @@ app.get('/health', (req, res) => {
   res.status(dbConnected ? 200 : 503).json({ status: dbConnected ? 'ok' : 'db_disconnected' });
 });
 
+// For search engines (lib/sitemap.js): robots.txt needs no database; the sitemap lists every public page in VI + EN
+const seo = require('./lib/sitemap');
+app.get('/robots.txt', seo.robotsRoute);
+
+// Database unreachable: pages answer at once with "Website đang tạm gián đoạn" (503) instead of hanging (lib/db-guard.js)
+const dbGuard = require('./lib/db-guard');
+app.use(dbGuard.dbGuard());
+app.get('/sitemap.xml', seo.createSitemapRoute());
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'mtglobal-dev-secret',
+  secret: sessionSecret.secret,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: MONGO_URI }),
+  // Gives up after 5 s (not 30) if the database goes away while a visit is being answered
+  store: MongoStore.create({ mongoUrl: MONGO_URI, mongoOptions: { serverSelectionTimeoutMS: 5000 } }),
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7,
     secure: process.env.SESSION_COOKIE_SECURE === 'true',
@@ -114,6 +145,7 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error(err);
   if (res.headersSent) return next(err);
+  if (dbGuard.isDbUnavailable(err)) return dbGuard.sendUnavailable(res);
   res.status(500).render('500');
 });
 

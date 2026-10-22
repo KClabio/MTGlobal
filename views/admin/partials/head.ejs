@@ -39,15 +39,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= t('admin.pageTitle') %></title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/theme.css">
-  <%# The website's styles (some admin forms reuse them), then the admin's own %>
-  <% ['base', 'layout', 'components', 'home', 'pages', 'admin'].forEach(function (css) { %>
-  <link rel="stylesheet" href="/css/<%= css %>.css">
-  <% }) %>
-  <script>document.documentElement.classList.add('js');</script>
+  <%# The website's styles (some admin forms reuse them), then the admin's own, as one file (lib/assets.js) %>
+  <link rel="stylesheet" href="<%= asset('/css/admin-all.css') %>">
+  <script nonce="<%= cspNonce %>">document.documentElement.classList.add('js');</script>
 </head>
 <body>
   <div class="admin-wrap">
@@ -80,7 +74,7 @@
       </div>
     </aside>
     <div class="admin-scrim" hidden></div>
-    <script>
+    <script nonce="<%= cspNonce %>">
       // The menu scrolls on its own (a tall list, also when it slides in on narrow screens). Every item loads a new
       // page, so keep the menu where it was (saved per tab) and make sure the current item is in view.
       // Runs right here, before the page is drawn, so the menu never visibly jumps.

@@ -434,7 +434,7 @@ await suite(async (b) => {
   await part(b, 'Cài đặt chung + Thông tin công ty', async () => {
     const PHOTO = `${PUB}/assets/giai-phap/workshop/hoc-sinh-lap-trinh.jpg`;
     const PHOTO2 = `${PUB}/assets/giai-phap/tap-huan/giao-luu-clb-stem.jpg`;
-    const hero = (html) => { const h = html.slice(html.indexOf('<section class="page-hero'), html.indexOf('</section>', html.indexOf('<section class="page-hero'))); return { cls: (h.match(/class="(page-hero[^"]*)"/) || [])[1], image: (h.match(/url\(&#39;([^&]+)&#39;\)/) || h.match(/url\('([^']+)'\)/) || [])[1] || null, sub: decode((h.match(/<p>([^<]*)<\/p>/) || [])[1] || '') }; };
+    const hero = (html) => { const h = html.slice(html.indexOf('<section class="page-hero'), html.indexOf('</section>', html.indexOf('<section class="page-hero'))); return { cls: (h.match(/class="(page-hero[^"]*)"/) || [])[1], image: ((h.match(/url\(&#39;([^&]+)&#39;\)/) || h.match(/url\('([^']+)'\)/) || [])[1] || '').split('?')[0] || null, sub: decode((h.match(/<p>([^<]*)<\/p>/) || [])[1] || '') }; };
     const newFiles = new Set();
     const getSettings = () => d.collection('sitesettings').findOne({});
     const save = async () => { const l = b.waitLoad(); await click(await ev("document.querySelector('.page-form-actions button[type=submit]') ? '.page-form-actions button[type=submit]' : 'form button[type=submit].btn-primary'")); await l; await sleep(400); return ev(`(() => { const t = document.getElementById('adminToast'); return { shown: !t.hidden, error: t.classList.contains('is-error'), text: t.textContent.trim(), url: location.pathname + location.search }; })()`); };
@@ -535,7 +535,7 @@ await suite(async (b) => {
       const t2 = await save();
       st = await getSettings(); if (st.heroImages.home) newFiles.add(st.heroImages.home);
       let home = await pub('/');
-      check('home hero: title override + new image shown; returns to Home tab', home.includes('<h1>ZZ Tiêu đề trang chủ</h1>') && home.includes(`src="${st.heroImages.home}"`) && t2.url === '/admin/cai-dat?tab=home', { t2, img: st.heroImages.home });
+      check('home hero: title override + new image shown; returns to Home tab', home.includes('<h1>ZZ Tiêu đề trang chủ</h1>') && home.includes(`src="${st.heroImages.home}?w=800"`) && t2.url === '/admin/cai-dat?tab=home', { t2, img: st.heroImages.home });
       const enTitle = (await pub('/', 'en')).match(/<h1>([^<]+)<\/h1>/)[1];
       check('EN home title is still the default text', enTitle && !enTitle.includes('ZZ'), enTitle);
       await setVal('#heroTitleVi', '');
@@ -547,7 +547,7 @@ await suite(async (b) => {
       await setFiles('input[name="logo"]', [PHOTO2]);
       await save();
       st = await getSettings(); newFiles.add(st.logo);
-      check('logo uploaded in Cài đặt chung shows in the site header', (await pub('/')).includes(`class="logo-img" src="${st.logo}"`), st.logo);
+      check('logo uploaded in Cài đặt chung shows in the site header (as a lighter 480 px copy)', (await pub('/')).includes(`class="logo-img" src="${st.logo}?w=480"`), st.logo);
       check('the previous logo file is kept on disk', existsSync(PUB + settingsBackup.logo));
       // Company info
       await nav('/admin/thong-tin-cong-ty');
@@ -565,7 +565,8 @@ await suite(async (b) => {
       const keep = new Set([settingsBackup.logo, settingsBackup.heroImages && settingsBackup.heroImages.home].filter(Boolean));
       newFiles.forEach((u) => { if (u && !keep.has(u)) { try { unlinkSync(PUB + u); } catch {} } });
     }
-    check('after the test the site shows the original logo again', (await pub('/')).includes(`class="logo-img" src="${settingsBackup.logo}"`));
+    // The original logo, as its 480 px copy when it is a JPG/PNG (an SVG stays as it is)
+    check('after the test the site shows the original logo again', (await pub('/')).includes(`class="logo-img" src="${settingsBackup.logo}${/\.(jpe?g|png)$/i.test(settingsBackup.logo || '') ? '?w=480' : ''}"`));
   });
 
   await part(b, 'company introduction is plain text', async () => {

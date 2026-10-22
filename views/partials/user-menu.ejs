@@ -1,5 +1,6 @@
 <div class="user-menu">
-  <button type="button" class="user-menu-trigger"><%= user.name %> <span class="nav-caret">▾</span></button>
+  <%# On a narrow phone a long name ends in "…" (layout.css); the tooltip keeps the full name %>
+  <button type="button" class="user-menu-trigger" title="<%= user.name %>"><span class="user-menu-name"><%= user.name %></span> <span class="nav-caret">▾</span></button>
   <div class="user-menu-dropdown">
     <div class="user-menu-theme"><%- include('theme-toggle', { label: t('theme.dark') }) %></div>
     <% if (user.role === 'admin' || user.role === 'owner') { %>

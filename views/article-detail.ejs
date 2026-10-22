@@ -12,7 +12,7 @@
   <div class="container" style="max-width:760px;">
     <% if (article.coverImage) { %>
       <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:24px; aspect-ratio:16/9;">
-        <img src="<%= article.coverImage %>" alt="<%= article.titleVi %>">
+        <%- picture(article.coverImage, article.titleVi, { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
       </div>
     <% } %>
     <div class="prose-text"><%- formatText(pick(article, 'body')) %></div>

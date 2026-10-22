@@ -121,7 +121,7 @@ await suite(async (b) => {
       const idat = zlib.deflateSync(Buffer.from([0, 21, 101, 192]));
       return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
     };
-    const avatarSrc = (html) => (html.match(/class="avatar-lg" src="([^"]+)"/) || [])[1] || null;
+    const avatarSrc = (html) => ((html.match(/class="avatar-lg" src="([^"]+)"/) || [])[1] || '').split('?')[0] || null; // the page shows a ?w=320 copy
     const has = (html, s) => html.includes(s);
     const created = new Set();
     try {
@@ -212,6 +212,45 @@ await suite(async (b) => {
     } finally {
       for (const url of created) if (existsSync(PUBLIC + url)) unlinkSync(PUBLIC + url);
     }
+  });
+
+  await part(b, 'login attempt limit (HTTP)', async () => {
+    const d = await db();
+    const u = await createUser('limit', 'customer');
+    const login = (email, password, lang = 'vi') => fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', headers: { cookie: `lang=${lang}` }, body: new URLSearchParams({ email, password }) })
+      .then(async (r) => ({ status: r.status, text: await r.text() }));
+    const wrongs = async (n, email = u.email) => { for (let i = 0; i < n; i++) await login(email, `wrong-${i}`); };
+    const key = `email:${u.email}`;
+    await wrongs(3);
+    let r = await login(u.email, u.password);
+    check('3 wrong passwords, then the right one: logs in normally', r.status === 303, r.status);
+    check('… and the right password clears the count', !(await d.collection('loginthrottles').findOne({ _id: key })));
+    await wrongs(4);
+    check('4 more wrong passwords: still allowed to log in', (await login(u.email, u.password)).status === 303);
+    await wrongs(5);
+    r = await login(u.email, u.password);
+    check('5 wrong passwords within 15 minutes: even the right password is refused (429) with "Bạn đã nhập sai quá nhiều lần… 15 phút"',
+      r.status === 429 && r.text.includes('Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.') && r.text.includes(`value="${u.email}"`), r.status);
+    const en = await login(u.email, u.password, 'en');
+    check('… in English: "Too many failed attempts…"', en.status === 429 && en.text.includes('Too many failed attempts. Please try again in 15 minutes.'));
+    const doc = await d.collection('loginthrottles').findOne({ _id: key });
+    check('… the lock lasts 15 minutes and is stored with an expiry (deleted by MongoDB afterwards)', doc && Math.abs(new Date(doc.lockedUntil) - Date.now() - 15 * 60000) < 60000 && +doc.expiresAt === +doc.lockedUntil, doc);
+    const ttl = (await d.collection('loginthrottles').indexes()).some((i) => i.key.expiresAt === 1 && i.expireAfterSeconds === 0);
+    check('… the collection has its automatic clean-up (TTL index)', ttl);
+    await d.collection('loginthrottles').updateOne({ _id: key }, { $set: { lockedUntil: new Date(Date.now() - 1000) } });
+    check('once the 15 minutes are over: the right password works again', (await login(u.email, u.password)).status === 303);
+    // Many accounts from one address: 30 wrong passwords block the address
+    await d.collection('loginthrottles').deleteMany({ _id: /^ip:/ });
+    try {
+      for (let i = 0; i < 30; i++) await login(`zztest-nobody-${i}-${stamp}@example.com`, 'wrong');
+      r = await login(u.email, u.password);
+      check('30 wrong passwords on different accounts from one address: that address waits 15 minutes', r.status === 429 && r.text.includes('15 phút'), r.status);
+      const unknown = await d.collection('loginthrottles').findOne({ _id: `email:zztest-nobody-0-${stamp}@example.com` });
+      check('… unknown emails are counted like real ones (nothing reveals whether an account exists)', unknown && unknown.fails === 1);
+    } finally {
+      await d.collection('loginthrottles').deleteMany({ $or: [{ _id: /^ip:/ }, { _id: new RegExp(`^email:zztest-nobody-.*-${stamp}@`) }] });
+    }
+    check('after the address count is cleared: logs in again', (await login(u.email, u.password)).status === 303);
   });
 
   await part(b, 'role badge on the profile', async () => {

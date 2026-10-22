@@ -14,12 +14,12 @@
     <div>
       <% if (item.images && item.images.length) { %>
         <div class="card-media<%= edProductShot ? ' is-contain' : '' %>" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/10;">
-          <img src="<%= item.images[0] %>" alt="<%= pick(item, 'name') %>">
+          <%- picture(item.images[0], pick(item, 'name'), { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
         </div>
         <% if (item.images.length > 1) { %>
           <div class="detail-thumbs">
             <% item.images.slice(1).forEach(function (img) { %>
-              <div class="media-frame"><img src="<%= img %>" alt="<%= pick(item, 'name') %>" loading="lazy"></div>
+              <div class="media-frame"><%- picture(img, pick(item, 'name'), { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px' }) %></div>
             <% }) %>
           </div>
         <% } %>

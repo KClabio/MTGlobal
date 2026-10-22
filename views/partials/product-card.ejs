@@ -2,7 +2,7 @@
   <div class="card-media">
     <% if (product.comingSoon) { %><div class="coming-soon-overlay"><span class="coming-soon-badge"><%= t('common.comingSoon') %></span></div><% } %>
     <% if (product.images && product.images[0]) { %>
-      <img src="<%= product.images[0] %>" alt="<%= pick(product, 'name') %>" loading="lazy">
+      <%- picture(product.images[0], pick(product, 'name'), { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px', eager: typeof eager !== 'undefined' && eager }) %>
     <% } %>
   </div>
   <div class="card-body">

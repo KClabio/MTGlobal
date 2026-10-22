@@ -7,7 +7,7 @@
 <a class="card" href="/giai-phap/du-an/<%= project._id %>" data-search-item data-search="<%= [project.schoolName, project.location].filter(Boolean).join(' ') %>">
   <div class="card-media">
     <% if (project.images && project.images[0]) { %>
-      <img src="<%= project.images[0] %>" alt="<%= pcHeading %>" loading="lazy">
+      <%- picture(project.images[0], pcHeading, { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px', eager: typeof eager !== 'undefined' && eager }) %>
     <% } %>
   </div>
   <div class="card-body">

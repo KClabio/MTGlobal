@@ -11,6 +11,9 @@
     <% if (projects && projects.length) { %>
       <%- include('partials/card-search', { placeholder: t('projectsPage.search'), one: t('projectsPage.resultsOne'), many: t('projectsPage.resultsCount'), none: t('projectsPage.noResults') }) %>
       <%# One section per school level (THCS, THPT, Đại học; "Khác" only when used) — see lib/project-levels.js %>
+      <%# The first card with a photo is the page's main picture: it loads at once; the others load lazily, so on a
+          phone they don't share the slow connection with it (on a wide screen they are on screen and still show at once) %>
+      <% let mainPicture = false; %>
       <% groups.forEach(function (g) { %>
         <div class="level-group" id="<%= g.key %>" data-search-group>
           <div class="level-head">
@@ -21,7 +24,8 @@
           <% if (g.items.length) { %>
             <div class="card-grid">
               <% g.items.forEach(function (project) { %>
-                <%- include('partials/project-card', { project }) %>
+                <% const eager = !mainPicture && !!(project.images && project.images[0]); if (eager) mainPicture = true; %>
+                <%- include('partials/project-card', { project, eager }) %>
               <% }) %>
             </div>
           <% } else { %>

@@ -14,7 +14,7 @@
         <a class="card accent-<%= card.accent %>" href="<%= card.url %>">
           <div class="card-media<%= card.contain ? ' is-contain' : '' %><%= card.image ? '' : ' is-art' %>">
             <% if (card.image) { %>
-              <img src="<%= card.image %>" alt="<%= card.title %>" loading="lazy">
+              <%- picture(card.image, card.title, { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px' }) %>
             <% } else { %>
               <%- include('admin/partials/icon', { name: card.icon, size: 72 }) %>
             <% } %>

@@ -578,10 +578,16 @@
         "none": "Không tìm thấy yêu cầu nào khớp “{q}”."
       },
       "users": {
-        "placeholder": "Tìm theo tên, email hoặc đơn vị…",
         "label": "Tìm người dùng",
         "count": "Hiển thị {shown} / {total} người dùng",
-        "none": "Không tìm thấy người dùng nào khớp “{q}”."
+        "none": "Không tìm thấy người dùng nào khớp “{q}”.",
+        "by": "Tìm theo",
+        "fields": { "ten": "Tên", "email": "Email", "ngay": "Ngày tham gia" },
+        "placeholders": {
+          "ten": "Nhập tên… (xếp A → Z)",
+          "email": "Nhập email… (xếp A → Z)",
+          "ngay": "Nhập ngày: DD/MM/YYYY (cũ → mới)"
+        }
       }
     },
     "viewPage": {
@@ -809,6 +815,7 @@
     "optional": "không bắt buộc",
     "registered": "Đăng ký thành công! Mời bạn đăng nhập bằng tài khoản vừa tạo.",
     "errLogin": "Email hoặc mật khẩu không đúng.",
+    "errTooMany": "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau {minutes} phút.",
     "haveAccount": "Đã có tài khoản?",
     "noAccount": "Chưa có tài khoản?",
     "loginToRequest": "Xin hãy đăng nhập để yêu cầu tư vấn.",

@@ -992,6 +992,7 @@ function revealIn(el, items) {
   input.addEventListener('keydown', function (e) { if (e.key === 'Escape' && input.value) { input.value = ''; search(); } });
 
   tools.hidden = false;
+  tools.classList.add('is-ready'); // the CSS stops pre-hiding the other parts (pages.css)
   var fromHash = (window.location.hash || '').slice(1);
   select(tabs.some(function (t) { return t.getAttribute('data-tab') === fromHash; }) ? fromHash : tabs[0].getAttribute('data-tab'));
   window.addEventListener('hashchange', function () {
@@ -1218,6 +1219,14 @@ document.addEventListener('contextmenu', function (e) {
       back.focus();
       // Look again once it is drawn, and a little later (some add-ons hide things after a short delay)
       var n = ++opened;
+      // The page shows a lighter copy (…?w=800): it appears at once, then the full picture takes its place as soon as it
+      // has arrived (a floor plan's small text needs every pixel). If the full one can't be loaded, the copy stays.
+      var full = btn.getAttribute('data-full');
+      if (full && address !== full && address.split('?')[0].replace(location.origin, '') === full.split('?')[0]) {
+        var better = new Image();
+        better.onload = function () { if (n === opened && box.open) { address = full; img.src = full; } };
+        better.src = full;
+      }
       requestAnimationFrame(function () { requestAnimationFrame(function () { check(n); }); });
       setTimeout(function () { check(n); }, 600);
     });

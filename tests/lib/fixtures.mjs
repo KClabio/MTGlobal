@@ -60,6 +60,8 @@ export async function cleanup() {
     await d.collection('sessions').deleteMany({ session: { $regex: String(id) } });
     await d.collection('users').deleteOne({ _id: id });
   }
+  // wrong-password counts of this run's temp accounts (login limit, lib/login-throttle.js)
+  await d.collection('loginthrottles').deleteMany({ _id: new RegExp(`^email:zztest-.*-${STAMP}@example\\.com$`) });
   await mongoose.disconnect();
 }
 

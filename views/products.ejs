@@ -9,8 +9,11 @@
 <section class="section">
   <div class="container">
     <div class="card-grid cols-4">
+      <%# Only the first card with a photo loads at once (the page's main picture on a phone); the rest load lazily %>
+      <% let mainPicture = false; %>
       <% robots.forEach(function (product) { %>
-        <%- include('partials/product-card', { product }) %>
+        <% const eager = !mainPicture && !!(product.images && product.images[0]); if (eager) mainPicture = true; %>
+        <%- include('partials/product-card', { product, eager }) %>
       <% }) %>
     </div>
   </div>

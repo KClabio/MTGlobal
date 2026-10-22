@@ -908,7 +908,7 @@ await suite(async (b) => {
     const row = (email) => ev(`(() => { const tr = [...document.querySelectorAll('.data-table tbody tr')].find((r) => r.textContent.includes(${JSON.stringify(email)})); const a = tr.querySelector('.user-avatar'); const r = a.getBoundingClientRect();
       return { tag: a.tagName, img: a.querySelector('img') && a.querySelector('img').getAttribute('src'), loaded: !!(a.querySelector('img') && a.querySelector('img').naturalWidth), text: a.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height), round: getComputedStyle(a).borderRadius, label: a.getAttribute('aria-label') }; })()`);
     const yes = await row(withPhoto.email);
-    check('a user with a profile photo: a 36px round photo before the name, as a button "Xem ảnh đại diện của …"', yes.tag === 'BUTTON' && yes.img === PHOTO && yes.w === 36 && yes.h === 36 && yes.round === '50%' && yes.label === 'Xem ảnh đại diện của ZZ photos-yes', yes);
+    check('a user with a profile photo: a 36px round photo (a 320 px copy) before the name, as a button "Xem ảnh đại diện của …"', yes.tag === 'BUTTON' && yes.img === `${PHOTO}?w=320` && yes.w === 36 && yes.h === 36 && yes.round === '50%' && yes.label === 'Xem ảnh đại diện của ZZ photos-yes', yes);
     const no = await row(noPhoto.email);
     check('a user without one: their initials in a 36px round badge (not clickable)', no.tag === 'SPAN' && no.text === 'ZP' && no.w === 36 && no.round === '50%', no);
     const dlg = () => ev(`(() => { const g = document.querySelector('[data-avatar-dialog]'); const img = g.querySelector('[data-avatar-img]'); return { open: g.open, src: img.getAttribute('src'), w: Math.round(img.getBoundingClientRect().width), name: g.querySelector('[data-avatar-name]').textContent, email: g.querySelector('[data-avatar-email]').textContent, focus: document.activeElement && (document.activeElement.getAttribute('data-email') || document.activeElement.className) }; })()`);
@@ -945,9 +945,10 @@ await suite(async (b) => {
     check('"Quản trị viên": only admins, and ?vai-tro=admin in the address', rows.length === counts.admin && rows.every((r) => r === 'admin') && (await ev(`location.search`)) === '?vai-tro=admin', rows);
     await b.shot('users-filter-admin');
     await b.clickAt('[data-list-filter="users"] .filter-chip[data-value=""]'); await sleep(200);
+    await ev(`(() => { const s = document.querySelector('[data-search-field]'); s.value = 'email'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
     await ev(`document.querySelector('[data-list-search="users"] input').focus()`); await send('Input.insertText', { text: customer.email }); await sleep(300);
     rows = await ev(`[...document.querySelectorAll('tbody[data-list="users"] tr')].filter((tr) => !tr.hidden).map((tr) => tr.dataset.id)`);
-    check('searching an email finds just that account', rows.length === 1 && rows[0] === String(customer.id), rows);
+    check('"Tìm theo: Email": searching an email finds just that account', rows.length === 1 && rows[0] === String(customer.id), rows);
     // The chosen filter stays after an action on the list
     await b.nav('/admin/nguoi-dung?vai-tro=customer', 400);
     check('opening ?vai-tro=customer shows only customers', (await shown()).every((r) => r === 'customer'));
@@ -956,5 +957,159 @@ await suite(async (b) => {
       && (await d.collection('users').findOne({ _id: customer.id })).role === 'admin', await ev(`location.href`));
     check('… the promoted account now counts under "Quản trị viên"', (await ev(`+document.querySelector('[data-list-filter="users"] .filter-chip[data-value="admin"] .filter-chip-count').textContent`)) === counts.admin + 1);
     void admin;
+  });
+
+  await part(b, 'Người dùng: owners on top, "Tìm theo" search + sort', async () => {
+    const owner = await createUser('order-owner', 'owner');
+    // Three accounts whose name, email and joining-date orders all differ
+    const mk = async (tag, name, date) => {
+      const u = await createUser(tag, 'customer');
+      await d.collection('users').updateOne({ _id: u.id }, { $set: { name, createdAt: new Date(date) } });
+      return String(u.id);
+    };
+    const anh = await mk('sort-c', 'ZZ Ánh', '2024-03-15T10:00:00');
+    const cuong = await mk('sort-a', 'ZZ Cường', '2025-07-02T10:00:00');
+    const bao = await mk('sort-b', 'ZZ Bảo', '2023-11-20T10:00:00');
+    await b.login(owner.sid); await b.setCookie('adminLang', 'vi');
+    await b.viewport(1280, 900);
+    await b.nav('/admin/nguoi-dung', 400);
+    const view = () => ev(`(() => {
+      const rows = [...document.querySelectorAll('tbody[data-list="users"] tr[data-id]')];
+      const shown = rows.filter((tr) => !tr.hidden);
+      const s = document.querySelector('[data-search-field]'), i = document.querySelector('[data-list-search="users"] input');
+      return { ids: shown.map((tr) => tr.dataset.id), roles: rows.map((tr) => tr.dataset.filter), times: rows.map((tr) => +tr.dataset.joinedTime),
+        names: shown.map((tr) => tr.querySelector('[data-search-name]').textContent), emails: shown.map((tr) => tr.querySelector('[data-search-email]').textContent),
+        shownTimes: shown.map((tr) => +tr.dataset.joinedTime), joined: shown.map((tr) => tr.dataset.joined),
+        field: s.value, placeholder: i.placeholder, clear: !document.querySelector('[data-list-search="users"] .list-search-clear').hidden,
+        marks: [...document.querySelectorAll('tbody[data-list="users"] tr:not([hidden]) mark.search-hit')].map((m) => m.closest('[data-search-name]') ? 'name' : m.closest('[data-search-email]') ? 'email' : '?'),
+        url: location.search }; })()`);
+    const sortedBy = (list, cmp) => list.every((x, i) => i === 0 || cmp(list[i - 1], x) <= 0);
+    const coll = new Intl.Collator('vi', { sensitivity: 'base', numeric: true });
+    const mine = (ids) => ids.filter((id) => [anh, cuong, bao].includes(id));
+    const type = async (text) => { await ev(`(() => { const i = document.querySelector('[data-list-search="users"] input'); i.focus(); i.value = ${JSON.stringify(text)}; i.dispatchEvent(new Event('input', { bubbles: true })); })()`); await sleep(60); };
+    const pick = async (f) => { await ev(`(() => { const s = document.querySelector('[data-search-field]'); s.value = ${JSON.stringify(f)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`); await sleep(60); };
+    const normalOrder = (v) => {
+      const firstOther = v.roles.findIndex((r) => r !== 'owner');
+      const ownersFirst = firstOther === -1 || v.roles.slice(firstOther).every((r) => r !== 'owner');
+      const cut = firstOther === -1 ? v.roles.length : firstOther;
+      const newestFirst = (t) => t.every((x, i) => i === 0 || t[i - 1] >= x);
+      return ownersFirst && newestFirst(v.times.slice(0, cut)) && newestFirst(v.times.slice(cut));
+    };
+
+    let v = await view();
+    check('page opens in the normal order: owners pinned on top, then everyone else newest first', normalOrder(v) && v.roles[0] === 'owner', v.roles);
+    check('"Tìm theo" shows Tên, with the name placeholder, no × and nothing in the address', v.field === 'ten' && v.placeholder === 'Nhập tên… (xếp A → Z)' && !v.clear && v.url === '', v);
+    const opts = await ev(`[...document.querySelectorAll('[data-search-field] option')].map((o) => o.textContent.trim())`);
+    check('the choices are Tên · Email · Ngày tham gia', JSON.stringify(opts) === JSON.stringify(['Tên', 'Email', 'Ngày tham gia']), opts);
+
+    await type('zz');
+    v = await view();
+    check('Tên: typing "zz" shows the ZZ accounts sorted A → Z (Ánh, Bảo, Cường), names highlighted, ?theo=ten&q=zz',
+      JSON.stringify(mine(v.ids)) === JSON.stringify([anh, bao, cuong]) && sortedBy(v.names, coll.compare) && v.names.every((n) => n.startsWith('ZZ')) && v.marks.length && v.marks.every((m) => m === 'name') && v.url === '?q=zz&theo=ten', v);
+    await type('zz b');
+    v = await view();
+    check('Tên: "zz b" narrows to names with a word starting with b (Bảo, not Ánh/Cường)', v.ids.includes(bao) && !v.ids.includes(anh) && !v.ids.includes(cuong), v.names);
+    await type('zztest');
+    check('Tên: the search no longer looks in emails ("zztest" finds no name)', (await view()).ids.length === 0);
+
+    await pick('email'); await type('zztest-sort');
+    v = await view();
+    check('Email: matches sorted A → Z by email (sort-a, sort-b, sort-c), emails highlighted, the email placeholder',
+      JSON.stringify(mine(v.ids)) === JSON.stringify([cuong, bao, anh]) && sortedBy(v.emails, coll.compare) && v.marks.length && v.marks.every((m) => m === 'email') && v.placeholder === 'Nhập email… (xếp A → Z)' && v.url.includes('theo=email'), v);
+    await b.shot('users-search-email');
+
+    // "Ngày tham gia": one format, DD/MM/YYYY, numbers and "/" only; the box tidies what is typed
+    const dateCell = await ev(`[...document.querySelectorAll('tbody[data-list="users"] tr')].find((tr) => tr.dataset.id === ${JSON.stringify(anh)}).children[4].textContent.trim()`);
+    check('the "Ngày tham gia" column shows DD/MM/YYYY (15/03/2024)', dateCell === '15/03/2024', dateCell);
+    await pick('ngay');
+    const box = () => ev(`(() => { const i = document.querySelector('[data-list-search="users"] input'); return { value: i.value, mode: i.getAttribute('inputmode') }; })()`);
+    // Key by key, as a person types (each key goes through the browser's own input checks)
+    const keys = async (text) => {
+      await type('');
+      await ev(`document.querySelector('[data-list-search="users"] input').focus()`);
+      for (const ch of text) { await send('Input.insertText', { text: ch }); await sleep(15); }
+      await sleep(60);
+    };
+    const backspace = async () => {
+      await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8, commands: ['deleteBackward'] });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8 }); await sleep(40);
+    };
+    v = await view();
+    check('Ngày tham gia: the number keypad on phones, the DD/MM/YYYY placeholder', (await box()).mode === 'numeric' && v.placeholder === 'Nhập ngày: DD/MM/YYYY (cũ → mới)', v.placeholder);
+    await keys('a -x.');
+    v = await view();
+    check('… letters, spaces and symbols can\'t be typed: the box stays empty, the whole list shown', (await box()).value === '' && v.ids.length === v.roles.length, await box());
+    await keys('15032024');
+    v = await view();
+    check('… typing 15032024 shows 15/03/2024 (slashes come by themselves) and finds Ánh only', (await box()).value === '15/03/2024' && v.ids.includes(anh) && v.joined.every((j) => j === '15/03/2024'), { box: await box(), joined: v.joined });
+    await keys('2/7/2025');
+    v = await view();
+    check('… typing 2/7/2025 becomes 02/07/2025 and finds Cường', (await box()).value === '02/07/2025' && v.ids.includes(cuong) && v.joined.every((j) => j === '02/07/2025'), { box: await box(), joined: v.joined });
+    await type('2/7/2025');
+    check('… pasting 2/7/2025 does the same', (await box()).value === '02/07/2025' && (await view()).ids.includes(cuong));
+    await type('ab15/03x2024');
+    check('… pasting ab15/03x2024 keeps just 15/03/2024', (await box()).value === '15/03/2024' && (await view()).ids.includes(anh), await box());
+    await keys('15//03/20245');
+    check('… an extra "/" is ignored and the year stops at 4 digits', (await box()).value === '15/03/2024', await box());
+    await keys('20/11');
+    v = await view();
+    check('… "20/11" (year not typed yet) finds Bảo, every 20 November', v.ids.includes(bao) && v.joined.every((j) => j.startsWith('20/11/')), v.joined);
+    await keys('02/7');
+    v = await view();
+    check('… "02/7" (month still being typed) finds 2 July (Cường)', v.ids.includes(cuong) && v.joined.every((j) => j.startsWith('02/07/')), v.joined);
+    await keys('2');
+    v = await view();
+    check('… "2": days 02 and 20–29, oldest → newest (Bảo 20/11/2023, then Cường 02/07/2025)', JSON.stringify(mine(v.ids)) === JSON.stringify([bao, cuong]) && v.joined.every((j) => j.startsWith('02/') || j.startsWith('2')) && sortedBy(v.shownTimes, (a, b2) => a - b2), v.joined);
+    await keys('211');
+    const steps = [(await box()).value];
+    await backspace(); steps.push((await box()).value);
+    await backspace(); steps.push((await box()).value);
+    check('… Backspace works naturally: 21/1 → 21/ → 21', JSON.stringify(steps) === JSON.stringify(['21/1', '21/', '21']), steps);
+    await b.shot('users-search-date');
+    await pick('ten'); await keys('zz');
+    check('back on "Tên": the normal keyboard and letters work again', (await box()).mode === null && (await box()).value === 'zz');
+    await pick('ngay');
+    check('… switching to "Ngày tham gia" again cleans the letters out', (await box()).value === '');
+    await type('');
+    v = await view();
+    check('picked field with an empty box: the whole list sorted oldest → newest, × shown, ?theo=ngay', sortedBy(v.shownTimes, (a, b2) => a - b2) && v.ids.length === v.roles.length && v.clear && v.url === '?theo=ngay', v.url);
+
+    await b.clickAt('[data-list-search="users"] .list-search-clear'); await sleep(100);
+    v = await view();
+    check('× brings back the normal order (owners on top), "Tên", no × and a clean address', normalOrder(v) && v.field === 'ten' && !v.clear && v.url === '' && v.ids.length === v.roles.length, v);
+    await pick('email');
+    await b.key('Escape', 'Escape', 27); await sleep(100);
+    v = await view();
+    check('Esc does the same', normalOrder(v) && v.field === 'ten' && v.url === '', { field: v.field, url: v.url });
+    // Typing fast must not run into Chrome's limit on address updates (~200 in 10 s): one update per change at most
+    const updates = await ev(`(() => { let n = 0; const rs = history.replaceState; history.replaceState = function () { n++; return rs.apply(this, arguments); };
+      const i = document.querySelector('[data-list-search="users"] input'); for (const t of ['z', 'zz', 'zz', 'zz ', 'zz']) { i.value = t; i.dispatchEvent(new Event('input', { bubbles: true })); }
+      history.replaceState = rs; i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); return n; })()`);
+    check('typing updates the address once per change, not 3 times per key (2 changes here)', updates === 2, updates);
+
+    await b.nav('/admin/nguoi-dung?theo=email&q=zztest-sort', 400);
+    v = await view();
+    check('opening ?theo=email&q=… brings the search back, sorted by email', v.field === 'email' && JSON.stringify(mine(v.ids)) === JSON.stringify([cuong, bao, anh]) && v.clear, v);
+
+    await b.setCookie('adminLang', 'en');
+    await b.nav('/admin/nguoi-dung?theo=ngay', 400);
+    v = await view();
+    check('English: "Search by" and the same DD/MM/YYYY format',
+      (await ev(`document.querySelector('.list-search-by span').textContent`)) === 'Search by' && v.placeholder === 'Type a date: DD/MM/YYYY (oldest → newest)', v.placeholder);
+    await type('15/03/2024');
+    v = await view();
+    const enCell = await ev(`[...document.querySelectorAll('tbody[data-list="users"] tr')].find((tr) => tr.dataset.id === ${JSON.stringify(anh)}).children[4].textContent.trim()`);
+    check('English: "15/03/2024" finds Ánh, and the column shows 15/03/2024 too', v.ids.includes(anh) && v.joined.every((j) => j === '15/03/2024') && enCell === '15/03/2024', { joined: v.joined, enCell });
+    await b.setCookie('adminLang', 'vi');
+    await b.nav('/admin/nguoi-dung?theo=ngay&q=15a03', 400);
+    check('opening ?theo=ngay&q=15a03 shows 15/03', (await box()).value === '15/03', await box());
+
+    await b.viewport(390, 844);
+    await b.nav('/admin/nguoi-dung?theo=email', 400);
+    const phone = await ev(`(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); const a = r('.list-search-by'), i = r('.list-search-box');
+      return { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, byRight: Math.round(a.right), boxRight: Math.round(i.right), boxW: Math.round(i.width), w: innerWidth }; })()`);
+    check('phone (390px): "Tìm theo" and the search box fit, nothing sticks out sideways (the table scrolls in its own box)', phone.overflow <= 0 && phone.w <= 400 && phone.byRight <= phone.w && phone.boxRight <= phone.w && phone.boxW >= 200, phone);
+    await b.shot('users-search-phone');
+    await b.viewport(1280, 900);
   });
 });

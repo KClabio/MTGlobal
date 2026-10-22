@@ -25,11 +25,11 @@
       </div>
     </div>
   </div>
-  <script>window.ADMIN_I18N = { orderSaved: <%- JSON.stringify(t('admin.common.orderSaved')) %>, orderError: <%- JSON.stringify(t('admin.common.orderError')) %>,
+  <script nonce="<%= cspNonce %>">window.ADMIN_I18N = { orderSaved: <%- JSON.stringify(t('admin.common.orderSaved')) %>, orderError: <%- JSON.stringify(t('admin.common.orderError')) %>,
     bannerNoLine: <%- JSON.stringify(t('admin.general.noLine')) %>, undo: <%- JSON.stringify(t('admin.pages.undo')) %>,
     leave: <%- JSON.stringify(t('admin.pages.leaveWarning')) %> };</script>
-  <script src="/js/theme.js"></script>
+  <script src="<%= asset('/js/theme.js') %>"></script>
   <script src="/vendor/sortable.min.js"></script>
-  <script src="/js/admin.js"></script>
+  <script src="<%= asset('/js/admin.js') %>"></script>
 </body>
 </html>

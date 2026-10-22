@@ -1,5 +1,6 @@
 <% if (typeof settings !== 'undefined' && settings && settings.logo) { %>
-  <img class="logo-img" src="<%= settings.logo %>" alt="MTG - Smart Solutions for Life">
+  <%# Shown 44–56 px tall: a 480 px wide copy stays sharp on 3× phone screens and is a fraction of the upload's size %>
+  <img class="logo-img" src="<%= resized(settings.logo, 480) %>" alt="MTG - Smart Solutions for Life">
 <% } else { %>
   <span class="logo-text">
     <span style="color:var(--mtg-blue)">M</span><span style="color:var(--mtg-green)">T</span><span style="color:var(--mtg-orange)">G</span>

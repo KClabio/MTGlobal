@@ -224,6 +224,10 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .login-needed-title { margin: 0 0 6px; font-size: 1.1rem; color: var(--mtg-heading); }
 .login-needed-text { margin: 0 0 16px; color: var(--mtg-muted); font-size: .92rem; }
 .login-needed-alt { margin: 12px 0 0; font-size: .9rem; color: var(--mtg-muted); }
+/* "Chưa có tài khoản? Đăng ký" lines: the link is underlined, so it stands out without relying on colour (in dark mode
+   the link blue and the grey text around it are about as bright) */
+.auth-switch { text-align: center; margin-top: 16px; }
+.auth-switch a, .login-needed-alt a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .form-hint { font-size: .8rem; color: var(--mtg-muted); margin-top: 4px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; }
 .checkbox-row input { width: auto; }
@@ -328,7 +332,7 @@ html.has-plan-zoom { overflow: hidden; }
 .tag.role-admin { background: var(--mtg-blue-tint); color: var(--mtg-info-ink); }
 
 .tag.status-da_lien_he { background: var(--mtg-info-tint); color: var(--mtg-info-ink); }
-.tag.status-hoan_tat { background: var(--mtg-done-tint); color: var(--mtg-success); }
+.tag.status-hoan_tat { background: var(--mtg-done-tint); color: var(--mtg-done-text); }
 .tag.tag-edited { margin-top: 4px; background: transparent; border: 1px dashed var(--mtg-border); color: var(--mtg-muted); font-weight: 600; white-space: nowrap; }
 /* "Yêu cầu của tôi": the Sửa column, and the row just changed */
 .my-requests-action { white-space: nowrap; text-align: right; }

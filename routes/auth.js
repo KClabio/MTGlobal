@@ -8,6 +8,7 @@ const { requireAuth } = require('../middleware/auth');
 const { uploadAvatar, AVATAR_MAX_BYTES, isRealImageFile, fileUrl, wrapUpload, removeLocalUpload } = require('../middleware/upload');
 const { isValidEmail, isValidPhone, isNonEmpty } = require('../lib/validators');
 const google = require('../lib/google-auth');
+const throttle = require('../lib/login-throttle');
 
 const PASSWORD_MIN = 6;
 
@@ -79,12 +80,19 @@ function logIn(req, res, user) {
 router.post('/dang-nhap', async (req, res) => {
   const email = typeof req.body.email === 'string' ? req.body.email.toLowerCase().trim() : '';
   const password = typeof req.body.password === 'string' ? req.body.password : '';
+  // Too many wrong passwords lately (lib/login-throttle.js): refused before the password is even checked
+  const wait = await throttle.check(email, req.ip);
+  if (wait) {
+    return res.status(429).render('login', { error: res.locals.t('auth.errTooMany', { minutes: wait }), registered: false, email, needLogin: forRequest(req) });
+  }
   const user = email ? await User.findOne({ email }) : null;
   // An account made with Google has no password until its owner sets one on the profile page
   const ok = user && user.passwordHash && (await bcrypt.compare(password, user.passwordHash));
   if (!ok) {
+    await throttle.fail(email, req.ip);
     return res.status(400).render('login', { error: res.locals.t('auth.errLogin'), registered: false, email, needLogin: forRequest(req) });
   }
+  await throttle.succeed(email);
   logIn(req, res, user);
 });
 

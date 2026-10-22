@@ -567,6 +567,8 @@ router.post('/yeu-cau/:id/xoa', async (req, res) => {
 // ---- Users ----
 async function renderUsers(res, { status = 200 } = {}) {
   const users = await User.find().sort({ createdAt: -1 }).lean();
+  // Owners pinned on top, newest first inside each group (sort is stable). The "Tìm theo" search re-sorts in the browser.
+  users.sort((a, b) => (b.role === 'owner') - (a.role === 'owner'));
   res.status(status).render('admin/users', { users, canDeleteUser, canChangeRole });
 }
 

@@ -6,6 +6,67 @@ await suite(async (b) => {
   const { ev, nav, sleep, shot } = b;
   const setTheme = (v) => b.setCookie('theme', v);
 
+  await part(b, 'speed: compression, one style file, own font, lighter photos', async () => {
+    const get = async (p, headers = {}) => { const r = await fetch(BASE + p, { headers }); const buf = Buffer.from(await r.arrayBuffer()); return { status: r.status, h: Object.fromEntries(r.headers), bytes: buf.length, buf, text: buf.toString('utf8') }; };
+    // Node's fetch decompresses by itself: ask with a raw request to see what goes over the network
+    const raw = (p, enc) => new Promise((resolve) => { import('node:http').then(({ default: http }) => { http.get(BASE + p, { headers: { 'accept-encoding': enc } }, (res) => { let n = 0; res.on('data', (c) => { n += c.length; }); res.on('end', () => resolve({ enc: res.headers['content-encoding'] || null, bytes: n, type: res.headers['content-type'] })); }); }); });
+    const home = await get('/');
+    const css = (home.text.match(/href="(\/css\/site\.css\?v=[0-9a-f]{10})"/) || [])[1];
+    check('pages link one style file with a fingerprint (/css/site.css?v=…), no Google Fonts', !!css && !home.text.includes('fonts.googleapis.com') && !/href="\/css\/(base|layout|theme)\.css"/.test(home.text), css);
+    const plainCss = await raw(css, 'identity'); const brCss = await raw(css, 'br'); const gzHtml = await raw('/', 'gzip');
+    check('the style file comes compressed (Brotli), several times smaller', brCss.enc === 'br' && brCss.bytes < plainCss.bytes / 3, { plain: plainCss.bytes, br: brCss.bytes });
+    check('pages come compressed too (gzip for browsers without Brotli)', gzHtml.enc === 'gzip' && /text\/html/.test(gzHtml.type), gzHtml);
+    const jpg = await raw('/assets/giai-phap/workshop/hoc-sinh-lap-rap-2.jpg', 'gzip, br');
+    check('photos are not compressed a second time', jpg.enc === null && /image\/jpeg/.test(jpg.type), jpg);
+    const font = await get('/fonts/be-vietnam-pro-400-vietnamese.woff2');
+    check('the font is served by the site (woff2, with its licence)', font.status === 200 && /font\/woff2/.test(font.h['content-type']) && (await get('/fonts/OFL.txt')).text.includes('SIL Open Font License'));
+
+    // Lighter copies of photos: right width, WebP when accepted, the original untouched
+    const P = '/assets/giai-phap/workshop/hoc-sinh-lap-rap-2.jpg';
+    const original = await get(P);
+    const webp = await get(`${P}?w=480`, { accept: 'image/avif,image/webp,*/*' });
+    const sharp = (await import('sharp')).default;
+    const meta = await sharp(webp.buf).metadata();
+    check('?w=480 gives a WebP copy 480 px wide, much smaller than the original', webp.status === 200 && webp.h['content-type'] === 'image/webp' && meta.format === 'webp' && meta.width === 480 && webp.bytes < original.bytes / 3 && /Accept/.test(webp.h.vary || ''), { orig: original.bytes, copy: webp.bytes, meta: { f: meta.format, w: meta.width } });
+    const jpeg = await get(`${P}?w=480`, { accept: 'image/jpeg,*/*' });
+    check('… a browser without WebP gets a JPEG copy', jpeg.h['content-type'] === 'image/jpeg' && (await sharp(jpeg.buf).metadata()).width === 480);
+    check('… never wider than the original (1600 asked for a smaller photo)', ((await sharp((await get(`${P}?w=1600`, { accept: 'image/webp' })).buf).metadata()).width) <= (await sharp(original.buf).metadata()).width);
+    check('… other widths give the original; paths outside the photos are refused', (await get(`${P}?w=999`)).bytes === original.bytes && (await get('/assets/..%2f..%2fserver.js?w=480')).status === 404);
+    check('… the original file is unchanged', (await get(P)).bytes === original.bytes);
+
+    // The pages use them: the browser picks a small copy on a phone
+    for (const p of ['/', '/giai-phap/du-an', '/giai-phap/thiet-bi']) {
+      const html = (await get(p)).text;
+      check(`${p}: photos have srcset (480–1600) and lazy loading`, /srcset="[^"]*\?w=480 480w/.test(html) && /loading="lazy"/.test(html));
+    }
+    await b.viewport(390, 844);
+    await nav('/giai-phap/du-an', 600);
+    await ev(`window.scrollTo(0, 400)`); await sleep(500);
+    const used = await ev(`[...document.querySelectorAll('img[srcset]')].filter((i) => i.complete && i.currentSrc).slice(0, 4).map((i) => i.currentSrc.replace(location.origin, ''))`);
+    check('phone width: the browser loads 480/800 px copies, not the originals or 1600', used.length > 0 && used.every((u) => /\?w=(480|800|1200)$/.test(u)), used);
+
+    // Only the main picture loads first; the others don't share a slow connection with it
+    for (const p of ['/giai-phap/du-an', '/giai-phap/thiet-bi', '/san-pham']) {
+      const html = (await get(p)).text;
+      const n = (html.match(/fetchpriority="high"/g) || []).length;
+      const photos = (html.match(/class="card-media"[\s\S]{0,400}?<img /g) || []).length; // robots without photos have none
+      check(`${p}: only the first card photo loads at once (one fetchpriority="high")`, n === Math.min(1, photos), { n, photos });
+    }
+    const logo = ((await get('/')).text.match(/class="logo-img" src="([^"]*)"/) || [])[1];
+    check('the logo is sent as a light 480 px copy (an SVG logo stays as it is)', !logo || /\?w=480$/.test(logo) || /\.svg$/i.test(logo), logo);
+
+    // Thiết bị: the search, the tabs and only Phần I are in place before main.js runs, so the list doesn't jump
+    await nav('/giai-phap/thiet-bi', 600);
+    const shift = await ev(`new Promise((r) => { let s = 0; new PerformanceObserver((l) => { for (const e of l.getEntries()) if (!e.hadRecentInput) s += e.value; }).observe({ type: 'layout-shift', buffered: true }); setTimeout(() => r(Math.round(s * 1000) / 1000), 300); })`);
+    check('Thiết bị on a phone: the page does not jump while loading (layout shift under 0.05)', shift < 0.05, shift);
+    const before = await ev(`(() => { const t = document.querySelector('[data-equip-tools]'); t.classList.remove('is-ready'); t.hidden = true;
+      const panels = [...document.querySelectorAll('[data-panel]')]; panels.forEach((p) => { p.hidden = false; });
+      const r = { tools: getComputedStyle(t).display !== 'none', shown: panels.filter((p) => getComputedStyle(p).display !== 'none').map((p) => p.dataset.panel) };
+      return r; })()`);
+    check('… before the page script runs: tools shown and only the first Phần', before.tools && before.shown.length === 1 && before.shown[0] === 'phan-1', before);
+    await b.viewport(1280, 900);
+  });
+
   await part(b, 'watch-only videos', async () => {
     await nav('/san-pham/robot-leo-cau-thang', 400);
     const vids = await ev(`[...document.querySelectorAll('video')].map((v) => ({ list: v.getAttribute('controlslist'), pip: v.disablePictureInPicture, remote: v.disableRemotePlayback, controls: v.controls }))`);

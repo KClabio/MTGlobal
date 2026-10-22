@@ -16,7 +16,7 @@
     <% articles.forEach(function (a) { %>
       <tr data-id="<%= a._id %>" data-search="<%= [a.titleVi, a.titleEn].filter(Boolean).join(' ') %>">
         <%- include('partials/drag-handle', { name: a.titleVi }) %>
-        <td><% if (a.coverImage) { %><img class="thumb" src="<%= a.coverImage %>" alt=""><% } %></td>
+        <td><% if (a.coverImage) { %><img class="thumb" src="<%= resized(a.coverImage, 320) %>" alt="" loading="lazy"><% } %></td>
         <td data-search-name><%= a.titleVi %></td>
         <td><%= new Date(a.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
         <td><%= a.published ? t('admin.articles.visible') : t('admin.articles.hidden') %></td>

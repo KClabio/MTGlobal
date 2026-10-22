@@ -18,7 +18,7 @@
     <div class="profile-layout">
       <aside class="profile-summary">
         <% if (user.avatar) { %>
-          <img class="avatar-lg" src="<%= user.avatar %>" alt="<%= user.name %>">
+          <img class="avatar-lg" src="<%= resized(user.avatar, 320) %>" alt="<%= user.name %>">
         <% } else { %>
           <div class="avatar-lg avatar-fallback" aria-hidden="true"><%= initials %></div>
         <% } %>

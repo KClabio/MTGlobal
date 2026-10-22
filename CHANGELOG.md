@@ -6,7 +6,30 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.0.13] - 2026-10-20
+## [1.0.14] - 2026-10-22
+
+### Added
+- **"Website đang tạm gián đoạn" page:** if the database stops, every page answers within a second with a short notice instead of hanging for 30 seconds, and the website comes back by itself a few seconds after the database returns.
+
+  ![The "Website đang tạm gián đoạn" page](docs/screenshots/1.0.14/db-down.jpg)
+- **Search engines:** `/sitemap.xml` lists every public page in Vietnamese and English (projects, equipment, news, services and partners included, and kept up to date as content changes), and `/robots.txt` keeps search engines out of the admin and account pages. On the live server, set `SITE_URL` to the website's address (see `.env.example`).
+- **Người dùng (admin): "Tìm theo"** Tên, Email or Ngày tham gia (DD/MM/YYYY). The list is then sorted by that field. Without a search, owners come first, then the newest accounts.
+
+  ![Người dùng searched by email](docs/screenshots/1.0.14/users-search.jpg)
+- **Wrong-password limit:** after 5 wrong passwords in 15 minutes an account waits 15 minutes, and the visitor sees "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút."
+- **More testing:** unit tests, and a real-world test campaign (`npm run qa`: busy days, sudden rushes, a 4-hour day, database outage, accessibility, Chrome/Firefox/Safari engines, printing, page speed) that runs on its own copy of the data.
+
+### Changed
+- **Faster, especially on phones:** pages and styles are sent compressed, the styles come as one file, the Be Vietnam Pro font is served by the website itself (no connection to Google Fonts), photos come as lighter WebP copies sized for the screen, the first pictures of a page load first, the logo is sent resized, and browsers keep styles, scripts and pictures instead of fetching them again. Phone speed scores are now 89–97 (Trang chủ was 78) and pages weigh 0.2–0.7 MB instead of 2–3.5 MB.
+- **Safer to put online:** browser security protections on every page and file; logins work behind the host's HTTPS (`TRUST_PROXY=1` and `SESSION_COOKIE_SECURE=true` on the live server); the live server refuses to start without a strong `SESSION_SECRET`; the Cloudinary packages are updated, with no known flaws left in the packages the website uses.
+- **Easier to read:** the "Hoàn tất" tag and the count in an active filter chip are slightly darker, and in dark mode the "Đăng ký" / "Đăng nhập" links in the login notice are underlined.
+
+### Fixed
+- **Long account names on small phones:** a long name in the account button pushed pages 10–15 px wider than a 360 px screen, so they could be dragged sideways. The name now ends in "…" (the full name shows on hover).
+
+  ![A long account name on a 360 px phone](docs/screenshots/1.0.14/long-name-phone.jpg)
+
+## [1.0.13] - 2026-10-20 · `1ac0010`
 
 ### Changed
 Movement everywhere below works in Chrome, Edge, Opera, Cốc Cốc and Firefox. With "reduced motion" turned on in the computer's settings it is still there, only quicker. If a page is in a background tab, any movement simply jumps to its end, so nothing is left half open.

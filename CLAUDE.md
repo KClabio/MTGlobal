@@ -14,7 +14,7 @@ The company website of Công ty TNHH Công nghệ Mễ Trì Global, in Vietnames
 | `server.js` | app setup, `app.locals` helpers, video guard, routes |
 | `routes/` | `index.js` (public pages), `auth.js` (login/register/profile), `account.js` (`/tai-khoan`: my requests), `admin.js` (`/admin/*`) |
 | `views/` | public pages; `views/partials/` (header, footer, cards, `solution-section.ejs`, …); `views/admin/` + `views/admin/partials/` |
-| `lib/` | logic: `solution-pages.js` (default Giải pháp pages), `dashboard.js`, `home-domains.js`, `project-levels.js`, `i18n.js`, `text.js`, `validators.js`, … |
+| `lib/` | logic: `solution-pages.js` (default Giải pháp pages), `dashboard.js`, `home-domains.js`, `project-levels.js`, `i18n.js`, `text.js`, `validators.js`, `db-guard.js` (503 "tạm gián đoạn" page while MongoDB is down), … |
 | `models/` | mongoose models (Article, Partner, Product, Project, QuoteRequest, Service, SiteSettings, SolutionPage, User) |
 | `locales/vi.json`, `locales/en.json` | every UI text, in both languages; add new keys to both |
 | `public/js/` | `main.js` (website), `admin.js` (admin), `theme.js` |
@@ -33,6 +33,12 @@ The company website of Công ty TNHH Công nghệ Mễ Trì Global, in Vietnames
 | `admin.css` | the whole admin area, dashboard charts included (loaded by `views/admin/partials/head.ejs` only) |
 
 Each file ends with its own `@media` rules. Grep for a selector first, then read only that part of the file.
+Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), joined by `lib/assets.js` in the order fonts, theme, base, layout, components, home, pages (+ admin). A new CSS file must be added to `SITE_CSS` there. The font (Be Vietnam Pro) is self-hosted in `public/fonts` (`fonts.css`).
+
+### Speed helpers (views)
+- Photos: `<%- picture(src, alt, { sizes, eager }) %>` (`lib/picture.js`) writes `srcset` with lighter copies (`?w=480…1600`, WebP, made by `lib/images.js` into `cache/images`, not in git). Use `eager: true` only for pictures on the first screen. One address at a width: `resized(src, 320)`.
+- Style/script links: `<%= asset('/js/main.js') %>` adds a content fingerprint, so production can cache them for a year.
+- Compression, cache rules and security headers (`lib/security-headers.js`, CSP with a per-page nonce: inline `<script nonce="<%= cspNonce %>">`) are set in `server.js`.
 
 ## Running
 - `npm run dev` runs on **:3000**. This is the owner's server: never stop or restart it.
@@ -59,7 +65,7 @@ Each file ends with its own `@media` rules. Grep for a selector first, then read
   | `accounts` | password eye, profile page, role badge, avatar size, "Xóa ảnh", sign-up checks, login notice |
   | `google` | "Đăng nhập bằng Google" (fake Google on :3002): new account, sync at each login, joining an email account, cancel / forged return, photo delete, first password |
   | `dashboard` | dashboard numbers, charts, animations, hover; random sample requests each run (`DASH_SEED=<n>` repeats one; a failure shows its seed) |
-  | `admin-lists` | permissions, notifications, drag order, list search, filter chips, request delete, delete dialog, admin menu scroll + ☰ slide-in menu (≤960px), users by role |
+  | `admin-lists` | permissions, notifications, drag order, list search, filter chips, request delete, delete dialog, admin menu scroll + ☰ slide-in menu (≤960px), users by role, user list owners first + "Tìm theo" search/sort |
   | `admin-editor` | admin sidebar, Giải pháp page editor, Cài đặt chung, Thông tin công ty, plain-text content |
 - Settings changed in a test must be put back through an admin save (see `restoreSettingsNow` in `admin-editor.test.mjs`): the server caches site settings.
 - Tests use the dev database, but only with temporary data:
@@ -76,6 +82,12 @@ Each file ends with its own `@media` rules. Grep for a selector first, then read
   ```
 - After a change, run the matching test file(s); run the full `npm test` before a release.
 - The owner's PC has "reduced motion" on, so check animations with `b.reducedMotion()` too.
+
+## Real-world test campaign (`npm run qa`)
+- `tests/qa/run.mjs` runs the scenarios in `tests/qa/scenarios/*.mjs` (smoke, load/stress/spike/endurance, forms, sessions, links, accessibility, browsers, print, page speed) against its own MongoDB on :27018 (`tests/output/qa/mongo-data`, content copied from the dev database, made-up accounts and requests) and its own site on :3001. It never touches :3000 or the dev data.
+- Progress is saved in `tests/output/qa/progress.json` after every step: `--status`, `--resume`, `--only 26,29`, `--restart 29`, `--pause` (or Ctrl+C). `QA_FAST=1` shortens the long runs (for testing the checkpoints).
+- `node tests/qa/build-report.mjs` turns the results into `tests/output/qa/report/index.html` (template `tests/qa/report.html`). Results and the report stay out of git (the repo is public; security findings).
+- Don't run `npm test` and `npm run qa` at the same time (both use :3001).
 
 ## Commits and releases
 - **Commit only when the owner asks.** Each commit is a version: the first was 1.0.0, and each later one adds 0.0.1 (one tag + GitHub Release per commit).

@@ -62,7 +62,7 @@
         <button type="submit" class="btn btn-primary btn-block"><%= t('forms.registerTitle') %></button>
       </form>
       <%- include('partials/google-button', { label: 'auth.googleRegister' }) %>
-      <p style="text-align:center; margin-top:16px;">
+      <p class="auth-switch">
         <%= t('auth.haveAccount') %>
         <a href="/dang-nhap<%= rgForRequest ? '?yeu-cau=1' : '' %>"><%= t('nav.login') %></a>
       </p>

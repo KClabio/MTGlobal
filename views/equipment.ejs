@@ -35,6 +35,9 @@
         <p class="empty-note" data-equip-empty hidden><%= t('equipment.noResults') %></p>
       </div>
 
+      <%# The first card with a photo is the page's main picture: it loads at once; the others load lazily, so on a
+          phone they don't share the slow connection with it (on a wide screen they are on screen and still show at once) %>
+      <% let mainPicture = false; %>
       <% parts.forEach(function (p) { %>
         <div class="equipment-group equip-panel" id="equip-<%= p.slug %>" role="tabpanel" aria-labelledby="tab-<%= p.slug %>" data-panel="<%= p.slug %>" data-part-label="<%= p.label %>">
           <h2 class="equipment-group-title"><%= p.title.split(/\s+—\s+/)[0] %></h2>
@@ -45,7 +48,8 @@
             <% if (g.showTitle && g.title.split(/\s+—\s+/)[1]) { %><h3 class="equipment-subgroup-title"><%= g.title.split(/\s+—\s+/)[1] %></h3><% } %>
             <div class="card-grid">
               <% g.items.forEach(function (item) { %>
-                <%- include('partials/equipment-card', { item, showGroup: false }) %>
+                <% const eager = !mainPicture && !!(item.images && item.images[0]); if (eager) mainPicture = true; %>
+                <%- include('partials/equipment-card', { item, showGroup: false, eager }) %>
               <% }) %>
             </div>
           <% }) %>

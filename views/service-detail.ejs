@@ -22,7 +22,7 @@
     <div>
       <% if (service.heroImage) { %>
         <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/9;">
-          <img src="<%= service.heroImage %>" alt="<%= pick(service, 'title') %>">
+          <%- picture(service.heroImage, pick(service, 'title'), { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
         </div>
       <% } %>
       <div class="prose-text prose-text-start"><%- formatText(pick(service, 'body')) %></div>
@@ -84,7 +84,7 @@
           <h2><%= t('services.galleryTitle') %></h2>
           <div class="service-gallery">
             <% gallery.forEach(function (img) { %>
-              <a href="<%= img %>" target="_blank" rel="noopener"><img src="<%= img %>" alt="<%= pick(service, 'title') %>" loading="lazy"></a>
+              <a href="<%= img %>" target="_blank" rel="noopener"><%- picture(img, pick(service, 'title'), { sizes: '(max-width: 640px) 50vw, 300px' }) %></a>
             <% }) %>
           </div>
         </div>

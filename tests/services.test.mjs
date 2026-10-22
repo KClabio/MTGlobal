@@ -134,7 +134,7 @@ await suite(async (b) => {
     check('Liên hệ keeps the chosen category (tu-van-du-hoc)', r.status === 303 && contactSaved && contactSaved.interestedIn === 'tu-van-du-hoc', contactSaved && contactSaved.interestedIn);
     // Admin list label: render the admin view with the saved test records
     const requests = await col.find({ name: { $regex: '^' + MARK } }).sort({ createdAt: -1 }).toArray();
-    const adminHtml = await ejs.renderFile(`${ROOT}views/admin/requests.ejs`, { requests, statusFilter: '', statuses: ['moi', 'da_lien_he', 'hoan_tat'], active: 'yeu-cau', user: { name: 'Admin' }, lang: 'vi', theme: 'light', t: makeTranslator('vi'), adminLangUrl: () => '#', flash: null, isProductLine }, { root: `${ROOT}views` });
+    const adminHtml = await ejs.renderFile(`${ROOT}views/admin/requests.ejs`, { requests, statusFilter: '', statuses: ['moi', 'da_lien_he', 'hoan_tat'], active: 'yeu-cau', user: { name: 'Admin' }, lang: 'vi', theme: 'light', t: makeTranslator('vi'), adminLangUrl: () => '#', flash: null, isProductLine, cspNonce: 'test', asset: (u) => u }, { root: `${ROOT}views` });
     check('admin shows "Sản phẩm Robot thông minh" (4 robot requests)', (adminHtml.match(/>Sản phẩm Robot thông minh</g) || []).length === 4);
     check('admin shows "Tư vấn du học" for the contact request', adminHtml.includes('>Tư vấn du học<') && !adminHtml.includes('>san-pham-robot<'));
     check('admin shows "Workshop trải nghiệm STEM" for the new choice', adminHtml.includes('>Workshop trải nghiệm STEM<'));
@@ -278,7 +278,7 @@ await suite(async (b) => {
 
     // Staff see "Đã sửa lúc …"
     const requests = await col.find({ name: { $regex: '^' + MARK } }).sort({ createdAt: -1 }).toArray();
-    const adminHtml = await ejs.renderFile(`${ROOT}views/admin/requests.ejs`, { requests, statusFilter: '', statuses: ['moi', 'da_lien_he', 'hoan_tat'], active: 'yeu-cau', user: { name: 'Admin' }, lang: 'vi', theme: 'light', t: makeTranslator('vi'), adminLangUrl: () => '#', flash: null, isProductLine }, { root: `${ROOT}views` });
+    const adminHtml = await ejs.renderFile(`${ROOT}views/admin/requests.ejs`, { requests, statusFilter: '', statuses: ['moi', 'da_lien_he', 'hoan_tat'], active: 'yeu-cau', user: { name: 'Admin' }, lang: 'vi', theme: 'light', t: makeTranslator('vi'), adminLangUrl: () => '#', flash: null, isProductLine, cspNonce: 'test', asset: (u) => u }, { root: `${ROOT}views` });
     check('admin list: "Đã sửa lúc HH:MM dd/mm" on the changed requests (2)', (adminHtml.match(/data-edited-at title="[^"]+">Đã sửa lúc \d{2}:\d{2} \d{2}\/\d{2}</g) || []).length === 2);
 
     // In the browser

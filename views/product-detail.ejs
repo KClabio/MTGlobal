@@ -12,7 +12,7 @@
     <div>
       <% if (product.images && product.images.length) { %>
         <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/10;">
-          <img src="<%= product.images[0] %>" alt="<%= pick(product, 'name') %>">
+          <%- picture(product.images[0], pick(product, 'name'), { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
         </div>
       <% } %>
 

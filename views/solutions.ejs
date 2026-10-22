@@ -12,7 +12,7 @@
     <div class="card-grid">
       <% cards.forEach(function (card) { %>
         <a class="card" href="<%= card.url %>">
-          <div class="card-media<%= card.contain ? ' is-contain' : '' %>"><img src="<%= card.image %>" alt="<%= card.title %>" loading="lazy"></div>
+          <div class="card-media<%= card.contain ? ' is-contain' : '' %>"><%- picture(card.image, card.title, { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px' }) %></div>
           <div class="card-body">
             <h3><%= card.title %></h3>
             <% if (card.text) { %><p><%= card.text %></p><% } %>

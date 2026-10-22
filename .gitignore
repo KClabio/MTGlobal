@@ -10,3 +10,8 @@ source-assets/
 *.log
 .DS_Store
 tests/output/
+cache/
+# QA report template and builder: they hold the written-up findings (the repo is public)
+tests/qa/report.html
+tests/qa/build-report.mjs
+.claude/worktrees/
