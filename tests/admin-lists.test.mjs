@@ -850,8 +850,8 @@ await suite(async (b) => {
     await shot('admin-menu-closed-390');
     await b.clickAt('.admin-menu-btn'); await sleep(700);
     m = await menu();
-    check('tapping ☰ slides the menu in from the left: logo, all 16 links with their group titles, VI/EN and the light/dark switch',
-      m.onScreen && m.logo && m.links === 16 && m.groups === 6 && m.lang === 'VI/EN' && m.theme && m.expanded === 'true', m);
+    check('tapping ☰ slides the menu in from the left: logo, all 17 links with their group titles, VI/EN and the light/dark switch',
+      m.onScreen && m.logo && m.links === 17 && m.groups === 6 && m.lang === 'VI/EN' && m.theme && m.expanded === 'true', m);
     check('… with a dark backdrop, the page behind locked (no scroll, no Tab) and the focus on the current page "Tổng quan"', m.scrim && m.pageLocked && m.inert && m.focus === 'menu:Tổng quan', m);
     await shot('admin-menu-open-390');
     await b.key('Escape', 'Escape', 27); await sleep(700);

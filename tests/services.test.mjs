@@ -309,6 +309,44 @@ await suite(async (b) => {
     await b.shot('request-edit');
   });
 
+  await part(b, 'message limit (3,000 characters) and a form too big for the server', async () => {
+    const col = (await db()).collection('quoterequests');
+    const post = async (path, fields, extra = {}) => {
+      const r = await fetch(BASE + path, { method: 'POST', redirect: 'manual', body: new URLSearchParams({ agreePrivacy: '1', ...fields }), headers: { ...asRequester(), ...extra } });
+      return { status: r.status, at: r.headers.get('location'), html: await r.text() };
+    };
+    const form = await (await fetch(BASE + '/lien-he', { headers: asRequester() })).text();
+    check('the message box stops at 3,000 characters and shows a "0/3000" counter',
+      /<textarea[^>]*name="message"[^>]*maxlength="3000"[^>]*data-count="qf-messageCount"/.test(form) && /<span id="qf-messageCount">0<\/span>\/3000/.test(form));
+
+    const exact = await post('/lien-he', { name: `${MARK}-max`, phone: '0912345678', message: 'á'.repeat(2999) + '\r\n', interestedIn: 'khac' });
+    check('3,000 characters (a line break counted once, as the box does) are accepted', exact.status === 303 && !!(await col.findOne({ name: `${MARK}-max` })), exact.status);
+    const over = await post('/lien-he', { name: `${MARK}-over`, phone: '0912345678', message: 'b'.repeat(3001), interestedIn: 'khac' });
+    check('3,001 characters: refused with the reason under the box, the text kept, nothing saved',
+      over.status === 400 && /data-error-for="message">Nội dung tối đa 3\.000 ký tự/.test(over.html) && over.html.includes('b'.repeat(3001) + '</textarea>') && !(await col.findOne({ name: `${MARK}-over` })), over.status);
+    const robot = await post('/san-pham/robot-cat-co/yeu-cau', { name: `${MARK}-over-robot`, phone: '0912345678', message: 'c'.repeat(3001) });
+    check('… the same limit on a robot page', robot.status === 400 && !(await col.findOne({ name: `${MARK}-over-robot` })), robot.status);
+    const sent = await col.findOne({ name: `${MARK}-max` });
+    const edit = await post(`/tai-khoan/yeu-cau/${sent._id}/sua`, { name: `${MARK}-max`, phone: '0912345678', message: 'd'.repeat(3001), interestedIn: 'khac' });
+    check('… and when changing a sent request', edit.status === 400 && (await col.findOne({ _id: sent._id })).message.startsWith('á'), edit.status);
+
+    const huge = await post('/lien-he', { name: `${MARK}-huge`, phone: '0912345678', message: 'e'.repeat(200000), interestedIn: 'khac' }, { referer: `${BASE}/lien-he` });
+    check('200,000 characters: 413 with "Nội dung gửi quá dài", not the general error page',
+      huge.status === 413 && /<h1>Nội dung gửi quá dài<\/h1>/.test(huge.html) && !/Đã có lỗi xảy ra/.test(huge.html) && !(await col.findOne({ name: `${MARK}-huge` })), huge.status);
+    check('… with "← Quay lại" to the form it came from (the browser steps back, keeping the typed text)', /<a class="btn btn-primary" href="\/lien-he" data-history-back>← Quay lại<\/a>/.test(huge.html));
+    const outside = await post('/lien-he', { message: 'e'.repeat(200000) }, { referer: 'https://example.com/x' });
+    check('… never back to another website', /href="\/" data-history-back/.test(outside.html));
+    const en = await fetch(BASE + '/lien-he', { method: 'POST', body: new URLSearchParams({ message: 'e'.repeat(200000) }), headers: asRequester('en') });
+    check('… in English on the English site', en.status === 413 && /<h1>What you sent is too long<\/h1>/.test(await en.text()));
+
+    // In the browser: the counter follows the typing
+    await b.login(requester.sid);
+    await b.nav('/lien-he', 200);
+    await ev(`document.querySelector('[data-quote-form] [name=message]').focus()`);
+    await send('Input.insertText', { text: 'Xin chào MTG' });
+    check('the counter follows the typing (12/3000)', (await ev(`document.getElementById('qf-messageCount').textContent`)) === '12');
+  });
+
   await part(b, 'choice boxes slide open; Dịch vụ questions slide (Liên hệ, Dịch vụ pages)', async () => {
     await b.login(requester.sid);
     await b.nav('/lien-he?lang=vi', 300);

@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: t('nav.myRequests') + ' - MTG' }) %>
+<%- include('partials/header', { title: t('nav.myRequests') + ' - MTG', noindex: true }) %>
 
 <%- include('partials/page-banner', { pill: t('nav.myAccount'), heading: t('nav.myRequests'), subheading: null }) %>
 
@@ -68,6 +68,7 @@
       <p class="empty-note"><%= t('requests.empty') %></p>
       <div style="text-align:center;"><a class="btn btn-primary" href="/lien-he"><%= t('common.requestQuote') %></a></div>
     <% } %>
+    <%- include('partials/help-link', { text: t('help.requestHelp'), anchor: 'gui-yeu-cau' }) %>
   </div>
 </section>
 

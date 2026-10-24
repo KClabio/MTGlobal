@@ -125,7 +125,9 @@
       <% } %>
       <div class="form-group">
         <label for="qf-message"><%= t('forms.message') %> *</label>
-        <textarea class="form-control<%= qfInvalid('message') %>" id="qf-message" name="message" required><%= qfValues.message || '' %></textarea>
+        <%# Longest message: lib/quote-request.js (MESSAGE_MAX); the counter below follows the typing (main.js [data-count]) %>
+        <textarea class="form-control<%= qfInvalid('message') %>" id="qf-message" name="message" required maxlength="<%= QUOTE_MESSAGE_MAX %>" data-count="qf-messageCount" aria-describedby="qf-messageCountLine"><%= qfValues.message || '' %></textarea>
+        <div class="char-count" id="qf-messageCountLine"><span id="qf-messageCount"><%= String(qfValues.message || '').replace(/\r\n?/g, '\n').length %></span>/<%= QUOTE_MESSAGE_MAX %></div>
         <% if (qfErrors.message) { %><div class="field-error" data-error-for="message"><%= qfErrors.message %></div><% } %>
       </div>
       <%# Consent (Decree 13): required; starts ticked when changing a request that was sent with it %>
@@ -145,6 +147,7 @@
       <% } else { %>
         <button type="submit" class="btn btn-primary btn-block"><%= qfSubmitLabel %></button>
       <% } %>
+      <%- include('help-link', { text: t('help.requestHelp'), anchor: 'gui-yeu-cau' }) %>
     </form>
   <% } %>
 </div>

@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: article.titleVi + ' - MTG' }) %>
+<%- include('partials/header', { title: article.titleVi + ' - MTG', description: pick(article, 'body'), image: article.coverImage, ogType: 'article', bannerKey: 'news' }) %>
 
 <%- include('partials/page-banner', {
   pill: t('nav.news'),

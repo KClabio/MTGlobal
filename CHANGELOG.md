@@ -6,7 +6,26 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.1.0] - 2026-10-23
+## [1.1.1] - 2026-10-24
+
+### Added
+- **"Hỗ trợ" (Help) page** at `/ho-tro`, in Vietnamese and English: 21 ready-written questions and answers on using the website, in five groups (Tài khoản, Gửi yêu cầu, Sản phẩm & giải pháp, Quyền riêng tư & dữ liệu, Sử dụng website). It has a search box (accents optional), a tile for each group, answers that slide open, and a "Vẫn cần hỗ trợ?" band with the company's phone, email and a "Gửi yêu cầu" button. It is linked in the footer and the account menu, and short "need help?" lines lead to the right group from the login and sign-up pages, every request form, "Yêu cầu của tôi" and Hồ sơ.
+  ![The Hỗ trợ page](docs/screenshots/1.1.1/help-page.jpg)
+- **Admin → Hỗ trợ:** one tab per group, like the school levels of Dự án tham khảo. Staff can add, edit, hide, delete and drag questions into order within their group, and search through all of them. After saving, the list opens on that question's tab. The line under the page title is set in Cài đặt chung, and the overview counts the questions.
+  ![Admin → Hỗ trợ, one group's tab](docs/screenshots/1.1.1/help-admin-tabs.jpg)
+- **Link previews and page descriptions:** every public page now gives Google a short description and its Vietnamese/English twin, and a link pasted into Facebook or Zalo shows a picture, the title and a summary (the page's own photo, or a new MTG share picture). Login, account and error pages are kept out of search results.
+- **Photos dragged into order** in the Robot, Thiết bị, Dự án and Dịch vụ editors: drag a photo itself (or use the arrow keys) and the new order is kept when you save. On the Giải pháp page editors, photos and videos are dragged by their picture too.
+- **"Người đăng" on Tin tức (admin):** the news list shows who put each article up, with their role. Only an owner can change it.
+
+### Changed
+- **Request messages stop at 3,000 characters**, with a live counter under the box ("12/3000"), on every request form and when changing a sent request. A longer message is refused with a short note and the typed text is kept.
+
+### Fixed
+- A form too big for the website showed the general "Đã có lỗi xảy ra" page; it now shows "Nội dung gửi quá dài" with a "← Quay lại" button that returns to the form with the text still in it.
+- Screen readers announced the Trang chủ "Lĩnh vực hoạt động" slider without its list ("list, 7 items"); it is read as a list again.
+- Clicking a link right after switching VI/EN, while the fade was still running, left a warning in the browser; the fade now ends cleanly.
+
+## [1.1.0] - 2026-10-23 · `f8e8503`
 
 With this version, every security, critical and major problem found by the pre-launch test is fixed (the security fixes came in 1.0.14). Only small items remain.
 

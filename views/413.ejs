@@ -1,0 +1,13 @@
+<%- include('partials/header', { title: t('errors.tooLargeTitle') + ' - MTG', noindex: true }) %>
+
+<%# A form too big for the server (server.js error handler). "Quay lại" goes back in the browser's history when it
+    can (main.js [data-history-back]), so the form comes back with the typed text; otherwise to the page it came from. %>
+<section class="section" style="text-align:center; padding:120px 0;">
+  <div class="container">
+    <h1><%= t('errors.tooLargeTitle') %></h1>
+    <p><%= t('errors.tooLargeText') %></p>
+    <a class="btn btn-primary" href="<%= backHref %>" data-history-back>← <%= t('errors.back') %></a>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: pick(product, 'name') + ' - MTG' }) %>
+<%- include('partials/header', { title: pick(product, 'name') + ' - MTG', description: pick(product, 'description'), image: product.images && product.images[0], bannerKey: 'products' }) %>
 
 <%- include('partials/page-banner', {
   pill: t('nav.products'),

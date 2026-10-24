@@ -55,6 +55,15 @@
   window.addEventListener('pageshow', update);
 })();
 
+// "Nội dung gửi quá dài" page (views/413.ejs): "Quay lại" steps back in the browser, so the form keeps what was typed
+document.querySelectorAll('[data-history-back]').forEach(function (link) {
+  link.addEventListener('click', function (e) {
+    if (window.history.length < 2) return; // opened on its own: the link's own address
+    e.preventDefault();
+    window.history.back();
+  });
+});
+
 // Request form gatekeeping: name and message required, plus a phone number OR an email.
 // Mirrors the server-side rules in routes/index.js (validateQuoteRequest), which stay authoritative.
 (function () {
@@ -553,6 +562,7 @@
     });
   }
 
+  // Character counters on any page: the bio here, and the message of every request form (partials/quote-form.ejs)
   document.querySelectorAll('[data-count]').forEach(function (field) {
     var counter = document.getElementById(field.getAttribute('data-count'));
     if (!counter) return;
@@ -1307,6 +1317,20 @@ document.addEventListener('contextmenu', function (e) {
   });
 })();
 
+// Hỗ trợ page: a link to one question (/ho-tro#q-<id>, e.g. from the admin's "Xem trang") opens it and scrolls to it
+(function () {
+  if (!document.querySelector('.help-page')) return;
+  function openFromHash() {
+    var id = decodeURIComponent((window.location.hash || '').slice(1));
+    var item = id && document.getElementById(id);
+    if (!item || !item.matches('details.faq-item')) return;
+    item.open = true;
+    item.scrollIntoView({ block: 'start' });
+  }
+  openFromHash();
+  window.addEventListener('hashchange', openFromHash);
+})();
+
 // Giải pháp pages: the jump menu marks the section being read. It stays out of sight at the top of the page and
 // slides in under the sticky header once the banner has been scrolled past (pages.css: .js .page-jump / .is-shown).
 // Topics above the one being read are marked as read, and the bar along its bottom shows how much of the page is read.
@@ -1439,6 +1463,15 @@ document.addEventListener('contextmenu', function (e) {
     document.querySelectorAll('style[data-lang-fade]').forEach(function (s) { s.remove(); });
     document.documentElement.classList.remove('lang-fading');
   });
+  // A link clicked while the fade was still running: the browser drops the fade on the next page (that page didn't
+  // ask for one) and reports it as a failed promise. Nothing is wrong for the visitor, so keep it out of the console.
+  // (The page being left gets the same report, so both ends listen.)
+  var quiet = function (e) {
+    var vt = e.viewTransition;
+    if (vt) [vt.ready, vt.finished, vt.updateCallbackDone].forEach(function (p) { if (p) p.catch(function () {}); });
+  };
+  window.addEventListener('pagereveal', quiet);
+  window.addEventListener('pageswap', quiet);
   // The new page: once faded in, the header goes back to normal and the page stops asking for a fade
   // (so its own links are plain page loads again)
   if (document.documentElement.classList.contains('lang-fading')) {
@@ -1452,6 +1485,11 @@ document.addEventListener('contextmenu', function (e) {
       e.viewTransition.finished.then(settle, settle);
     });
     setTimeout(settle, 1500); // browsers without page fades
+    // Another link clicked before the fade is over: that page is a plain load, not a fade the next page never asked for
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest && e.target.closest('a[href]');
+      if (link && !link.closest('.lang-switch')) settle();
+    }, true);
   }
 
   var saved = null;

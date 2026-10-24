@@ -1,4 +1,7 @@
-<%- include('partials/header', { title: 'MTG - Smart Solutions for Life' }) %>
+<%- include('partials/header', {
+  title: 'MTG - Smart Solutions for Life',
+  description: ((settings && settings.homeHero && (lang === 'en' ? settings.homeHero.subtitleEn : settings.homeHero.subtitleVi)) || '').trim() || t('home.heroSubtitle'),
+}) %>
 
 <section class="home-hero">
   <div class="container home-hero-inner">
@@ -37,7 +40,8 @@
         </button>
       </div>
     </div>
-    <ul class="domain-track" data-domain-slider tabindex="0" role="region" aria-label="<%= t('home.pillarsTitle') %>">
+    <%# A named list (no role): screen readers say "Lĩnh vực hoạt động, list, 8 items"; tabindex lets the keyboard scroll it %>
+    <ul class="domain-track" data-domain-slider tabindex="0" aria-label="<%= t('home.pillarsTitle') %>">
       <% domains.forEach(function (d) { %>
         <li class="domain-item">
           <a class="domain-card accent-<%= d.accent %>" href="<%= d.url %>?from=home">

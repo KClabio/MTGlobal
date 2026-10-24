@@ -293,6 +293,30 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 .testimonial-card figcaption { display: flex; flex-direction: column; font-size: .88rem; }
 .testimonial-card figcaption span { color: var(--mtg-muted); }
 
+/* ---- Hỗ trợ (/ho-tro): topic tiles, groups of questions (the .faq-item folds above), "Vẫn cần hỗ trợ?" band ---- */
+.help-page .container { max-width: 960px; }
+.help-topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 44px; }
+.help-topic { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 18px 16px; background: var(--mtg-surface); border: 1px solid var(--mtg-border);
+  border-radius: var(--mtg-radius); color: var(--mtg-heading); text-decoration: none;
+  transition: transform calc(180ms * var(--anim)) ease, border-color calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease; }
+.help-topic:hover { transform: translateY(-2px); border-color: var(--mtg-hover-border); box-shadow: var(--mtg-shadow); }
+.help-topic:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
+.help-topic-icon, .help-group-icon { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--mtg-blue-tint); color: var(--mtg-blue); flex: none; }
+.help-topic-icon { width: 42px; height: 42px; margin-bottom: 4px; }
+.help-topic-name { font-weight: 700; line-height: 1.3; }
+.help-topic-count { font-size: .85rem; color: var(--mtg-muted); }
+.help-group { margin-bottom: 36px; scroll-margin-top: calc(var(--header-h, 72px) + 16px); }
+.help-group-title { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 1.25rem; }
+.help-group-icon { width: 34px; height: 34px; }
+.help-group-count { margin-left: 2px; padding: 1px 9px; border-radius: 999px; background: var(--mtg-bg-alt); color: var(--mtg-muted); font-size: .8rem; font-weight: 700; }
+.help-page .faq-item { scroll-margin-top: calc(var(--header-h, 72px) + 16px); }
+.help-cta { margin-top: 48px; }
+.help-cta-plain { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, .6); font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.help-cta-plain:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+/* "Cần trợ giúp?" line under the login / sign-up / request forms and on Hồ sơ (partials/help-link.ejs) */
+.help-link { margin: 14px 0 0; text-align: center; font-size: .9rem; color: var(--mtg-muted); }
+.help-link a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
 /* ---- Responsive ---- */
 @media (max-width: 960px) {
   .service-aside { position: static; }
@@ -302,4 +326,10 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
   .solution-block .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .solution-block .stat-card { padding: 14px; font-size: .9rem; }
   .solution-block .stat-card .num { font-size: 1.35rem; }
+  /* Hỗ trợ: topic tiles two by two, icon beside the name */
+  .help-topics { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 32px; }
+  .help-topic { padding: 14px 12px; }
+  .help-topic:last-child:nth-child(odd) { grid-column: 1 / -1; } /* a lone last tile takes the whole row */
+  .help-topic-icon { width: 36px; height: 36px; }
+  .help-group-title { font-size: 1.1rem; }
 }

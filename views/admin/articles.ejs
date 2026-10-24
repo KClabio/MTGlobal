@@ -1,4 +1,5 @@
 <%- include('partials/head', { active: 'tin-tuc' }) %>
+<% const ROLE_TAG = { owner: 'tag role-owner', admin: 'tag role-admin', customer: 'tag' }; %>
 
 <div class="admin-topbar">
   <h1><%= t('admin.articles.title') %> <span class="count-badge"><%= articles.length %></span></h1>
@@ -11,14 +12,22 @@
 
 <div style="overflow-x:auto;">
 <table class="data-table">
-  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.articles.colTitle') %></th><th><%= t('admin.articles.colDate') %></th><th><%= t('admin.articles.colVisible') %></th><th></th></tr></thead>
+  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.articles.colTitle') %></th><th><%= t('admin.articles.colDate') %></th><th><%= t('admin.articles.colUploader') %></th><th><%= t('admin.articles.colVisible') %></th><th></th></tr></thead>
   <tbody data-sortable="articles">
     <% articles.forEach(function (a) { %>
-      <tr data-id="<%= a._id %>" data-search="<%= [a.titleVi, a.titleEn].filter(Boolean).join(' ') %>">
+      <tr data-id="<%= a._id %>" data-search="<%= [a.titleVi, a.titleEn, a.uploader && a.uploader.name].filter(Boolean).join(' ') %>">
         <%- include('partials/drag-handle', { name: a.titleVi }) %>
         <td><% if (a.coverImage) { %><img class="thumb" src="<%= resized(a.coverImage, 320) %>" alt="" loading="lazy"><% } %></td>
         <td data-search-name><%= a.titleVi %></td>
         <td><%= new Date(a.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') %></td>
+        <td>
+          <% if (a.uploader) { %>
+            <span class="article-uploader">
+              <span class="article-uploader-name"><%= a.uploader.name %></span>
+              <% if (a.uploader.role) { %><span class="<%= ROLE_TAG[a.uploader.role] || 'tag' %>"><% if (a.uploader.role === 'owner') { %><%- include('partials/icon', { name: 'crown', size: 13 }) %><% } %> <%= t('admin.roles.' + a.uploader.role) %></span><% } %>
+            </span>
+          <% } else { %><span class="article-uploader-none">—</span><% } %>
+        </td>
         <td><%= a.published ? t('admin.articles.visible') : t('admin.articles.hidden') %></td>
         <td>
           <div class="row-actions">

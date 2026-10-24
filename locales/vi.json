@@ -22,6 +22,7 @@
     "logout": "Đăng xuất",
     "myAccount": "Tài khoản của tôi",
     "myRequests": "Yêu cầu của tôi",
+    "help": "Hỗ trợ",
     "admin": "Quản trị",
     "solutionWorkshop": "Workshop trải nghiệm STEM",
     "solutionEducation": "Đào tạo STEM"
@@ -87,6 +88,7 @@
     "errPhone": "Số điện thoại không hợp lệ.",
     "errEmail": "Email không hợp lệ.",
     "errMessage": "Vui lòng nhập nội dung yêu cầu.",
+    "errMessageLength": "Nội dung tối đa 3.000 ký tự. Hãy rút gọn rồi gửi lại.",
     "errSummary": "Vui lòng kiểm tra lại các trường được đánh dấu.",
     "choosePlaceholder": "— Chọn —",
     "errAnswerRequired": "Vui lòng trả lời câu hỏi này.",
@@ -157,6 +159,36 @@
     "quickLinks": "Liên kết nhanh",
     "contactInfo": "Thông tin liên hệ"
   },
+  "help": {
+    "title": "Hỗ trợ",
+    "search": "Bạn cần giúp gì? Tìm câu hỏi…",
+    "resultsOne": "1 câu hỏi phù hợp",
+    "resultsCount": "{n} câu hỏi phù hợp",
+    "noResults": "Không tìm thấy câu hỏi nào khớp “{q}”. Hãy thử từ khác, hoặc liên hệ MTG bên dưới.",
+    "topicsLabel": "Chủ đề hỗ trợ",
+    "questionCount": "{n} câu hỏi",
+    "groups": {
+      "tai-khoan": "Tài khoản",
+      "gui-yeu-cau": "Gửi yêu cầu",
+      "san-pham": "Sản phẩm & giải pháp",
+      "quyen-rieng-tu": "Quyền riêng tư & dữ liệu",
+      "su-dung": "Sử dụng website"
+    },
+    "empty": "Chưa có câu hỏi nào.",
+    "ctaTitle": "Vẫn cần hỗ trợ?",
+    "ctaText": "Đội ngũ MTG luôn sẵn sàng giúp bạn. Gọi điện, gửi email hoặc gửi yêu cầu, chúng tôi sẽ liên hệ lại sớm.",
+    "ctaButton": "Gửi yêu cầu",
+    "seeGuide": "Xem hướng dẫn",
+    "loginHelp": "Gặp khó khăn khi đăng nhập?",
+    "registerHelp": "Cần trợ giúp khi đăng ký?",
+    "requestHelp": "Cần trợ giúp về yêu cầu?",
+    "dataHelp": "Câu hỏi về dữ liệu của bạn?"
+  },
+  "errors": {
+    "tooLargeTitle": "Nội dung gửi quá dài",
+    "tooLargeText": "Thông tin bạn gửi vượt quá giới hạn của website. Hãy rút gọn nội dung (tối đa 3.000 ký tự) rồi gửi lại.",
+    "back": "Quay lại"
+  },
   "privacy": {
     "title": "Chính sách bảo mật",
     "agree": "Tôi đồng ý với",
@@ -199,7 +231,8 @@
       "pageWorkshop": "Workshop trải nghiệm STEM",
       "pageEducation": "Đào tạo STEM",
       "pageTraining": "Tập huấn & triển khai",
-      "companyInfo": "Thông tin công ty"
+      "companyInfo": "Thông tin công ty",
+      "help": "Hỗ trợ"
     },
     "common": {
       "edit": "Sửa",
@@ -218,6 +251,7 @@
       "plainTextHint": "Chỉ nhập văn bản thường, không cần thẻ HTML. Để trống một dòng để bắt đầu đoạn mới; bắt đầu dòng bằng “- ” để tạo danh sách.",
       "dragHint": "Kéo biểu tượng ⠿ (hoặc dùng phím ↑ ↓) để sắp xếp thứ tự hiển thị trên website. Thứ tự được lưu ngay.",
       "dragHandle": "Kéo để sắp xếp: {name}",
+      "photoMove": "Kéo ảnh, hoặc dùng phím mũi tên, để đổi thứ tự",
       "orderSaved": "Đã lưu thứ tự",
       "orderError": "Không lưu được thứ tự, vui lòng thử lại",
       "notFound": "Không tìm thấy mục này.",
@@ -478,11 +512,36 @@
       "slug": "Địa chỉ trang (tuỳ chọn)",
       "slugHint": "Phần cuối địa chỉ /doi-tac/… — để trống thì tự tạo từ tên đối tác."
     },
+    "help": {
+      "title": "Hỗ trợ",
+      "intro": "Chọn một nhóm để xem riêng. Kéo để đổi thứ tự trong nhóm.",
+      "filterLabel": "Lọc theo nhóm",
+      "add": "+ Thêm câu hỏi",
+      "colQuestion": "Câu hỏi",
+      "colVisible": "Hiển thị",
+      "visible": "Có",
+      "hidden": "Ẩn",
+      "groupEmpty": "Chưa có câu hỏi nào trong nhóm này.",
+      "confirmDelete": "Xoá câu hỏi này?",
+      "formNew": "Thêm câu hỏi",
+      "formEdit": "Sửa câu hỏi",
+      "group": "Nhóm",
+      "questionVi": "Câu hỏi (Tiếng Việt) *",
+      "questionEn": "Câu hỏi (Tiếng Anh)",
+      "answerVi": "Câu trả lời (Tiếng Việt) *",
+      "answerEn": "Câu trả lời (Tiếng Anh)",
+      "enHint": "Để trống thì trang tiếng Anh dùng bản tiếng Việt.",
+      "published": "Hiển thị trên trang Hỗ trợ",
+      "errGroup": "Hãy chọn một nhóm.",
+      "errQuestion": "Câu hỏi (Tiếng Việt) là bắt buộc.",
+      "errAnswer": "Câu trả lời (Tiếng Việt) là bắt buộc."
+    },
     "articles": {
       "title": "Tin tức",
       "add": "+ Thêm bài viết",
       "colTitle": "Tiêu đề",
       "colDate": "Ngày đăng",
+      "colUploader": "Người đăng",
       "colVisible": "Hiển thị",
       "visible": "Có",
       "hidden": "Ẩn",
@@ -495,7 +554,12 @@
       "bodyEn": "Nội dung (Tiếng Anh)",
       "cover": "Ảnh bìa",
       "published": "Hiển thị công khai",
-      "errTitle": "Tiêu đề (Tiếng Việt) là bắt buộc."
+      "errTitle": "Tiêu đề (Tiếng Việt) là bắt buộc.",
+      "uploader": "Người đăng",
+      "uploaderNone": "— Chưa có (ghi người lưu) —",
+      "uploaderGone": "tài khoản đã xoá",
+      "uploaderNotStaff": "không còn là quản trị",
+      "uploaderHint": "Chỉ chủ sở hữu đổi được người đăng."
     },
     "requests": {
       "title": "Yêu cầu tư vấn",
@@ -576,6 +640,12 @@
         "label": "Tìm dự án theo tên trường",
         "count": "Hiển thị {shown} / {total} dự án",
         "none": "Không tìm thấy trường nào khớp “{q}”."
+      },
+      "help": {
+        "placeholder": "Tìm theo câu hỏi…",
+        "label": "Tìm câu hỏi hỗ trợ",
+        "count": "Hiển thị {shown} / {total} câu hỏi",
+        "none": "Không tìm thấy câu hỏi nào khớp “{q}”."
       },
       "articles": {
         "placeholder": "Tìm theo tiêu đề…",
@@ -670,7 +740,7 @@
       "captionVi": "Chú thích (Tiếng Việt)",
       "captionEn": "Chú thích (Tiếng Anh)",
       "removeMedia": "Bỏ khỏi trang",
-      "dragMedia": "Kéo để đổi thứ tự ảnh/video",
+      "dragMedia": "Kéo, hoặc dùng phím ↑ ↓, để đổi thứ tự ảnh/video",
       "videoLabel": "Video",
       "save": "Lưu trang",
       "errorsTitle": "Chưa lưu được trang:",
@@ -881,5 +951,9 @@
     "empty": "Bạn chưa gửi yêu cầu nào.",
     "done": "Đã xử lý",
     "doneHint": "MTG đã xử lý xong yêu cầu này."
+  },
+  "seo": {
+    "siteName": "MTG - Mễ Trì Global",
+    "defaultDescription": "MTG (Công ty TNHH Công nghệ Mễ Trì Global) mang đến robot thông minh, giải pháp phòng Lab STEM trọn gói cho trường học, đào tạo giáo viên và tư vấn công nghệ giáo dục."
   }
 }

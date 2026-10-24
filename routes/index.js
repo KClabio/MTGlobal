@@ -14,6 +14,7 @@ const { groupProjectsByLevel } = require('../lib/project-levels');
 const { buildHomeDomains, buildSolutionCards, buildServiceCards } = require('../lib/home-domains');
 const { groupEquipmentByPart, partSlug } = require('../lib/equipment-parts');
 const { policyText } = require('../lib/privacy-policy');
+const { getHelpItems, groupHelpItems } = require('../lib/help-topics');
 
 const ROBOT_CATEGORIES = [
   'robot-leo-cau-thang',
@@ -43,6 +44,12 @@ router.get('/ve-mtg', async (req, res) => {
 router.get('/chinh-sach-bao-mat', (req, res) => {
   const { settings, lang } = res.locals;
   res.render('privacy', { policy: policyText(lang, settings) });
+});
+
+// Hỗ trợ: questions and answers on using the website, in fixed groups (lib/help-topics.js, Admin → Hỗ trợ)
+router.get('/ho-tro', async (req, res) => {
+  const groups = groupHelpItems(await getHelpItems()).filter((g) => g.items.length);
+  res.render('help', { groups });
 });
 
 // A partner's own page (opened from its logo on the home and Về MTG pages), with a button to its website

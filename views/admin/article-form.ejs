@@ -36,6 +36,33 @@
         <input type="checkbox" id="published" name="published" <%= !article || article.published ? 'checked' : '' %>>
         <label for="published" style="margin:0;"><%= t('admin.articles.published') %></label>
       </div>
+      <%# Người đăng: owners pick any owner/admin account; admins only see it %>
+      <div class="form-group">
+        <% const roleText = (r) => t('admin.roles.' + r); %>
+        <% if (staff) { %>
+          <label for="uploadedBy"><%= t('admin.articles.uploader') %></label>
+          <select class="form-control" id="uploadedBy" name="uploadedBy">
+            <% if (!uploader) { %><option value=""<%= picked === '' ? ' selected' : '' %>><%= t('admin.articles.uploaderNone') %></option><% } %>
+            <% if (uploader && !uploader.staff) { %>
+              <option value="keep"<%= picked === 'keep' ? ' selected' : '' %>><%= uploader.name %> (<%= t(uploader.gone ? 'admin.articles.uploaderGone' : 'admin.articles.uploaderNotStaff') %>)</option>
+            <% } %>
+            <% staff.forEach(function (u) { %>
+              <option value="<%= u._id %>"<%= picked === String(u._id) ? ' selected' : '' %>><%= u.name %> · <%= roleText(u.role) %></option>
+            <% }) %>
+          </select>
+          <p class="form-hint"><%= t('admin.articles.uploaderHint') %></p>
+        <% } else { %>
+          <label><%= t('admin.articles.uploader') %></label>
+          <div data-uploader>
+            <% if (uploader) { %>
+              <span class="article-uploader">
+                <span class="article-uploader-name"><%= uploader.name %></span>
+                <% if (uploader.role) { %><span class="tag<%= uploader.role === 'owner' ? ' role-owner' : uploader.role === 'admin' ? ' role-admin' : '' %>"><% if (uploader.role === 'owner') { %><%- include('partials/icon', { name: 'crown', size: 13 }) %> <% } %><%= roleText(uploader.role) %></span><% } %>
+              </span>
+            <% } else { %><span class="article-uploader-none">—</span><% } %>
+          </div>
+        <% } %>
+      </div>
       <button type="submit" class="btn btn-primary btn-block"><%= t('admin.common.save') %></button>
     </aside>
   </div>

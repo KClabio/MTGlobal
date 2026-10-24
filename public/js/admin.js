@@ -539,6 +539,51 @@
     }
   });
 
+  // ---- Photo lists: photos reorder by dragging the photo itself, with no grip or hint; only from 2 photos on ----
+  // An open hand on hover and a closed hand while dragging (admin.css .can-sort); with the keyboard, the arrow keys move
+  // a focused photo. Product/project/service lists carry a hidden order field per photo, so the form posts the new order.
+  var PHOTO = '.media-thumb, [data-media]';
+  function photosOf(list) {
+    return Array.prototype.filter.call(list.children, function (el) { return el.matches(PHOTO); });
+  }
+  function syncPhotoSort(list) {
+    var on = photosOf(list).length > 1;
+    list.classList.toggle('can-sort', on);
+    if (list._photoSort) list._photoSort.option('disabled', !on);
+  }
+  function makePhotoSortable(list, opts) {
+    opts = opts || {};
+    var changed = opts.onChange || function () {};
+    if (window.Sortable) {
+      list._photoSort = window.Sortable.create(list, Object.assign({
+        animation: 150,
+        forceFallback: true,
+        fallbackOnBody: true,
+        ghostClass: 'sortable-ghost',
+        delay: 200, delayOnTouchOnly: true, // on a touch screen a short press picks the photo up, so a swipe still scrolls
+        filter: 'label, input, textarea, button', // the "Xoá" tick and the captions keep working
+        preventOnFilter: false,
+        onStart: function () { document.body.classList.add('is-sorting'); },
+        onEnd: function (e) { document.body.classList.remove('is-sorting'); if (e.oldIndex !== e.newIndex) changed(); },
+      }, opts.handle ? { handle: opts.handle } : {}));
+    }
+    list.addEventListener('keydown', function (e) {
+      var keys = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
+      if (!(e.key in keys) || !list.classList.contains('can-sort') || !e.target.matches('.media-thumb, .page-media-thumb')) return;
+      var photo = e.target.closest(PHOTO);
+      if (!photo || photo.parentNode !== list) return;
+      e.preventDefault();
+      var sibling = keys[e.key] < 0 ? photo.previousElementSibling : photo.nextElementSibling;
+      if (!sibling || !sibling.matches(PHOTO)) return;
+      if (keys[e.key] < 0) list.insertBefore(photo, sibling);
+      else list.insertBefore(sibling, photo);
+      e.target.focus();
+      changed();
+    });
+    syncPhotoSort(list);
+  }
+  document.querySelectorAll('[data-photo-sort]').forEach(function (list) { makePhotoSortable(list); });
+
   // ---- Service editor: tabs, numbered/draggable item cards, checkboxes inside repeatable rows ----
   document.querySelectorAll('[data-service-form]').forEach(function (form) {
     initTabs(form);
@@ -775,8 +820,8 @@
       syncHints(section);
       if (window.Sortable) {
         window.Sortable.create(section.querySelector('[data-item-list]'), Object.assign({ handle: '.item-drag' }, sortableOpts));
-        window.Sortable.create(section.querySelector('[data-media-list]'), Object.assign({ handle: '.media-drag' }, sortableOpts));
       }
+      makePhotoSortable(section.querySelector('[data-media-list]'), { handle: '.page-media-thumb', onChange: markDirty });
     }
 
     // Numbers, the section count, ▲/▼ at the ends, and "attach to the section above" (not for the first section)
@@ -794,6 +839,7 @@
         });
         // Photos: their number on the preview, and "6 ảnh · 1 video" in the header
         var photos = 0, videos = 0;
+        syncPhotoSort(section.querySelector('[data-media-list]'));
         children(section.querySelector('[data-media-list]'), '[data-media]').forEach(function (media, k) {
           setText(media.querySelector('[data-media-num]'), k + 1);
           if (media.querySelector('[data-media-field="type"]').value === 'video') videos++; else photos++;
@@ -1113,8 +1159,11 @@
     if (listTypes.indexOf(type) === -1) listTypes.push(type);
   });
   listTypes.forEach(function (type) {
-    var tbody = document.querySelector('tbody[data-sortable="' + type + '"], tbody[data-list="' + type + '"]');
-    if (!tbody) return;
+    // A list split into several tables (Hỗ trợ: one per group) marks each part data-list-part; the search covers them all
+    var tbodies = Array.prototype.slice.call(document.querySelectorAll('tbody[data-sortable="' + type + '"], tbody[data-list="' + type + '"], tbody[data-list-part="' + type + '"]'));
+    if (!tbodies.length) return;
+    var tbody = tbodies[0];
+    var listGroups = document.querySelectorAll('[data-list-group="' + type + '"]');
     var box = document.querySelector('[data-list-search="' + type + '"]');
     var chips = document.querySelector('[data-list-filter="' + type + '"]');
     var input = box && box.querySelector('input');
@@ -1126,7 +1175,8 @@
     var param = chips ? chips.getAttribute('data-param') : '';
     var chipButtons = chips ? Array.prototype.slice.call(chips.querySelectorAll('.filter-chip')) : [];
     var filterValue = '';
-    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr[data-id]'));
+    var rows = [];
+    tbodies.forEach(function (tb) { rows = rows.concat(Array.prototype.slice.call(tb.querySelectorAll('tr[data-id]'))); });
     // "Tìm theo" box (users list): the search looks in one field (ten / email / ngay) and sorts the list by it.
     // Until the person types or picks a field, the list keeps the server's order (owners first, then newest).
     var fieldSelect = box && box.querySelector('[data-search-field]');
@@ -1260,16 +1310,31 @@
         clearBtn.hidden = !input.value && !picked;
         count.textContent = active ? fill(box.getAttribute('data-count'), { shown: shown, total: rows.length }) : '';
       }
+      // Parts of a split list (Hỗ trợ: one per group). A part with its own chip (data-list-group-key) shows under that
+      // chip only, even when it is empty, so its "+" stays at hand; while searching, a part with no match steps aside
+      var partShown = false;
+      Array.prototype.forEach.call(listGroups, function (g) {
+        var key = g.getAttribute('data-list-group-key');
+        var hasRow = !!g.querySelector('tr[data-id]:not([hidden])');
+        g.hidden = key ? (!!filterValue && key !== filterValue) || (searching && !hasRow) : active && !hasRow;
+        if (!g.hidden) partShown = true;
+      });
       if (none) {
-        none.hidden = !active || shown > 0;
+        none.hidden = !active || shown > 0 || (!searching && partShown); // an empty part says so itself
         none.textContent = searching ? fill(box.getAttribute('data-none'), { q: raw }) : (box ? box.getAttribute('data-none-filter') : '');
       }
 
-      // Reordering a partial list would move items relative to hidden ones, so pause it while filtering
-      tbody.classList.toggle('is-filtered', active);
-      if (tbody._sortable) tbody._sortable.option('disabled', active);
-      if (hint) hint.textContent = active && box ? box.getAttribute('data-drag-paused') : hintText;
-      if (hint) hint.parentElement.classList.toggle('is-paused', active);
+      // Reordering a table with hidden rows would move items relative to them, so pause it while filtering;
+      // a table shown whole (a Hỗ trợ group under its chip) can still be dragged
+      var paused = false;
+      tbodies.forEach(function (tb) {
+        var off = searching || (!!filterValue && !!tb.querySelector('tr[data-id][hidden]'));
+        tb.classList.toggle('is-filtered', off);
+        if (tb._sortable) tb._sortable.option('disabled', off);
+        if (off && !tb.closest('[hidden]')) paused = true;
+      });
+      if (hint) hint.textContent = paused && box ? box.getAttribute('data-drag-paused') : hintText;
+      if (hint) hint.parentElement.classList.toggle('is-paused', paused);
 
       // Keep the search and the chip in the URL so Back from an edit page brings them back
       var changes = {};

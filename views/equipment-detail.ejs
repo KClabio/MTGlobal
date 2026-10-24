@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: pick(item, 'name') + ' - MTG' }) %>
+<%- include('partials/header', { title: pick(item, 'name') + ' - MTG', description: pick(item, 'description'), image: item.images && item.images[0], bannerKey: 'thiet-bi' }) %>
 
 <%- include('partials/page-banner', {
   pill: t('nav.solutionEquipment'),

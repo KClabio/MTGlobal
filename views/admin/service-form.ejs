@@ -98,10 +98,11 @@
         <h2 class="admin-panel-title"><%= L('galleryTitle') %></h2>
         <p class="admin-hint"><%- include('partials/icon', { name: 'bell', size: 16 }) %><span><%= L('hintGallery') %></span></p>
         <% if ((service.gallery || []).length) { %>
-          <div class="media-thumb-list" style="margin-bottom:12px;">
+          <div class="media-thumb-list" style="margin-bottom:12px;" data-photo-sort>
             <% service.gallery.forEach(function (img) { %>
-              <div class="media-thumb">
-                <img src="<%= img %>" alt="">
+              <div class="media-thumb" tabindex="0" aria-label="<%= t('admin.common.photoMove') %>">
+                <input type="hidden" name="galleryOrder" value="<%= img %>">
+                <img src="<%= img %>" alt="" draggable="false">
                 <label><input type="checkbox" name="removeGallery" value="<%= img %>"> <%= t('admin.common.remove') %></label>
               </div>
             <% }) %>

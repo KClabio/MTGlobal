@@ -119,7 +119,7 @@ await suite(async (b) => {
       const foot = html.slice(html.lastIndexOf('<footer'));
       check(`footer Quick Links on ${p}: Giải pháp → /giai-phap`, /<a href="\/giai-phap">Giải pháp<\/a>/.test(foot) && !/href="\/giai-phap\/stem-lab">Giải pháp/.test(foot));
     }
-    check('BANNERS has the "solutions" entry first in the Giải pháp group', BANNERS.filter((x) => x.group === 'solutions')[0].key === 'solutions' && BANNERS.length === 13);
+    check('BANNERS has the "solutions" entry first in the Giải pháp group', BANNERS.filter((x) => x.group === 'solutions')[0].key === 'solutions' && BANNERS.length === 14);
     // Admin banner card + override round-trip
     await b.login(admin.sid);
     await nav('/admin/cai-dat?tab=banners', 500);

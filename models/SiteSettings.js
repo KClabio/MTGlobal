@@ -28,6 +28,8 @@ const siteSettingsSchema = new mongoose.Schema({
   // Chính sách bảo mật (/chinh-sach-bao-mat): empty = the default draft of lib/privacy-policy.js
   privacyPolicy: { type: String, default: '' }, // Vietnamese
   privacyPolicyEn: { type: String, default: '' },
+  // The Hỗ trợ page's starter questions were saved once (lib/help-topics.js): never again, even if all are deleted
+  helpSeeded: { type: Boolean, default: false },
   contactInfo: {
     address: { type: String, default: '' },
     phone: { type: String, default: '' },

@@ -10,15 +10,17 @@ const Article = require('../models/Article');
 const QuoteRequest = require('../models/QuoteRequest');
 const User = require('../models/User');
 const SiteSettings = require('../models/SiteSettings');
+const HelpItem = require('../models/HelpItem');
 
 const { requireAdmin } = require('../middleware/auth');
 const { uploadMedia, uploadServiceMedia, uploadPageMedia, uploadSingleImage, uploadSettingsImages, fileUrl, fileUrls, wrapUpload, removeLocalUpload, removeUpload, removeLocalMedia, PAGE_MEDIA_PREFIX } = require('../middleware/upload');
 const { clearSiteSettingsCache } = require('../lib/settings');
 const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
 const { isNonEmpty } = require('../lib/validators');
-const { canDeleteUser, canChangeRole } = require('../lib/roles');
+const { isStaff, canDeleteUser, canChangeRole } = require('../lib/roles');
 const { getDashboardData } = require('../lib/dashboard');
 const { toPlainText, slugify } = require('../lib/text');
+const { orderMedia } = require('../lib/media-order');
 const { defaultPolicy } = require('../lib/privacy-policy');
 const { PRODUCT_SECTIONS, sectionForCategory } = require('../lib/admin-sections');
 const { parseServiceSections } = require('../lib/service-content');
@@ -28,6 +30,7 @@ const { parseSolutionPageForm } = require('../lib/solution-page-form');
 const { BANNERS } = require('../lib/banners');
 const { partSlug, groupEquipmentByPart } = require('../lib/equipment-parts');
 const { LEVELS: PROJECT_LEVELS, projectLevel } = require('../lib/project-levels');
+const { HELP_GROUPS, HELP_GROUP_KEYS, getHelpItems, groupHelpItems } = require('../lib/help-topics');
 
 router.use(requireAdmin);
 router.use(loadAdminLanguage);
@@ -91,6 +94,8 @@ const SORTABLE = {
   partners: { Model: Partner, filter: {} },
   articles: { Model: Article, filter: {} },
   services: { Model: Service, filter: {} },
+  // Hỗ trợ questions are ordered within their own group: help-tai-khoan, help-gui-yeu-cau, …
+  ...Object.fromEntries(HELP_GROUP_KEYS.map((key) => [`help-${key}`, { Model: HelpItem, filter: { group: key } }])),
 };
 
 router.post('/thu-tu/:type', async (req, res) => {
@@ -162,8 +167,7 @@ router.post('/du-an/:id/sua', wrapUpload(uploadMedia, async (req, res) => {
     return res.status(400).render('admin/project-form', { project: { ...project.toObject(), ...req.body }, error: t('admin.projects.errName') });
   }
 
-  let images = project.images.filter((url) => !([].concat(removeImages || [])).includes(url));
-  images = images.concat(fileUrls(req.files && req.files.images));
+  const images = orderMedia(project.images, req.body.imageOrder, removeImages).concat(fileUrls(req.files && req.files.images));
   const newVideos = fileUrls(req.files && req.files.videos);
 
   project.titleVi = titleVi.trim();
@@ -262,8 +266,7 @@ router.post('/san-pham/:id/sua', wrapUpload(uploadMedia, async (req, res) => {
     return renderProductForm(res, { status: 400, product: { ...product.toObject(), ...req.body }, section, error: t('admin.products.errRequired') });
   }
 
-  let images = product.images.filter((url) => !([].concat(removeImages || [])).includes(url));
-  images = images.concat(fileUrls(req.files && req.files.images));
+  const images = orderMedia(product.images, req.body.imageOrder, removeImages).concat(fileUrls(req.files && req.files.images));
   let videos = product.videos.filter((url) => !([].concat(removeVideos || [])).includes(url));
   videos = videos.concat(fileUrls(req.files && req.files.videos));
 
@@ -335,7 +338,7 @@ router.post('/dich-vu/:id/sua', wrapUpload(uploadServiceMedia, async (req, res) 
 
   const removeGallery = [].concat(req.body.removeGallery || []);
   removeGallery.filter((url) => service.gallery.includes(url)).forEach(removeLocalUpload);
-  service.gallery = service.gallery.filter((url) => !removeGallery.includes(url)).concat(fileUrls(files.gallery));
+  service.gallery = orderMedia(service.gallery, req.body.galleryOrder, removeGallery).concat(fileUrls(files.gallery));
 
   service.steps = sections.steps;
   service.packages = sections.packages;
@@ -480,28 +483,143 @@ router.post('/doi-tac/:id/xoa', async (req, res) => {
   done(req, res, 'admin.flash.deleted', { name: partner.name }, '/admin/doi-tac');
 });
 
+// ---- Hỗ trợ (questions on the help page /ho-tro, in the fixed groups of lib/help-topics.js) ----
+// The list opened on one group's tab (chip), e.g. after saving a question of that group
+const helpTab = (group) => `/admin/ho-tro?nhom=${encodeURIComponent(group)}`;
+
+router.get('/ho-tro', async (req, res) => {
+  const items = await getHelpItems({ includeHidden: true });
+  res.render('admin/help', { groups: groupHelpItems(items), total: items.length });
+});
+
+const renderHelpForm = (res, item, error = null, status = 200) =>
+  res.status(status).render('admin/help-form', { item, error, groups: HELP_GROUPS });
+
+// ?nhom=<key> (the "+" of a group) picks that group for a new question
+router.get('/ho-tro/moi', (req, res) => {
+  const group = HELP_GROUP_KEYS.includes(req.query.nhom) ? req.query.nhom : HELP_GROUP_KEYS[0];
+  renderHelpForm(res, { group, published: true });
+});
+
+// Shared by add and edit: the checked form values, or the first error to show
+function readHelpForm(req, t) {
+  const { group, questionVi, questionEn, answerVi, answerEn, published } = req.body;
+  if (!HELP_GROUP_KEYS.includes(group)) return { error: t('admin.help.errGroup') };
+  if (!isNonEmpty(questionVi)) return { error: t('admin.help.errQuestion') };
+  if (!isNonEmpty(answerVi)) return { error: t('admin.help.errAnswer') };
+  return {
+    fields: {
+      group,
+      questionVi: questionVi.trim(),
+      questionEn: (questionEn || '').trim(),
+      answerVi: toPlainText(answerVi),
+      answerEn: toPlainText(answerEn),
+      published: published === 'on',
+    },
+  };
+}
+// The form posted back after an error: what was typed, the tick as it was
+const helpFormValues = (body, base = {}) => ({ ...base, ...body, published: body.published === 'on' });
+
+router.post('/ho-tro/moi', async (req, res) => {
+  const form = readHelpForm(req, res.locals.t);
+  if (form.error) return renderHelpForm(res, helpFormValues(req.body), form.error, 400);
+  await HelpItem.create({ ...form.fields, order: await nextOrder(HelpItem, { group: form.fields.group }) });
+  done(req, res, 'admin.flash.created', { name: form.fields.questionVi }, helpTab(form.fields.group));
+});
+
+router.get('/ho-tro/:id/sua', async (req, res) => {
+  const item = await HelpItem.findById(req.params.id).lean().catch(() => null);
+  if (!item) return notFound(req, res, '/admin/ho-tro');
+  renderHelpForm(res, item);
+});
+
+router.post('/ho-tro/:id/sua', async (req, res) => {
+  const item = await HelpItem.findById(req.params.id).catch(() => null);
+  if (!item) return notFound(req, res, '/admin/ho-tro');
+  const form = readHelpForm(req, res.locals.t);
+  if (form.error) return renderHelpForm(res, helpFormValues(req.body, item.toObject()), form.error, 400);
+  // Moved to another group: it goes to the end of that group
+  if (form.fields.group !== item.group) form.fields.order = await nextOrder(HelpItem, { group: form.fields.group });
+  Object.assign(item, form.fields);
+  await item.save();
+  done(req, res, 'admin.flash.updated', { name: item.questionVi }, helpTab(item.group));
+});
+
+router.post('/ho-tro/:id/xoa', async (req, res) => {
+  const item = await HelpItem.findByIdAndDelete(req.params.id).catch(() => null);
+  if (!item) return notFound(req, res, '/admin/ho-tro');
+  done(req, res, 'admin.flash.deleted', { name: item.questionVi }, helpTab(item.group));
+});
+
 // ---- Articles (tin tức) ----
+// The account putting an article up, as stored on it
+function uploaderOf(user) {
+  return { uploadedBy: user._id, uploaderName: user.name, uploaderRole: user.role };
+}
+
+// An article's uploader for its form: the account as it is now, else the stored copy (account deleted), else null
+async function uploaderView(article) {
+  if (!article) return null;
+  const id = article.uploadedBy && (article.uploadedBy._id || article.uploadedBy);
+  const user = id ? await User.findById(id, 'name role').lean().catch(() => null) : null;
+  if (user) return { id: String(user._id), name: user.name, role: user.role, staff: isStaff(user.role) };
+  if (article.uploaderName) return { id: null, name: article.uploaderName, role: article.uploaderRole, gone: true };
+  return null;
+}
+
+// Owners and admins, the accounts an owner can credit an article to: owners first, then by name
+async function staffChoices() {
+  const users = await User.find({ role: { $in: ['owner', 'admin'] } }, 'name role').lean();
+  return users.sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name, 'vi') : a.role === 'owner' ? -1 : 1));
+}
+
+// The account an owner picked in "Người đăng"; null for anyone else, "keep", "— Chưa có —" or an id that isn't staff
+async function pickedUploader(req) {
+  const id = req.body.uploadedBy;
+  if (req.user.role !== 'owner' || !id || !mongoose.isValidObjectId(id)) return null;
+  const user = await User.findById(id, 'name role').lean().catch(() => null);
+  return user && isStaff(user.role) ? user : null;
+}
+
+// saved: the article as stored (null for a new one); article: the values to show (the posted ones after a failed save)
+async function renderArticleForm(req, res, { article, saved = null, error = null, status = 200 }) {
+  const uploader = saved ? await uploaderView(saved) : { id: String(req.user._id), name: req.user.name, role: req.user.role, staff: true };
+  let staff = null;
+  let picked = null;
+  if (req.user.role === 'owner') {
+    staff = await staffChoices();
+    picked = req.method === 'POST' && req.body.uploadedBy !== undefined ? req.body.uploadedBy
+      : !uploader ? '' : uploader.staff ? uploader.id : 'keep';
+  }
+  res.status(status).render('admin/article-form', { article, error, uploader, staff, picked });
+}
+
 router.get('/tin-tuc', async (req, res) => {
-  const articles = await Article.find().sort({ order: 1, createdAt: -1 }).lean();
+  const articles = await Article.find().sort({ order: 1, createdAt: -1 }).populate('uploadedBy', 'name role').lean();
+  // The account's current name and role; the stored copy once the account is deleted
+  articles.forEach((a) => {
+    a.uploader = a.uploadedBy ? { name: a.uploadedBy.name, role: a.uploadedBy.role }
+      : a.uploaderName ? { name: a.uploaderName, role: a.uploaderRole } : null;
+  });
   res.render('admin/articles', { articles });
 });
 
-router.get('/tin-tuc/moi', (req, res) => {
-  res.render('admin/article-form', { article: null, error: null });
-});
+router.get('/tin-tuc/moi', (req, res) => renderArticleForm(req, res, { article: null }));
 
 router.post('/tin-tuc/moi', wrapUpload(uploadSingleImage('coverImage'), async (req, res) => {
   const t = res.locals.t;
-  if (req.uploadError) return res.status(400).render('admin/article-form', { article: req.body, error: uploadErrorText(req, t) });
+  if (req.uploadError) return renderArticleForm(req, res, { article: req.body, status: 400, error: uploadErrorText(req, t) });
   const { titleVi, titleEn, bodyVi, bodyEn, published } = req.body;
   if (!isNonEmpty(titleVi)) {
-    return res.status(400).render('admin/article-form', { article: req.body, error: t('admin.articles.errTitle') });
+    return renderArticleForm(req, res, { article: req.body, status: 400, error: t('admin.articles.errTitle') });
   }
   await Article.create({
     titleVi: titleVi.trim(), titleEn: (titleEn || '').trim(),
     bodyVi: toPlainText(bodyVi), bodyEn: toPlainText(bodyEn),
     coverImage: fileUrl(req.file), published: published === 'on',
     order: await nextOrder(Article, {}, 'first'), // newest news goes to the top
+    ...uploaderOf((await pickedUploader(req)) || req.user),
   });
   done(req, res, 'admin.flash.created', { name: titleVi.trim() }, '/admin/tin-tuc');
 }));
@@ -509,17 +627,17 @@ router.post('/tin-tuc/moi', wrapUpload(uploadSingleImage('coverImage'), async (r
 router.get('/tin-tuc/:id/sua', async (req, res) => {
   const article = await Article.findById(req.params.id).lean().catch(() => null);
   if (!article) return notFound(req, res, '/admin/tin-tuc');
-  res.render('admin/article-form', { article, error: null });
+  await renderArticleForm(req, res, { article, saved: article });
 });
 
 router.post('/tin-tuc/:id/sua', wrapUpload(uploadSingleImage('coverImage'), async (req, res) => {
   const t = res.locals.t;
   const article = await Article.findById(req.params.id).catch(() => null);
   if (!article) return notFound(req, res, '/admin/tin-tuc');
-  if (req.uploadError) return res.status(400).render('admin/article-form', { article: { ...article.toObject(), ...req.body }, error: uploadErrorText(req, t) });
+  if (req.uploadError) return renderArticleForm(req, res, { article: { ...article.toObject(), ...req.body }, saved: article, status: 400, error: uploadErrorText(req, t) });
   const { titleVi, titleEn, bodyVi, bodyEn, published } = req.body;
   if (!isNonEmpty(titleVi)) {
-    return res.status(400).render('admin/article-form', { article: { ...article.toObject(), ...req.body }, error: t('admin.articles.errTitle') });
+    return renderArticleForm(req, res, { article: { ...article.toObject(), ...req.body }, saved: article, status: 400, error: t('admin.articles.errTitle') });
   }
   article.titleVi = titleVi.trim();
   article.titleEn = (titleEn || '').trim();
@@ -527,6 +645,10 @@ router.post('/tin-tuc/:id/sua', wrapUpload(uploadSingleImage('coverImage'), asyn
   article.bodyEn = toPlainText(bodyEn);
   article.published = published === 'on';
   if (req.file) article.coverImage = fileUrl(req.file);
+  // An owner may credit someone else; otherwise the uploader stays (an older article gets whoever saves it)
+  const picked = await pickedUploader(req);
+  if (picked) Object.assign(article, uploaderOf(picked));
+  else if (!article.uploadedBy && !article.uploaderName) Object.assign(article, uploaderOf(req.user));
   await article.save();
   done(req, res, 'admin.flash.updated', { name: article.titleVi }, '/admin/tin-tuc');
 }));

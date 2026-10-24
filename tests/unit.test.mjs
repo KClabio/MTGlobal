@@ -162,6 +162,24 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('sitemap: last change date and escaped characters', xml.includes('<lastmod>2026-10-01</lastmod>') && xml.includes('/dich-vu/a&amp;b?lang=en') && !/a&b/.test(xml));
 }
 
+// Page description and link preview (lib/seo.js; the tags on real pages are checked in nav.test.mjs)
+{
+  const { pageMeta, DESCRIPTION_MAX } = appRequire('./lib/seo.js');
+  const base = 'https://mtg.vn';
+  const vi = pageMeta({ base, path: '/giai-phap/du-an', lang: 'vi', description: '<p>Phòng Lab <b>STEM</b></p>\n- cho mọi cấp học', image: '/uploads/images/a.jpg' });
+  check('preview: description is plain text on one line', vi.description === 'Phòng Lab STEM cho mọi cấp học', vi.description);
+  check('preview: Vietnamese page → its own address, both languages as alternates, vi_VN', vi.url === 'https://mtg.vn/giai-phap/du-an' && vi.alternates.en === 'https://mtg.vn/giai-phap/du-an?lang=en' && vi.locale === 'vi_VN' && vi.altLocale === 'en_US');
+  const en = pageMeta({ base, path: '/giai-phap/du-an', lang: 'en' });
+  check('preview: English page → the ?lang=en address, en_US', en.url === 'https://mtg.vn/giai-phap/du-an?lang=en' && en.locale === 'en_US');
+  check('preview: picture → its full 1200 px address', vi.image === 'https://mtg.vn/uploads/images/a.jpg?w=1200', vi.image);
+  const long = pageMeta({ base, path: '/', description: 'Robot thông minh '.repeat(30) });
+  check('preview: a long description is cut at a word, at most 160 characters', long.description.length <= DESCRIPTION_MAX + 1 && long.description.endsWith('…'), long.description.length);
+  const none = pageMeta({ base, path: '/', description: '', fallbackDescription: 'Mô tả chung', image: '/uploads/images/logo.svg' });
+  check('preview: no text → the site description; a picture a preview can\'t show (SVG) → the default picture', none.description === 'Mô tả chung' && none.image === 'https://mtg.vn/images/og-default.jpg?w=1200', none);
+  const cloud = pageMeta({ base, path: '/', image: 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg', type: 'article' });
+  check('preview: Cloudinary picture stays absolute (resized by Cloudinary); news articles are "article"', cloud.image.startsWith('https://res.cloudinary.com/demo/image/upload/') && cloud.image.includes('w_1200') && cloud.type === 'article', cloud.image);
+}
+
 // Requests are deleted 24 months after their last change (lib/retention.js); a stand-in replaces the database call
 {
   const QuoteRequest = appRequire('./models/QuoteRequest.js');
@@ -188,6 +206,17 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
     && cloudinaryPublicId('https://res.cloudinary.com/mtg/image/upload/v1/samples/a.jpg', 'mtg') === null
     && cloudinaryPublicId('https://lh3.googleusercontent.com/a/abc=s256-c', 'mtg') === null
     && cloudinaryPublicId('/uploads/images/a.jpg', 'mtg') === null && cloudinaryPublicId(null, 'mtg') === null);
+}
+
+// Photo order after an admin save (product / project / service photos dragged into place)
+{
+  const { orderMedia } = appRequire('./lib/media-order.js');
+  const [a, b, c] = ['/a.jpg', '/b.jpg', '/c.jpg'];
+  const eq = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+  check('orderMedia: the order the form sent', eq(orderMedia([a, b, c], [c, a, b]), [c, a, b]));
+  check('orderMedia: addresses not on the record, and repeats, are ignored', eq(orderMedia([a, b], ['https://evil.example/x.jpg', b, b, a]), [b, a]));
+  check('orderMedia: photos the form left out stay, after the others, in their old order', eq(orderMedia([a, b, c], [c]), [c, a, b]));
+  check('orderMedia: ticked photos are dropped; one value or none works too', eq(orderMedia([a, b, c], [c, b, a], [b]), [c, a]) && eq(orderMedia([a, b], b, a), [b]) && eq(orderMedia([a, b]), [a, b]) && eq(orderMedia(undefined, [a]), []));
 }
 
 process.exit(result() ? 1 : 0);

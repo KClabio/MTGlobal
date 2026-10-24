@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: t('forms.registerTitle') + ' - MTG' }) %>
+<%- include('partials/header', { title: t('forms.registerTitle') + ' - MTG', noindex: true }) %>
 <%
   // Checked in the browser before sending (public/js/main.js, [data-register-form]) and again on the server (routes/auth.js)
   const rgErrors = typeof errors !== 'undefined' && errors ? errors : {};
@@ -75,6 +75,7 @@
         <%= t('auth.haveAccount') %>
         <a href="/dang-nhap<%= rgForRequest ? '?yeu-cau=1' : '' %>"><%= t('nav.login') %></a>
       </p>
+      <%- include('partials/help-link', { text: t('help.registerHelp'), anchor: 'tai-khoan' }) %>
     </div>
   </div>
 </section>

@@ -77,10 +77,11 @@
 
       <div class="form-group">
         <label><%= t('admin.common.currentImages') %></label>
-        <div class="media-thumb-list">
+        <div class="media-thumb-list" data-photo-sort>
           <% ((product && product.images) || []).forEach(function (img) { %>
-            <div class="media-thumb">
-              <img src="<%= img %>" alt="">
+            <div class="media-thumb" tabindex="0" aria-label="<%= t('admin.common.photoMove') %>">
+              <input type="hidden" name="imageOrder" value="<%= img %>">
+              <img src="<%= img %>" alt="" draggable="false">
               <label><input type="checkbox" name="removeImages" value="<%= img %>"> <%= t('admin.common.remove') %></label>
             </div>
           <% }) %>

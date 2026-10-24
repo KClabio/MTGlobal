@@ -14,8 +14,8 @@ The company website of Công ty TNHH Công nghệ Mễ Trì Global, in Vietnames
 | `server.js` | app setup, `app.locals` helpers, video guard, routes |
 | `routes/` | `index.js` (public pages), `auth.js` (login/register/profile), `account.js` (`/tai-khoan`: my requests), `admin.js` (`/admin/*`) |
 | `views/` | public pages; `views/partials/` (header, footer, cards, `solution-section.ejs`, …); `views/admin/` + `views/admin/partials/` |
-| `lib/` | logic: `solution-pages.js` (default Giải pháp pages), `dashboard.js`, `home-domains.js`, `project-levels.js`, `i18n.js`, `text.js`, `validators.js`, `db-guard.js` (503 "tạm gián đoạn" page while MongoDB is down), … |
-| `models/` | mongoose models (Article, Partner, Product, Project, QuoteRequest, Service, SiteSettings, SolutionPage, User) |
+| `lib/` | logic: `solution-pages.js` (default Giải pháp pages), `dashboard.js`, `home-domains.js`, `project-levels.js`, `help-topics.js` (Hỗ trợ page groups + starter questions), `i18n.js`, `text.js`, `validators.js`, `db-guard.js` (503 "tạm gián đoạn" page while MongoDB is down), … |
+| `models/` | mongoose models (Article, HelpItem, Partner, Product, Project, QuoteRequest, Service, SiteSettings, SolutionPage, User) |
 | `locales/vi.json`, `locales/en.json` | every UI text, in both languages; add new keys to both |
 | `public/js/` | `main.js` (website), `admin.js` (admin), `theme.js` |
 | `scripts/` | `seed.js`, `make-admin.js`, `release.js`, data scripts |
@@ -29,7 +29,7 @@ The company website of Công ty TNHH Công nghệ Mễ Trì Global, in Vietnames
 | `layout.css` | header and menus, page banner, sections, footer, theme switch, phone menu drawer |
 | `components.css` | card grids, partner tiles + partner page, timeline, forms + password eye, galleries, prose text, profile, tables/tags, key-fact tiles, coming soon |
 | `home.css` | home hero, pillar cards, "Lĩnh vực hoạt động" slider |
-| `pages.css` | Giải pháp pages (jump menu, folds, tabs, process trail, "Khám phá thêm", CTA band), Dịch vụ, STEM equipment, projects/news search |
+| `pages.css` | Giải pháp pages (jump menu, folds, tabs, process trail, "Khám phá thêm", CTA band), Dịch vụ, STEM equipment, projects/news search, Hỗ trợ page |
 | `admin.css` | the whole admin area, dashboard charts included (loaded by `views/admin/partials/head.ejs` only) |
 
 Each file ends with its own `@media` rules. Grep for a selector first, then read only that part of the file.
@@ -55,13 +55,14 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
 
   | File | Covers |
   |---|---|
-  | `home` | home "Lĩnh vực hoạt động" slider (wheel, drag, arrows), "← Về trang chủ" and "← Quay lại" links |
+  | `home` | home "Lĩnh vực hoạt động" slider (wheel, drag, arrows, read as a list), "← Về trang chủ" and "← Quay lại" links |
   | `nav` | header dropdowns, keyboard, account menu, phone drawer; theme switches, admin toasts, dark-mode contrast |
   | `solutions` | Giải pháp menu, pages, assets, /giai-phap landing, STEM Lab page, "Khám phá thêm", equipment tabs + search, process trails |
   | `projects-news` | project school levels + searches, news search |
   | `partners` | partner strips, partner pages, partner admin, tile rows + hover |
-  | `services` | request forms (contact, robot pages), thank-you card, changing a sent request, Dịch vụ landing |
+  | `services` | request forms (contact, robot pages), thank-you card, changing a sent request, message limit + "too long" page (413), Dịch vụ landing |
   | `media` | watch-only videos, "Sắp ra mắt" overlay |
+  | `help` | Hỗ trợ page (groups, search, topic tiles, `#q-…` links, phone width), links to it (footer, account menu, forms, Hồ sơ), Admin → Hỗ trợ (group tabs, add/edit/hide/order within a group/delete, search across groups) |
   | `accounts` | password eye, profile page, role badge, avatar size, "Xóa ảnh", sign-up checks, login notice |
   | `google` | "Đăng nhập bằng Google" (fake Google on :3002): new account, sync at each login, joining an email account, cancel / forged return, photo delete, first password |
   | `dashboard` | dashboard numbers, charts, animations, hover; random sample requests each run (`DASH_SEED=<n>` repeats one; a failure shows its seed) |

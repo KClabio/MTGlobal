@@ -49,8 +49,8 @@ await suite(async (b) => {
 
   await part(b, 'sidebar and access', async () => {
     const EXPECTED_NAV = {
-      vi: [[null, ['Tổng quan']], ['Robotics thông minh', ['Sản phẩm robot']], ['Giải pháp', ['Tư vấn, thiết kế & triển khai', 'Thiết bị, học liệu, Robot STEM', 'Workshop trải nghiệm STEM', 'Đào tạo STEM', 'Dự án tham khảo', 'Tập huấn & triển khai']], ['Dịch vụ', ['Dịch vụ']], ['Tin tức', ['Tin tức']], ['Về MTG & Liên hệ', ['Thông tin công ty', 'Đối tác đồng hành']], ['Quản lý', ['Yêu cầu tư vấn', 'Người dùng', 'Cài đặt chung']]],
-      en: [[null, ['Overview']], ['Smart Robotics', ['Robot products']], ['Solutions', ['Consulting, design & deployment', 'Equipment, materials & STEM robots', 'Hands-on STEM workshops', 'STEM training', 'Reference projects', 'Training & rollout']], ['Services', ['Services']], ['News', ['News']], ['About & Contact', ['Company info', 'Partners']], ['Management', ['Consultation requests', 'Users', 'General settings']]],
+      vi: [[null, ['Tổng quan']], ['Robotics thông minh', ['Sản phẩm robot']], ['Giải pháp', ['Tư vấn, thiết kế & triển khai', 'Thiết bị, học liệu, Robot STEM', 'Workshop trải nghiệm STEM', 'Đào tạo STEM', 'Dự án tham khảo', 'Tập huấn & triển khai']], ['Dịch vụ', ['Dịch vụ']], ['Tin tức', ['Tin tức']], ['Về MTG & Liên hệ', ['Thông tin công ty', 'Đối tác đồng hành', 'Hỗ trợ']], ['Quản lý', ['Yêu cầu tư vấn', 'Người dùng', 'Cài đặt chung']]],
+      en: [[null, ['Overview']], ['Smart Robotics', ['Robot products']], ['Solutions', ['Consulting, design & deployment', 'Equipment, materials & STEM robots', 'Hands-on STEM workshops', 'STEM training', 'Reference projects', 'Training & rollout']], ['Services', ['Services']], ['News', ['News']], ['About & Contact', ['Company info', 'Partners', 'Help']], ['Management', ['Consultation requests', 'Users', 'General settings']]],
     };
     for (const lang of ['vi', 'en']) {
       const groups = navOf(await (await adminGet(`/admin/trang/workshop?alang=${lang}`)).text());
@@ -135,12 +135,20 @@ await suite(async (b) => {
       await click(`${gallerySel} .ps-summary`); await settled(); await sleep(600); // the slide, then its scroll into view
       check('opening the gallery closes the other section', await ev(`document.querySelectorAll('[data-section].is-open').length === 1 && document.querySelector('${gallerySel}').classList.contains('is-open')`));
       const mediaBefore = await ev(`[...document.querySelectorAll('${gallerySel} [data-media] [data-media-field="src"]')].map(i => i.value)`);
-      const pts = await ev(`(() => { const m = document.querySelectorAll('${gallerySel} [data-media]'); m[1].scrollIntoView({ block: 'center' }); const h = m[1].querySelector('.media-drag').getBoundingClientRect(); const t = m[0].getBoundingClientRect(); return { x: h.left + h.width / 2, y: h.top + h.height / 2, tx: h.left + h.width / 2, ty: t.top + t.height * 0.3 }; })()`);
+      const pts = await ev(`(() => { const m = document.querySelectorAll('${gallerySel} [data-media]'); m[1].scrollIntoView({ block: 'center' }); const h = m[1].querySelector('.page-media-thumb').getBoundingClientRect(); const t = m[0].getBoundingClientRect(); return { x: h.left + h.width / 2, y: h.top + h.height / 2, tx: h.left + h.width / 2, ty: t.top + t.height * 0.3 }; })()`);
+      const cue = await ev(`(() => { const g = document.querySelector('${gallerySel}'); return { grip: !!g.querySelector('.media-drag, [data-media] .drag-handle'), canSort: g.querySelector('[data-media-list]').classList.contains('can-sort'), cursor: getComputedStyle(g.querySelector('.page-media-thumb')).cursor, captionCursor: getComputedStyle(g.querySelector('[data-media-field="captionVi"]')).cursor }; })()`);
+      check('photos have no ⠿ grip: the photo itself shows an open hand (captions keep their text cursor)', !cue.grip && cue.canSort && cue.cursor === 'grab' && cue.captionCursor !== 'grab', cue);
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x, y: pts.y });
       await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pts.x, y: pts.y, button: 'left', buttons: 1, clickCount: 1 });
-      for (let i = 1; i <= 10; i++) { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x + ((pts.tx - pts.x) * i) / 10, y: pts.y + ((pts.ty - pts.y) * i) / 10, button: 'left', buttons: 1 }); await sleep(30); }
+      let midDrag = null;
+      for (let i = 1; i <= 10; i++) {
+        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x + ((pts.tx - pts.x) * i) / 10, y: pts.y + ((pts.ty - pts.y) * i) / 10, button: 'left', buttons: 1 }); await sleep(30);
+        if (i === 5) midDrag = await ev(`({ sorting: document.body.classList.contains('is-sorting'), cursor: getComputedStyle(document.body).cursor })`);
+      }
       await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pts.tx, y: pts.ty, button: 'left', buttons: 0, clickCount: 1 });
       await sleep(300);
+      check('while a photo is dragged the pointer is a closed hand', midDrag && midDrag.sorting && midDrag.cursor === 'grabbing', midDrag);
+      check('after the drop the closed hand goes away', await ev(`!document.body.classList.contains('is-sorting')`));
       const mediaAfterDrag = await ev(`[...document.querySelectorAll('${gallerySel} [data-media] [data-media-field="src"]')].map(i => i.value)`);
       check('dragging a photo reorders the gallery', mediaAfterDrag[0] === mediaBefore[1] && mediaAfterDrag[1] === mediaBefore[0], { mediaBefore, mediaAfterDrag });
       // Remove one shipped photo (/assets file must survive), upload a new image + video
@@ -680,6 +688,175 @@ await suite(async (b) => {
     } finally {
       await d.collection('services').replaceOne({ _id: service._id }, service);
       for (const [c, f] of [['products', 'nameVi'], ['projects', 'titleVi'], ['articles', 'titleVi']]) await d.collection(c).deleteMany({ [f]: { $regex: '^' + MARK } });
+    }
+  });
+
+  await part(b, 'photos reorder by dragging the photo itself; news shows its uploader', async () => {
+    const cookie = `connect.sid=${admin.sid}`;
+    const W = '/assets/giai-phap/workshop/';
+    const [A, B2, C] = ['hoc-sinh-lap-rap-1.jpg', 'hoc-sinh-lap-rap-2.jpg', 'hoc-sinh-lap-trinh.jpg'].map((f) => W + f);
+    const list = '[data-photo-sort]';
+    const order = () => ev(`[...document.querySelectorAll('${list} > .media-thumb input[type="hidden"]')].map((i) => i.value)`);
+    const same = (a, x) => JSON.stringify(a) === JSON.stringify(x);
+    // A real mouse drag from one photo to the left part of another
+    const drag = async (from, to) => {
+      const pts = await ev(`(() => { const f = document.querySelector(${JSON.stringify(from)}); f.scrollIntoView({ block: 'center' }); const a = f.getBoundingClientRect(), t = document.querySelector(${JSON.stringify(to)}).getBoundingClientRect();
+        return { x: a.left + a.width / 2, y: a.top + a.height / 3, tx: t.left + t.width * 0.2, ty: t.top + t.height / 3 }; })()`);
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x, y: pts.y });
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: pts.x, y: pts.y, button: 'left', buttons: 1, clickCount: 1 });
+      let mid = null;
+      for (let i = 1; i <= 12; i++) {
+        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pts.x + ((pts.tx - pts.x) * i) / 12, y: pts.y + ((pts.ty - pts.y) * i) / 12, button: 'left', buttons: 1 }); await sleep(30);
+        if (i === 6) mid = await ev(`({ sorting: document.body.classList.contains('is-sorting'), cursor: getComputedStyle(document.body).cursor })`);
+      }
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: pts.tx, y: pts.ty, button: 'left', buttons: 0, clickCount: 1 });
+      await sleep(300);
+      return mid;
+    };
+    const save = async () => { const l = b.waitLoad(); await b.clickAt('form button[type="submit"].btn-block'); await l; await sleep(300); };
+    const svc = await d.collection('services').findOne({ slug: 'tu-van-du-hoc' });
+    try {
+      await signIn();
+      // Product with 3 photos: open hand on the photo, normal pointer on "Xoá", closed hand while dragging
+      const prod = (await d.collection('products').insertOne({ nameVi: `${MARK} ảnh`, nameEn: '', category: 'stem-equipment', subcategory: '', subcategoryEn: '', descriptionVi: '', descriptionEn: '',
+        images: [A, B2, C], videos: [], specs: [], featured: false, comingSoon: false, order: 999, createdAt: new Date(), updatedAt: new Date() })).insertedId;
+      await nav(`/admin/san-pham/${prod}/sua`);
+      const cue = await ev(`(() => { const l = document.querySelector('${list}'), t = l.querySelector('.media-thumb'); return { canSort: l.classList.contains('can-sort'), cursor: getComputedStyle(t).cursor, label: getComputedStyle(t.querySelector('label')).cursor,
+        grip: !!l.querySelector('.drag-handle, .media-drag'), hint: !!l.closest('.form-group').querySelector('.sort-hint, .admin-hint') }; })()`);
+      check('product photos: open hand on the photo, pointer on "Xoá", no grip or hint', cue.canSort && cue.cursor === 'grab' && cue.label === 'pointer' && !cue.grip && !cue.hint, cue);
+      check('the product video list is not made draggable', await ev(`document.querySelectorAll('${list}').length === 1`));
+      const mid = await drag(`${list} > .media-thumb:nth-child(3)`, `${list} > .media-thumb:nth-child(1)`);
+      check('while dragging the pointer is a closed hand', mid && mid.sorting && mid.cursor === 'grabbing', mid);
+      check('after the drop the closed hand goes away', await ev(`!document.body.classList.contains('is-sorting')`));
+      check('dragging the 3rd photo onto the 1st moves it to the front', same(await order(), [C, A, B2]), await order());
+      // Keyboard: → moves the focused photo one place on
+      await ev(`document.querySelector('${list} > .media-thumb:nth-child(2)').focus()`);
+      await b.key('ArrowRight', 'ArrowRight', 39);
+      check('→ on a focused photo moves it one place on, and it keeps the focus', same(await order(), [C, B2, A])
+        && await ev(`document.activeElement === document.querySelector('${list} > .media-thumb:nth-child(3)')`), await order());
+      // Clicking the "Xoá" tick doesn't start a drag
+      await b.clickAt(`${list} > .media-thumb:nth-child(2) label`);
+      check('clicking "Xoá" ticks it and moves nothing', await ev(`document.querySelector('${list} > .media-thumb:nth-child(2) input[type="checkbox"]').checked`) && same(await order(), [C, B2, A]));
+      await save();
+      let doc = await d.collection('products').findOne({ _id: prod });
+      check('saved: the new order, the ticked photo removed, nothing else changed', same(doc.images, [C, A]) && doc.nameVi === `${MARK} ảnh` && doc.category === 'stem-equipment', doc.images);
+      // A forged order can't add a photo that isn't on the product, and a left-out photo is kept
+      const fd = new FormData();
+      for (const [k, v] of [['nameVi', `${MARK} ảnh`], ['category', 'stem-equipment'], ['imageOrder', 'https://evil.example/x.jpg'], ['imageOrder', A]]) fd.append(k, v);
+      await fetch(BASE + `/admin/san-pham/${prod}/sua`, { method: 'POST', body: fd, redirect: 'manual', headers: { cookie } });
+      doc = await d.collection('products').findOne({ _id: prod });
+      check('order from the form: outside addresses ignored, left-out photos kept after', same(doc.images, [A, C]), doc.images);
+      // One photo: nothing to reorder, so no hand
+      await d.collection('products').updateOne({ _id: prod }, { $set: { images: [A] } });
+      await nav(`/admin/san-pham/${prod}/sua`);
+      const one = await ev(`(() => { const l = document.querySelector('${list}'); return { canSort: l.classList.contains('can-sort'), cursor: getComputedStyle(l.querySelector('.media-thumb')).cursor }; })()`);
+      check('a single photo: reordering off, normal pointer', !one.canSort && one.cursor !== 'grab' && one.cursor !== 'grabbing', one);
+
+      // Service gallery (photos tab)
+      await d.collection('services').updateOne({ _id: svc._id }, { $set: { gallery: [A, B2] } });
+      await nav(`/admin/dich-vu/${svc._id}/sua`);
+      await b.clickAt('#tab-media'); await settled();
+      await drag(`${list} > .media-thumb:nth-child(2)`, `${list} > .media-thumb:nth-child(1)`);
+      check('service gallery: dragging the 2nd photo onto the 1st swaps them', same(await order(), [B2, A]), await order());
+      await save();
+      check('service gallery saved in the new order', same((await d.collection('services').findOne({ _id: svc._id })).gallery, [B2, A]));
+
+      // News: the uploader's name and role in the admin list; an older article shows "—" until it is saved again
+      await fetch(BASE + '/admin/tin-tuc/moi', { method: 'POST', body: new URLSearchParams({ titleVi: `${MARK} tin người đăng`, published: 'on' }), redirect: 'manual', headers: { cookie } });
+      const art = await d.collection('articles').findOne({ titleVi: `${MARK} tin người đăng` });
+      const me = await d.collection('users').findOne({ _id: admin.id });
+      check('a new article stores who uploaded it', art && String(art.uploadedBy) === String(admin.id) && art.uploaderName === me.name && art.uploaderRole === 'admin', art);
+      const old = (await d.collection('articles').insertOne({ titleVi: `${MARK} tin cũ`, titleEn: '', bodyVi: '', bodyEn: '', coverImage: null, published: false, order: 9999, createdAt: new Date(), updatedAt: new Date() })).insertedId;
+      await nav('/admin/tin-tuc');
+      const rows = await ev(`(() => { const row = (id) => document.querySelector('tr[data-id="' + id + '"]'); const cell = (id) => row(id).querySelector('.article-uploader, .article-uploader-none');
+        const head = [...document.querySelectorAll('.data-table thead th')].map((th) => th.textContent.trim());
+        return { head, mine: cell('${art._id}').textContent.replace(/\\s+/g, ' ').trim(), role: !!row('${art._id}').querySelector('.tag.role-admin'), search: row('${art._id}').getAttribute('data-search'), old: cell('${old}').textContent.trim() }; })()`);
+      check('Tin tức list: a "Người đăng" column after the date', rows.head.indexOf('Người đăng') > 0 && rows.head.indexOf('Người đăng') === rows.head.indexOf('Ngày đăng') + 1, rows.head);
+      check('it shows the uploader name and the "Quản trị viên" role; the list search finds the name', rows.mine === `${me.name} Quản trị viên` && rows.role && rows.search.includes(me.name), rows);
+      check('an older article without an uploader shows "—"', rows.old === '—', rows.old);
+      await d.collection('users').updateOne({ _id: admin.id }, { $set: { role: 'owner', name: me.name + ' mới' } });
+      const live = await (await adminGet('/admin/tin-tuc')).text();
+      await d.collection('users').updateOne({ _id: admin.id }, { $set: { role: 'admin', name: me.name } });
+      check('the column follows the account\'s current name and role', live.includes(me.name + ' mới') && live.includes('Chủ sở hữu'));
+      await fetch(BASE + `/admin/tin-tuc/${old}/sua`, { method: 'POST', body: new URLSearchParams({ titleVi: `${MARK} tin cũ` }), redirect: 'manual', headers: { cookie } });
+      check('saving an older article makes the saver its uploader', String((await d.collection('articles').findOne({ _id: old })).uploadedBy) === String(admin.id));
+      const other = await createUser('editor-2');
+      await fetch(BASE + `/admin/tin-tuc/${art._id}/sua`, { method: 'POST', body: new URLSearchParams({ titleVi: `${MARK} tin người đăng` }), redirect: 'manual', headers: { cookie: `connect.sid=${other.sid}` } });
+      check('another admin editing it doesn\'t change the uploader', String((await d.collection('articles').findOne({ _id: art._id })).uploadedBy) === String(admin.id));
+      check('the public article page doesn\'t show the uploader', !(await pub(`/tin-tuc/${art._id}`)).includes(me.name));
+      // The owner can credit an article to any owner/admin account ("Người đăng" on the form); admins only see it
+      const owner = await createUser('editor-owner', 'owner');
+      const ownerMe = await d.collection('users').findOne({ _id: owner.id });
+      const as = (u) => ({ cookie: `connect.sid=${u.sid}` });
+      const html = async (p, u) => (await fetch(BASE + p, { headers: as(u) })).text();
+      const send2 = (p, u, fields) => fetch(BASE + p, { method: 'POST', body: new URLSearchParams(fields), redirect: 'manual', headers: as(u) });
+      const options = (page) => [...((page.match(/<select[^>]*name="uploadedBy"[\s\S]*?<\/select>/) || [''])[0]).matchAll(/<option value="([^"]*)"( selected)?>([^<]*)<\/option>/g)]
+        .map((m) => ({ value: m[1], selected: !!m[2], label: decode(m[3]).replace(/\s+/g, ' ').trim() }));
+      const selected = (page) => (options(page).find((o) => o.selected) || {}).value;
+      const creditOf = async (title) => { const a = await d.collection('articles').findOne({ titleVi: title }); return a && String(a.uploadedBy); };
+      const staffIds = (await d.collection('users').find({ role: { $in: ['owner', 'admin'] } }).toArray()).map((u) => String(u._id));
+      let opts = options(await html('/admin/tin-tuc/moi', owner));
+      const roleOf = (o) => (o.label.endsWith('Chủ sở hữu') ? 'owner' : 'admin');
+      check('owner\'s new-article form: "Người đăng" lists every owner and admin, no customer', opts.length === staffIds.length && opts.every((o) => staffIds.includes(o.value)) && !opts.some((o) => o.value === String(cust.id)), opts.length);
+      check('owners come first, and the owner is preselected', opts.map(roleOf).join() === [...opts.map(roleOf)].sort((a, b) => (a === b ? 0 : a === 'owner' ? -1 : 1)).join() && selected(await html('/admin/tin-tuc/moi', owner)) === String(owner.id));
+      await send2('/admin/tin-tuc/moi', owner, { titleVi: `${MARK} tin hộ`, uploadedBy: String(admin.id) });
+      const onBehalf = await d.collection('articles').findOne({ titleVi: `${MARK} tin hộ` });
+      check('the owner can post an article credited to an admin', String(onBehalf.uploadedBy) === String(admin.id) && onBehalf.uploaderName === me.name && onBehalf.uploaderRole === 'admin', onBehalf);
+      check('its edit form preselects that admin', selected(await html(`/admin/tin-tuc/${onBehalf._id}/sua`, owner)) === String(admin.id));
+      await send2(`/admin/tin-tuc/${onBehalf._id}/sua`, owner, { titleVi: `${MARK} tin hộ`, uploadedBy: String(owner.id) });
+      check('the owner can change the credit to themself', await creditOf(`${MARK} tin hộ`) === String(owner.id));
+      for (const id of [String(cust.id), '0123456789abcdef01234567', 'not-an-id']) await send2(`/admin/tin-tuc/${onBehalf._id}/sua`, owner, { titleVi: `${MARK} tin hộ`, uploadedBy: id });
+      check('a customer, a made-up or a broken id is ignored: the credit stays', await creditOf(`${MARK} tin hộ`) === String(owner.id));
+      // Admins can't choose
+      await send2('/admin/tin-tuc/moi', admin, { titleVi: `${MARK} tin admin`, uploadedBy: String(owner.id) });
+      check('an admin posting a "Người đăng" choice is ignored: the article is theirs', await creditOf(`${MARK} tin admin`) === String(admin.id));
+      await send2(`/admin/tin-tuc/${onBehalf._id}/sua`, admin, { titleVi: `${MARK} tin hộ`, uploadedBy: String(admin.id) });
+      check('an admin editing can\'t move the credit', await creditOf(`${MARK} tin hộ`) === String(owner.id));
+      const adminForm = await html(`/admin/tin-tuc/${onBehalf._id}/sua`, admin);
+      const line = decode(((adminForm.match(/<div data-uploader>([\s\S]*?)<\/div>/) || ['', ''])[1]).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+      check('the admin\'s form has no choice, only a "Người đăng" line with the name and role', !/name="uploadedBy"/.test(adminForm) && line === `${ownerMe.name} Chủ sở hữu`, line);
+      // Edge cases: no uploader yet; uploader no longer staff; uploader account deleted
+      const older = (await d.collection('articles').insertOne({ titleVi: `${MARK} tin xưa`, titleEn: '', bodyVi: '', bodyEn: '', coverImage: null, published: false, order: 9998, createdAt: new Date(), updatedAt: new Date() })).insertedId;
+      opts = options(await html(`/admin/tin-tuc/${older}/sua`, owner));
+      check('an article with no uploader: "— Chưa có —" first and selected', opts[0].value === '' && opts[0].selected && opts[0].label.startsWith('— Chưa có'), opts[0]);
+      await send2(`/admin/tin-tuc/${older}/sua`, owner, { titleVi: `${MARK} tin xưa`, uploadedBy: '' });
+      check('saving it that way credits the owner who saved', await creditOf(`${MARK} tin xưa`) === String(owner.id));
+      await d.collection('articles').updateOne({ _id: older }, { $set: { uploadedBy: other.id, uploaderName: 'ZZ editor-2', uploaderRole: 'admin' } });
+      await d.collection('users').updateOne({ _id: other.id }, { $set: { role: 'customer' } });
+      opts = options(await html(`/admin/tin-tuc/${older}/sua`, owner));
+      check('uploader no longer staff: kept as a first, selected choice marked so', opts[0].value === 'keep' && opts[0].selected && opts[0].label.includes('không còn là quản trị'), opts[0]);
+      await send2(`/admin/tin-tuc/${older}/sua`, owner, { titleVi: `${MARK} tin xưa`, uploadedBy: 'keep' });
+      check('saving keeps that credit', await creditOf(`${MARK} tin xưa`) === String(other.id));
+      await d.collection('articles').updateOne({ _id: older }, { $set: { uploadedBy: new (cust.id.constructor)(), uploaderName: 'ZZ đã xoá', uploaderRole: 'admin' } });
+      opts = options(await html(`/admin/tin-tuc/${older}/sua`, owner));
+      check('uploader account deleted: the stored name, marked "tài khoản đã xoá"', opts[0].value === 'keep' && opts[0].selected && opts[0].label === 'ZZ đã xoá (tài khoản đã xoá)', opts[0]);
+      // A failed save keeps the owner's choice
+      const failed = await (await send2('/admin/tin-tuc/moi', owner, { titleVi: '', uploadedBy: String(admin.id) })).text();
+      check('a failed save keeps the picked uploader selected', selected(failed) === String(admin.id));
+
+      // Giải pháp (last, as nothing here is saved): removing photos down to one switches reordering off, undo switches it back on
+      await nav('/admin/trang/workshop');
+      const gallerySel = '[data-section-list] > [data-section][data-kind="gallery"]';
+      await click(`${gallerySel} .ps-summary`); await settled();
+      // Waits (at most 2 s) for the gallery to hold n photos and the page to catch up
+      const mediaCountIs = (n) => ev(`new Promise((r) => { const t0 = Date.now(); (function f() { if (document.querySelectorAll('${gallerySel} [data-media]').length === ${n}) return setTimeout(() => r(true), 50); if (Date.now() - t0 > 2000) return r(false); setTimeout(f, 30); })(); })`);
+      const mediaCount = await ev(`document.querySelectorAll('${gallerySel} [data-media]').length`);
+      // The buttons are pressed in the page: the notification of each removal may cover the next 🗑
+      const removeLast = () => ev(`document.querySelector('${gallerySel} [data-media]:last-child [data-remove-media]').click()`);
+      for (let i = 1; i < mediaCount - 1; i++) { await removeLast(); await sleep(50); }
+      await mediaCountIs(2);
+      check('Giải pháp gallery with 2 photos: reordering on', await ev(`document.querySelector('${gallerySel} [data-media-list]').classList.contains('can-sort')`));
+      await removeLast();
+      await mediaCountIs(1);
+      const down = await ev(`(() => { const l = document.querySelector('${gallerySel} [data-media-list]'), t = l.querySelector('.page-media-thumb'); return { n: l.querySelectorAll('[data-media]').length, canSort: l.classList.contains('can-sort'), cursor: t && getComputedStyle(t).cursor }; })()`);
+      check('down to 1 photo: reordering off, normal pointer', down.n === 1 && !down.canSort && down.cursor !== 'grab', down);
+      await ev(`document.querySelector('#adminToast .toast-action').click()`);
+      await mediaCountIs(2);
+      const back = await ev(`(() => { const l = document.querySelector('${gallerySel} [data-media-list]'), t = l.querySelector('.page-media-thumb'); return { n: l.querySelectorAll('[data-media]').length, canSort: l.classList.contains('can-sort'), cursor: t && getComputedStyle(t).cursor }; })()`);
+      check('undo brings the 2nd photo back: reordering on again', back.n === 2 && back.canSort && back.cursor === 'grab', back);
+    } finally {
+      await d.collection('services').replaceOne({ _id: svc._id }, svc);
+      for (const [c, f] of [['products', 'nameVi'], ['articles', 'titleVi']]) await d.collection(c).deleteMany({ [f]: { $regex: '^' + MARK } });
     }
   });
 });

@@ -38,6 +38,10 @@ await suite(async (b) => {
     const cards = await ev(`[...document.querySelectorAll('.domain-card')].map((a) => ({ href: a.getAttribute('href'), title: a.querySelector('h3').textContent.trim(), text: (a.querySelector('p') || {}).textContent || '', img: (a.querySelector('img') || {}).src || null }))`);
     check('7 area cards in menu order (one "Dịch vụ" card for all services), each linking with ?from=home', cards.length === 7 && JSON.stringify(cards.map((c) => c.href)) === JSON.stringify(['/san-pham', '/giai-phap/stem-lab', '/giai-phap/thiet-bi', '/giai-phap/workshop', '/giai-phap/dao-tao', '/giai-phap/tap-huan', '/dich-vu'].map((u) => u + '?from=home')), cards.map((c) => c.href));
     check('section title is "Lĩnh vực hoạt động"', (await ev(`document.querySelector('#linh-vuc .section-title').textContent.trim()`)) === 'Lĩnh vực hoạt động');
+    // Screen readers: a named list ("Lĩnh vực hoạt động, list, 7 items"), not a region that hides the list
+    const a11y = await ev(`(() => { const t = document.querySelector('[data-domain-slider]'); return { tag: t.tagName, role: t.getAttribute('role'), label: t.getAttribute('aria-label'), focusable: t.tabIndex === 0, items: t.querySelectorAll(':scope > li').length }; })()`);
+    check('slider read as a named list: <ul> without a role, "Lĩnh vực hoạt động" as its name, one <li> per card, keyboard-focusable',
+      a11y.tag === 'UL' && a11y.role === null && a11y.label === 'Lĩnh vực hoạt động' && a11y.items === cards.length && a11y.focusable, a11y);
     // Off-screen cards lazy-load, so check each picture over HTTP instead of waiting for the browser
     const imgs = [];
     for (const card of cards) imgs.push(card.img ? (await fetch(card.img)).headers.get('content-type')?.startsWith('image/') === true : 'art');

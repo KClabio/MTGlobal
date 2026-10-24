@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: t('forms.loginTitle') + ' - MTG' }) %>
+<%- include('partials/header', { title: t('forms.loginTitle') + ' - MTG', noindex: true }) %>
 
 <section class="section">
   <div class="container" style="max-width:480px;">
@@ -26,6 +26,7 @@
         <%= t('auth.noAccount') %>
         <a href="/dang-ky<%= typeof needLogin !== 'undefined' && needLogin ? '?yeu-cau=1' : '' %>"><%= t('nav.register') %></a>
       </p>
+      <%- include('partials/help-link', { text: t('help.loginHelp'), anchor: 'tai-khoan' }) %>
     </div>
   </div>
 </section>

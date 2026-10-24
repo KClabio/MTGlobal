@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: t('profile.title') + ' - MTG' }) %>
+<%- include('partials/header', { title: t('profile.title') + ' - MTG', noindex: true }) %>
 <%
   const pState = typeof profileState !== 'undefined' && profileState ? profileState : {};
   const pwState = typeof passwordState !== 'undefined' && passwordState ? passwordState : {};
@@ -166,6 +166,7 @@
             <% } %>
           </div>
           <% if (!canDeleteSelf) { %><p class="form-hint" data-staff-no-delete><%= t('privacy.staffNoDelete') %></p><% } %>
+          <%- include('partials/help-link', { text: t('help.dataHelp'), anchor: 'quyen-rieng-tu' }) %>
           <% if (canDeleteSelf) { %>
             <dialog class="profile-confirm account-confirm" data-account-confirm aria-labelledby="accountConfirmTitle"<%= dState.error ? ' data-open-now' : '' %>>
               <form method="POST" action="/ho-so/xoa-tai-khoan" data-account-delete-form>

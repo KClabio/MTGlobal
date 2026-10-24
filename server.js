@@ -50,6 +50,7 @@ app.locals.LEVELS = require('./lib/project-levels').LEVELS; // school levels of 
 app.locals.levelFromSchool = require('./lib/project-levels').levelFromSchool;
 app.locals.INTEREST_GROUPS = require('./models/QuoteRequest').INTEREST_GROUPS; // "Bạn quan tâm đến" list (partials/quote-form.ejs)
 app.locals.isProductLine = require('./models/QuoteRequest').isProductLine; // robot name shown with the category (request lists)
+app.locals.QUOTE_MESSAGE_MAX = require('./lib/quote-request').MESSAGE_MAX; // request message limit + counter (partials/quote-form.ejs)
 app.locals.googleEnabled = require('./lib/google-auth').isConfigured(); // "Đăng nhập bằng Google" button (login, register)
 // Behind the host's HTTPS proxy (lib/trust-proxy.js turns TRUST_PROXY=1 into the number Express expects)
 const trustProxy = require('./lib/trust-proxy').parseTrustProxy(process.env.TRUST_PROXY);
@@ -58,8 +59,6 @@ if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
 // Browser protections on every page and file (lib/security-headers.js); "X-Powered-By: Express" is not sent
 app.disable('x-powered-by');
 app.use(require('./lib/security-headers').securityHeaders());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
 app.use(cookieParser());
 // Light/dark theme preference (shared by the website and the admin), light by default
 app.use((req, res, next) => {
@@ -80,6 +79,7 @@ const assets = require('./lib/assets').createAssets();
 app.locals.asset = assets.asset; // '/js/main.js' -> '/js/main.js?v=<fingerprint>'
 app.locals.picture = require('./lib/picture').picture; // <img> with srcset (views)
 app.locals.resized = require('./lib/picture').resized; // one picture address at a width (banners, thumbnails)
+app.locals.pageMeta = require('./lib/seo').pageMeta; // description, canonical and link-preview tags (partials/header.ejs)
 app.use(require('compression')({ threshold: 1024 }));
 app.use(require('./lib/images').createImages());
 app.use(assets.bundleRoute);
@@ -119,6 +119,8 @@ app.use(session({
 app.use(loadUser);
 app.use(loadLanguage);
 app.use(loadSiteSettings);
+// The site's address and this page's path, for the canonical and link-preview tags (lib/seo.js)
+app.use((req, res, next) => { res.locals.siteBase = seo.siteBase(req); res.locals.pagePath = req.path; next(); });
 // Opened from a card in the home page "Lĩnh vực hoạt động" slider: the page banner shows "← Về trang chủ"
 app.use((req, res, next) => {
   res.locals.fromHome = req.method === 'GET' && req.query.from === 'home';
@@ -140,6 +142,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Form and JSON bodies are read last, once the visitor's language and the site settings are known: a body too big
+// to read then gets a clear page in the right language (error handler below), not the general error page
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
 app.use('/', indexRoutes);
 app.use('/', authRoutes);
 app.use('/tai-khoan', accountRoutes);
@@ -149,7 +156,21 @@ app.use((req, res) => {
   res.status(404).render('404');
 });
 
+// The page the visitor came from on this site (for "← Quay lại"), else Trang chủ; never an outside address
+function sameSiteReferer(req) {
+  try {
+    const ref = new URL(req.get('Referer') || '', `${req.protocol}://${req.get('host')}`);
+    if (ref.host === req.get('host')) return ref.pathname + ref.search;
+  } catch (err) { /* no or malformed Referer */ }
+  return '/';
+}
+
 app.use((err, req, res, next) => {
+  // A form (or admin order list) bigger than the server takes (express's 100 KB limit): say so plainly, not "something went wrong"
+  if (err && err.type === 'entity.too.large' && !res.headersSent) {
+    if (req.is('json') || req.path.startsWith('/admin/thu-tu/')) return res.status(413).json({ ok: false });
+    return res.status(413).render('413', { backHref: sameSiteReferer(req) });
+  }
   console.error(err);
   if (res.headersSent) return next(err);
   if (dbGuard.isDbUnavailable(err)) return dbGuard.sendUnavailable(res);

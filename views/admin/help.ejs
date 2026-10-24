@@ -1,0 +1,58 @@
+<%- include('partials/head', { active: 'ho-tro' }) %>
+
+<div class="admin-topbar">
+  <h1><%= t('admin.help.title') %> <span class="count-badge"><%= total %></span></h1>
+  <%# data-keep-query: the chosen tab rides along (?nhom=…), so the new question starts in that group %>
+  <a class="btn btn-primary" href="/admin/ho-tro/moi" data-keep-query><%= t('admin.help.add') %></a>
+</div>
+<p class="form-hint help-admin-intro"><%= t('admin.help.intro') %></p>
+
+<%# Search through every group, plus one tab (chip) per group, like the school levels of Dự án tham khảo %>
+<%- include('partials/list-search', { target: 'help' }) %>
+<%- include('partials/list-filter', { target: 'help', param: 'nhom', label: t('admin.help.filterLabel'), total: total,
+      options: groups.map(function (g) { return { value: g.key, label: t(g.labelKey), count: g.items.length }; }) }) %>
+
+<%- include('partials/sort-hint') %>
+
+<%# One table per group; rows are dragged within their group only (/admin/thu-tu/help-<group>).
+    The search looks through every group at once (data-list-part) and hides groups without a match; a tab shows only
+    its own group (data-list-group-key), even when it is empty. %>
+<% groups.forEach(function (g) { %>
+  <section class="help-admin-group" data-list-group="help" data-list-group-key="<%= g.key %>">
+    <div class="help-admin-group-head">
+      <h2 class="admin-panel-title"><%= t(g.labelKey) %> <span class="count-badge"><%= g.items.length %></span></h2>
+      <a class="btn btn-ghost btn-sm" href="/admin/ho-tro/moi?nhom=<%= g.key %>"><%= t('admin.help.add') %></a>
+    </div>
+    <% if (g.items.length) { %>
+      <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead><tr><th class="drag-cell"></th><th><%= t('admin.help.colQuestion') %></th><th><%= t('admin.help.colVisible') %></th><th></th></tr></thead>
+        <tbody data-sortable="help-<%= g.key %>" data-list-part="help">
+          <% g.items.forEach(function (it) { %>
+            <tr data-id="<%= it._id %>" data-search="<%= [it.questionVi, it.questionEn].filter(Boolean).join(' ') %>" data-filter="<%= g.key %>">
+              <%- include('partials/drag-handle', { name: it.questionVi }) %>
+              <td data-search-name><%= it.questionVi %></td>
+              <td><% if (it.published) { %><%= t('admin.help.visible') %><% } else { %><span class="tag"><%= t('admin.help.hidden') %></span><% } %></td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn-ghost btn-sm" href="/admin/ho-tro/<%= it._id %>/sua"><%= t('admin.common.edit') %></a>
+                  <form method="POST" action="/admin/ho-tro/<%= it._id %>/xoa" data-confirm="<%= t('admin.help.confirmDelete') %>">
+                    <button class="btn btn-danger btn-sm" type="submit"><%= t('admin.common.delete') %></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      </div>
+    <% } else { %>
+      <p class="empty-note"><%= t('admin.help.groupEmpty') %></p>
+    <% } %>
+  </section>
+<% }) %>
+<p class="empty-note list-search-none" data-list-search-none="help" hidden></p>
+
+<%- include('partials/view-page-fab', { href: '/ho-tro', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>

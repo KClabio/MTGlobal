@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: partner.name + ' - MTG' }) %>
+<%- include('partials/header', { title: partner.name + ' - MTG', description: pick(partner, 'description'), image: partner.logo, bannerKey: 'about' }) %>
 
 <%- include('partials/page-banner', {
   pill: t('home.partnersTitle'),

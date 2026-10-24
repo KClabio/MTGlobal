@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: pick(service, 'title') + ' - MTG' }) %>
+<%- include('partials/header', { title: pick(service, 'title') + ' - MTG', description: pick(service, 'summary') || pick(service, 'body'), image: service.heroImage, bannerKey: 'services' }) %>
 
 <%- include('partials/page-banner', {
   pill: t('nav.services'),

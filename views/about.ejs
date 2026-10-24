@@ -1,4 +1,7 @@
-<%- include('partials/header', { title: (lang === 'en' ? 'About MTG' : 'Về MTG') + ' - MTG' }) %>
+<%- include('partials/header', {
+  title: (lang === 'en' ? 'About MTG' : 'Về MTG') + ' - MTG',
+  description: settings && (lang === 'en' && settings.companyProfileEn ? settings.companyProfileEn : settings.companyProfile),
+}) %>
 
 <%- include('partials/page-banner', {
   pill: 'MTG',

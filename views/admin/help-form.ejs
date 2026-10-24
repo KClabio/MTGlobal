@@ -1,0 +1,51 @@
+<%- include('partials/head', { active: 'ho-tro' }) %>
+
+<div class="admin-topbar"><h1><%= t(item && item._id ? 'admin.help.formEdit' : 'admin.help.formNew') %></h1></div>
+
+<% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
+
+<form method="POST" action="<%= item && item._id ? '/admin/ho-tro/' + item._id + '/sua' : '/admin/ho-tro/moi' %>">
+  <div class="admin-form-grid">
+    <div>
+      <div class="form-group">
+        <label for="questionVi"><%= t('admin.help.questionVi') %></label>
+        <input class="form-control" id="questionVi" name="questionVi" value="<%= item.questionVi || '' %>" required>
+      </div>
+      <div class="form-group">
+        <label for="answerVi"><%= t('admin.help.answerVi') %></label>
+        <textarea class="form-control" id="answerVi" name="answerVi" rows="8" required><%= item.answerVi || '' %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
+      <div class="form-group">
+        <label for="questionEn"><%= t('admin.help.questionEn') %></label>
+        <input class="form-control" id="questionEn" name="questionEn" value="<%= item.questionEn || '' %>">
+      </div>
+      <div class="form-group">
+        <label for="answerEn"><%= t('admin.help.answerEn') %></label>
+        <textarea class="form-control" id="answerEn" name="answerEn" rows="8"><%= item.answerEn || '' %></textarea>
+        <p class="form-hint"><%= t('admin.help.enHint') %></p>
+      </div>
+    </div>
+    <aside>
+      <div class="form-group">
+        <label for="group"><%= t('admin.help.group') %></label>
+        <select class="form-control" id="group" name="group">
+          <% groups.forEach(function (g) { %>
+            <option value="<%= g.key %>"<%= item.group === g.key ? ' selected' : '' %>><%= t(g.labelKey) %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="checkbox-row form-group">
+        <input type="checkbox" id="published" name="published"<%= item.published ? ' checked' : '' %>>
+        <label for="published" style="margin:0;"><%= t('admin.help.published') %></label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('admin.common.save') %></button>
+    </aside>
+  </div>
+</form>
+
+<%- include('partials/view-page-fab', item && item._id
+  ? { href: '/ho-tro#q-' + item._id, label: t('admin.viewPage.item', { name: item.questionVi }) }
+  : { href: '/ho-tro', label: t('admin.viewPage.list') }) %>
+
+<%- include('partials/foot') %>

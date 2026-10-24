@@ -1,5 +1,18 @@
 <%
   const pageTitle = typeof title !== 'undefined' ? title : 'MTG - Smart Solutions for Life';
+  // Description and link preview (lib/seo.js): the page's own text and picture, else its banner line and photo
+  // (lib/banners.js), else the site's; account and error pages ask search engines to leave them out (noindex)
+  const hdSettings = typeof settings !== 'undefined' ? settings : null;
+  const hdBanner = typeof bannerKey !== 'undefined' && bannerKey ? bannerFor(hdSettings, bannerKey, lang) : { subtitle: '', image: null };
+  const hdHero = hdSettings && hdSettings.heroImages && hdSettings.heroImages.home;
+  const meta = typeof siteBase !== 'undefined' ? pageMeta({
+    base: siteBase, path: pagePath, lang,
+    description: (typeof description !== 'undefined' && description) || hdBanner.subtitle,
+    fallbackDescription: t('seo.defaultDescription'),
+    image: (typeof image !== 'undefined' && image) || hdBanner.image || hdHero,
+    type: typeof ogType !== 'undefined' ? ogType : 'website',
+  }) : null;
+  const hdNoindex = typeof noindex !== 'undefined' && noindex;
 %>
 <!doctype html>
 <% const langFade = typeof langSwitched !== 'undefined' && langSwitched; %>
@@ -8,6 +21,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= pageTitle %></title>
+  <% if (hdNoindex) { %>
+  <meta name="robots" content="noindex">
+  <% } else if (meta) { %>
+  <meta name="description" content="<%= meta.description %>">
+  <link rel="canonical" href="<%= meta.url %>">
+  <link rel="alternate" hreflang="vi" href="<%= meta.alternates.vi %>">
+  <link rel="alternate" hreflang="en" href="<%= meta.alternates.en %>">
+  <link rel="alternate" hreflang="x-default" href="<%= meta.alternates.vi %>">
+  <meta property="og:site_name" content="<%= t('seo.siteName') %>">
+  <meta property="og:type" content="<%= meta.type %>">
+  <meta property="og:title" content="<%= pageTitle %>">
+  <meta property="og:description" content="<%= meta.description %>">
+  <meta property="og:url" content="<%= meta.url %>">
+  <meta property="og:image" content="<%= meta.image %>">
+  <meta property="og:image:alt" content="<%= pageTitle %>">
+  <meta property="og:locale" content="<%= meta.locale %>">
+  <meta property="og:locale:alternate" content="<%= meta.altLocale %>">
+  <meta name="twitter:card" content="summary_large_image">
+  <% } %>
   <%# The font comes from this site (public/fonts); the regular Vietnamese/Latin weights load first %>
   <link rel="preload" href="/fonts/be-vietnam-pro-400-vietnamese.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/be-vietnam-pro-400-latin.woff2" as="font" type="font/woff2" crossorigin>

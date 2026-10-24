@@ -22,6 +22,7 @@
     "logout": "Log Out",
     "myAccount": "My Account",
     "myRequests": "My Requests",
+    "help": "Help",
     "admin": "Admin",
     "solutionWorkshop": "Hands-on STEM workshops",
     "solutionEducation": "STEM training"
@@ -87,6 +88,7 @@
     "errPhone": "Please enter a valid phone number.",
     "errEmail": "Please enter a valid email address.",
     "errMessage": "Please enter your message.",
+    "errMessageLength": "The message can be at most 3,000 characters. Please shorten it and send again.",
     "errSummary": "Please check the highlighted fields.",
     "choosePlaceholder": "— Select —",
     "errAnswerRequired": "Please answer this question.",
@@ -157,6 +159,36 @@
     "quickLinks": "Quick Links",
     "contactInfo": "Contact Information"
   },
+  "help": {
+    "title": "Help",
+    "search": "How can we help? Search the questions…",
+    "resultsOne": "1 matching question",
+    "resultsCount": "{n} matching questions",
+    "noResults": "No question matches “{q}”. Try other words, or contact MTG below.",
+    "topicsLabel": "Help topics",
+    "questionCount": "{n} questions",
+    "groups": {
+      "tai-khoan": "Your account",
+      "gui-yeu-cau": "Sending requests",
+      "san-pham": "Products & solutions",
+      "quyen-rieng-tu": "Privacy & your data",
+      "su-dung": "Using the website"
+    },
+    "empty": "No questions yet.",
+    "ctaTitle": "Still need help?",
+    "ctaText": "The MTG team is happy to help. Call, email or send a request and we will get back to you soon.",
+    "ctaButton": "Send a request",
+    "seeGuide": "See the guide",
+    "loginHelp": "Trouble logging in?",
+    "registerHelp": "Need help signing up?",
+    "requestHelp": "Need help with a request?",
+    "dataHelp": "Questions about your data?"
+  },
+  "errors": {
+    "tooLargeTitle": "What you sent is too long",
+    "tooLargeText": "What you sent is more than the website accepts. Please shorten your message (at most 3,000 characters) and send it again.",
+    "back": "Go back"
+  },
   "privacy": {
     "title": "Privacy Policy",
     "agree": "I agree to the",
@@ -199,7 +231,8 @@
       "pageWorkshop": "Hands-on STEM workshops",
       "pageEducation": "STEM training",
       "pageTraining": "Training & rollout",
-      "companyInfo": "Company info"
+      "companyInfo": "Company info",
+      "help": "Help"
     },
     "common": {
       "edit": "Edit",
@@ -218,6 +251,7 @@
       "plainTextHint": "Plain text only, no HTML tags needed. Leave an empty line to start a new paragraph; start a line with “- ” to make a bullet list.",
       "dragHint": "Drag the ⠿ handle (or use the ↑ ↓ keys) to set the order shown on the website. The order is saved immediately.",
       "dragHandle": "Drag to reorder: {name}",
+      "photoMove": "Drag the photo, or use the arrow keys, to reorder",
       "orderSaved": "Order saved",
       "orderError": "Could not save the order, please try again",
       "notFound": "This item could not be found.",
@@ -478,11 +512,36 @@
       "slug": "Page address (optional)",
       "slugHint": "The end of the /doi-tac/… address — leave empty to make it from the partner's name."
     },
+    "help": {
+      "title": "Help",
+      "intro": "Pick a group to see it on its own. Drag to change the order within a group.",
+      "filterLabel": "Filter by group",
+      "add": "+ Add question",
+      "colQuestion": "Question",
+      "colVisible": "Visible",
+      "visible": "Yes",
+      "hidden": "Hidden",
+      "groupEmpty": "No questions in this group yet.",
+      "confirmDelete": "Delete this question?",
+      "formNew": "Add question",
+      "formEdit": "Edit question",
+      "group": "Group",
+      "questionVi": "Question (Vietnamese) *",
+      "questionEn": "Question (English)",
+      "answerVi": "Answer (Vietnamese) *",
+      "answerEn": "Answer (English)",
+      "enHint": "Left empty, the English page shows the Vietnamese text.",
+      "published": "Show on the Help page",
+      "errGroup": "Please choose a group.",
+      "errQuestion": "The question (Vietnamese) is required.",
+      "errAnswer": "The answer (Vietnamese) is required."
+    },
     "articles": {
       "title": "News",
       "add": "+ Add article",
       "colTitle": "Title",
       "colDate": "Published",
+      "colUploader": "Uploader",
       "colVisible": "Visible",
       "visible": "Yes",
       "hidden": "Hidden",
@@ -495,7 +554,12 @@
       "bodyEn": "Content (English)",
       "cover": "Cover image",
       "published": "Publicly visible",
-      "errTitle": "The title (Vietnamese) is required."
+      "errTitle": "The title (Vietnamese) is required.",
+      "uploader": "Uploader",
+      "uploaderNone": "— None (credits whoever saves) —",
+      "uploaderGone": "account deleted",
+      "uploaderNotStaff": "no longer staff",
+      "uploaderHint": "Only owners can change the uploader."
     },
     "requests": {
       "title": "Consultation requests",
@@ -576,6 +640,12 @@
         "label": "Search projects by school name",
         "count": "Showing {shown} / {total} projects",
         "none": "No school matches “{q}”."
+      },
+      "help": {
+        "placeholder": "Search questions…",
+        "label": "Search help questions",
+        "count": "Showing {shown} / {total} questions",
+        "none": "No question matches “{q}”."
       },
       "articles": {
         "placeholder": "Search by title…",
@@ -670,7 +740,7 @@
       "captionVi": "Caption (Vietnamese)",
       "captionEn": "Caption (English)",
       "removeMedia": "Remove from page",
-      "dragMedia": "Drag to reorder photos/videos",
+      "dragMedia": "Drag, or use the ↑ ↓ keys, to reorder photos/videos",
       "videoLabel": "Video",
       "save": "Save page",
       "errorsTitle": "The page was not saved:",
@@ -881,5 +951,9 @@
     "empty": "You haven't submitted any requests yet.",
     "done": "Done",
     "doneHint": "MTG has finished handling this request."
+  },
+  "seo": {
+    "siteName": "MTG - Mễ Trì Global",
+    "defaultDescription": "MTG (Mễ Trì Global Technology Co., Ltd) offers smart robots, end-to-end STEM Lab solutions for schools, teacher training and education technology consulting."
   }
 }

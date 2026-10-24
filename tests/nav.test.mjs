@@ -53,6 +53,43 @@ await suite(async (b) => {
     } finally { await d.collection('projects').deleteOne({ _id: insertedId }); }
     check('… and disappears once deleted', !(await read()).xml.includes(`/giai-phap/du-an/${insertedId}`));
     check('sitemap.xml: the Chính sách bảo mật page (both languages)', locs.includes('/chinh-sach-bao-mat') && locs.includes('/chinh-sach-bao-mat?lang=en'));
+    check('sitemap.xml: the Hỗ trợ page (both languages)', locs.includes('/ho-tro') && locs.includes('/ho-tro?lang=en'));
+  });
+
+  await part(b, 'search engines and link previews: description, canonical, Open Graph (lib/seo.js)', async () => {
+    const head = async (path, lang = 'vi') => {
+      const html = await (await fetch(BASE + path, { headers: { cookie: `lang=${lang}` } })).text();
+      const h = (html.match(/<head>([\s\S]*?)<\/head>/) || [])[1] || '';
+      const tag = (re) => { const m = h.match(re); return m ? m[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') : null; };
+      return {
+        h, description: tag(/<meta name="description" content="([^"]*)"/), canonical: tag(/<link rel="canonical" href="([^"]*)"/),
+        ogTitle: tag(/<meta property="og:title" content="([^"]*)"/), ogDesc: tag(/<meta property="og:description" content="([^"]*)"/),
+        ogImage: tag(/<meta property="og:image" content="([^"]*)"/), ogUrl: tag(/<meta property="og:url" content="([^"]*)"/),
+        ogType: tag(/<meta property="og:type" content="([^"]*)"/), locale: tag(/<meta property="og:locale" content="([^"]*)"/),
+        noindex: /<meta name="robots" content="noindex">/.test(h),
+      };
+    };
+    const ok = (m) => m.description && m.description.length >= 30 && m.description.length <= 161 && m.ogDesc === m.description && m.ogTitle && /^https?:\/\//.test(m.ogImage) && m.ogUrl === m.canonical;
+    const home = await head('/');
+    check('Trang chủ: description, canonical and Open Graph tags, vi_VN', ok(home) && home.canonical === BASE + '/' && home.locale === 'vi_VN' && home.h.includes(`hreflang="en" href="${BASE}/?lang=en"`), home);
+    const robot = await head('/san-pham/robot-leo-cau-thang');
+    check('a robot page: its own description and picture', ok(robot) && robot.ogImage.includes('?w=1200') && robot.canonical === BASE + '/san-pham/robot-leo-cau-thang', robot);
+    const enLab = await head('/giai-phap/stem-lab', 'en');
+    check('an English page: the ?lang=en address, en_US, English text', ok(enLab) && enLab.canonical === BASE + '/giai-phap/stem-lab?lang=en' && enLab.locale === 'en_US' && /STEM Lab/.test(enLab.description), enLab);
+    const d = await db();
+    const project = await d.collection('projects').findOne({ 'images.0': { $exists: true } });
+    if (project) {
+      const p = await head(`/giai-phap/du-an/${project._id}`);
+      check('a project with photos: its first photo is the preview picture', ok(p) && (p.ogImage.startsWith(BASE + project.images[0].split('?')[0]) || p.ogImage.includes('cloudinary')), p.ogImage);
+    }
+    const img = await fetch(home.ogImage, { headers: { accept: 'image/*' } });
+    check('the preview picture opens as a JPEG for Facebook / Zalo (no WebP asked)', img.status === 200 && /image\/(jpeg|png)/.test(img.headers.get('content-type')), [img.status, img.headers.get('content-type'), home.ogImage]);
+    const article = await d.collection('articles').findOne({ published: true });
+    if (article) check('a news article: og:type article', (await head(`/tin-tuc/${article._id}`)).ogType === 'article');
+    for (const path of ['/dang-nhap', '/dang-ky', '/khong-co-trang-nay']) {
+      const m = await head(path);
+      check(`${path}: noindex, no description or preview tags`, m.noindex && !m.description && !m.ogTitle, m.h.slice(0, 300));
+    }
   });
 
   await part(b, 'Chính sách bảo mật page (lib/privacy-policy.js)', async () => {
