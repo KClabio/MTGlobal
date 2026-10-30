@@ -13,7 +13,7 @@ await suite(async (b) => {
 
   await part(b, 'password eye', async () => {
     const EMAIL = `zztest-eye-${stamp}@example.com`;
-    const r0 = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: 'ZZ Eye', email: EMAIL, password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
+    const r0 = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: 'ZZ Eye', email: EMAIL, password: 'zz-secret1', confirmPassword: 'zz-secret1', agreePrivacy: '1' }) });
     check('test account created', r0.status === 303);
     const posted = [];
     b.on('Network.requestWillBeSent', (p) => { if (p.request.method === 'POST') posted.push({ url: p.request.url, body: p.request.postData || '' }); });
@@ -41,7 +41,7 @@ await suite(async (b) => {
 
     // Toggle behaviour (login page)
     await typeInto('#loginEmail', EMAIL);
-    await typeInto('#loginPassword', 'secret1');
+    await typeInto('#loginPassword', 'zz-secret1');
     await ev(`document.getElementById('loginPassword').setSelectionRange(3, 3)`);
     await clickSel('[aria-controls="loginPassword"]');
     let s = await boxState('loginPassword');
@@ -79,9 +79,9 @@ await suite(async (b) => {
     check('profile "Đổi mật khẩu": 3 boxes with eye buttons', prof.toggles === 3, prof);
     check('browser-fill setup: invisible unnamed username = your email; current = current-password, new/confirm = new-password',
       prof.user && prof.user.name === null && prof.user.value === EMAIL && prof.user.readonly && prof.user.hiddenVisually && prof.user.tab === -1 && prof.current === 'current-password' && prof.newAc === 'new-password' && prof.confAc === 'new-password', prof);
-    await typeInto('#currentPassword', 'secret1');
-    await typeInto('#newPassword', 'secret22');
-    await typeInto('#confirmNewPassword', 'secret22');
+    await typeInto('#currentPassword', 'zz-secret1');
+    await typeInto('#newPassword', 'zz-secret22');
+    await typeInto('#confirmNewPassword', 'zz-secret22');
     await clickSel('[aria-controls="currentPassword"]');
     await clickSel('[aria-controls="newPassword"]');
     const each = await ev(`['currentPassword','newPassword','confirmNewPassword'].map((i) => document.getElementById(i).type)`);
@@ -92,7 +92,7 @@ await suite(async (b) => {
     check('only currentPassword / newPassword / confirmPassword are sent (no username field)', JSON.stringify([...body.keys()].sort()) === JSON.stringify(['confirmPassword', 'currentPassword', 'newPassword']), [...body.keys()]);
     check('password changed with the boxes shown (success message)', await ev(`!!document.querySelector('.form-alert.success')`));
     const tryLogin = async (pw) => (await fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ email: EMAIL, password: pw }) })).headers.get('location');
-    const oldLoc = await tryLogin('secret1'); const newLoc = await tryLogin('secret22');
+    const oldLoc = await tryLogin('zz-secret1'); const newLoc = await tryLogin('zz-secret22');
     check('old password rejected, new password accepted', oldLoc === null && newLoc && newLoc !== '/dang-nhap', { oldLoc, newLoc });
     // back/forward restore hides everything
     await b.clearCookie('connect.sid');
@@ -201,7 +201,7 @@ await suite(async (b) => {
       r = await pw({ currentPassword: 'wrong', newPassword: 'newpass1', confirmPassword: 'newpass1' });
       check('wrong current password rejected', r.status === 400 && has(r.text, 'Mật khẩu hiện tại không đúng.'));
       r = await pw({ currentPassword: 'oldpass1', newPassword: '123', confirmPassword: '123' }, 'en');
-      check('too-short new password rejected (EN)', r.status === 400 && has(r.text, 'at least 6 characters'));
+      check('too-short new password rejected (EN)', r.status === 400 && has(r.text, 'at least 8 characters'));
       r = await pw({ currentPassword: 'oldpass1', newPassword: 'oldpass1', confirmPassword: 'oldpass1' });
       check('new = current rejected', r.status === 400 && has(r.text, 'Mật khẩu mới phải khác mật khẩu hiện tại.'));
       r = await pw({ currentPassword: 'oldpass1', newPassword: 'newpass1', confirmPassword: 'newpass2' });
@@ -374,7 +374,7 @@ await suite(async (b) => {
       return { status: res.status, location: res.headers.get('location'), text: await res.text() };
     };
     const errorsIn = (html) => Object.fromEntries([...html.matchAll(/data-error-for="(\w+)">([^<]*)</g)].map((m) => [m[1], m[2].replace(/&#39;/g, "'")]));
-    const ok = { name: 'ZZ Signup', email: `zztest-signup-${stamp}@example.com`, phone: '', schoolOrCompany: '', password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' };
+    const ok = { name: 'ZZ Signup', email: `zztest-signup-${stamp}@example.com`, phone: '', schoolOrCompany: '', password: 'zz-secret1', confirmPassword: 'zz-secret1', agreePrivacy: '1' };
 
     // Server checks (the browser checks are bypassed here)
     let r = await post('/dang-ky', { name: ' ', email: '', password: '', confirmPassword: '' });
@@ -387,10 +387,26 @@ await suite(async (b) => {
     check('… the page links the policy next to the tick', /<label class="checkbox-row consent-row" for="regAgree">[\s\S]*?href="\/chinh-sach-bao-mat"/.test(r.text));
     r = await post('/dang-ky', { ...ok, email: 'not-an-email', phone: '12ab', password: 'abc', confirmPassword: 'abd' });
     e = errorsIn(r.text);
-    check('server: bad email, bad phone, short password, mismatched confirmation each named', r.status === 400 && e.email === 'Email không hợp lệ.' && e.phone === 'Số điện thoại không hợp lệ.' && e.password === 'Mật khẩu cần tối thiểu 6 ký tự.' && e.confirmPassword === 'Mật khẩu xác nhận không khớp.', e);
+    check('server: bad email, bad phone, short password, mismatched confirmation each named', r.status === 400 && e.email === 'Email không hợp lệ.' && e.phone === 'Số điện thoại không hợp lệ.' && e.password === 'Mật khẩu cần tối thiểu 8 ký tự.' && e.confirmPassword === 'Mật khẩu xác nhận không khớp.', e);
     check('server: what was typed is kept (name, email, phone)', r.text.includes('value="ZZ Signup"') && r.text.includes('value="not-an-email"') && r.text.includes('value="12ab"'));
-    r = await post('/dang-ky', { ...ok, password: 'secret1', confirmPassword: 'secret2' }, 'en');
+    r = await post('/dang-ky', { ...ok, password: 'zz-secret1', confirmPassword: 'zz-secret2' }, 'en');
     check('server: messages in English on the English site', r.status === 400 && errorsIn(r.text).confirmPassword === "The passwords don't match.", errorsIn(r.text));
+    // Long enough but easy to guess (lib/passwords.js): the list, one repeated character, a plain run
+    const common = [];
+    for (const pw of ['12345678', 'Password', 'matkhau123', 'aaaaaaaa', 'abcdefgh']) {
+      r = await post('/dang-ky', { ...ok, password: pw, confirmPassword: pw });
+      if (r.status !== 400 || errorsIn(r.text).password !== 'Mật khẩu này quá phổ biến, dễ bị đoán. Vui lòng chọn mật khẩu khác.') common.push(pw);
+    }
+    check('server: common passwords refused ("12345678", "Password", "matkhau123", "aaaaaaaa", "abcdefgh")', !common.length, common);
+    r = await post('/dang-ky', { ...ok, password: '12345678', confirmPassword: '12345678' }, 'en');
+    check('… in English too', r.status === 400 && errorsIn(r.text).password === 'This password is too common and easy to guess. Please choose another one.', errorsIn(r.text));
+    // Three sign-ups with one email at the same moment: one account, the others told the email is taken (not the error page)
+    const raceEmail = `zztest-race-${stamp}@example.com`;
+    const race = await Promise.all([1, 2, 3].map(() => post('/dang-ky', { ...ok, email: raceEmail })));
+    const raceStatuses = race.map((x) => x.status).sort();
+    check('server: 3 sign-ups at the same moment → one account, the other two "đã được đăng ký" (no error page)',
+      JSON.stringify(raceStatuses) === '[303,400,400]' && race.filter((x) => x.status === 400).every((x) => /đã được đăng ký/.test(errorsIn(x.text).email || ''))
+      && (await d.collection('users').countDocuments({ email: raceEmail })) === 1, raceStatuses);
     check('server: nothing was saved by the refused sign-ups', !(await d.collection('users').findOne({ email: ok.email })));
     r = await post('/dang-ky', ok);
     check('server: name + email + password + tick is enough (phone and school are optional) → login page, not logged in', r.status === 303 && r.location === '/dang-nhap', r.status);
@@ -420,14 +436,14 @@ await suite(async (b) => {
     const lengthLine = () => ev(`(() => { const p = document.querySelector('[data-password-length]'); return { text: p.textContent, short: p.classList.contains('is-short'), ok: p.classList.contains('is-ok'), shown: !p.hidden }; })()`);
     await typeIn('regPassword', 'abc');
     let len = await lengthLine();
-    check('password "abc": "Còn thiếu 3 ký tự (tối thiểu 6)." while typing', len.text === 'Còn thiếu 3 ký tự (tối thiểu 6).' && len.short && len.shown, len);
+    check('password "abc": "Còn thiếu 5 ký tự (tối thiểu 8)." while typing', len.text === 'Còn thiếu 5 ký tự (tối thiểu 8).' && len.short && len.shown, len);
     await ev(`document.getElementById('regPassword').blur()`);
-    check('… and leaving the box with 3 characters names the rule in red', (await ev(`(document.querySelector('[data-error-for="password"]') || {}).textContent`)) === 'Mật khẩu cần tối thiểu 6 ký tự.');
-    await ev(`document.getElementById('regPassword').focus()`); await send('Input.insertText', { text: 'def' });
+    check('… and leaving the box with 3 characters names the rule in red', (await ev(`(document.querySelector('[data-error-for="password"]') || {}).textContent`)) === 'Mật khẩu cần tối thiểu 8 ký tự.');
+    await ev(`document.getElementById('regPassword').focus()`); await send('Input.insertText', { text: 'defgh' });
     len = await lengthLine();
-    check('6 characters: "Đủ độ dài ✓" in green, the red message gone', len.text === 'Đủ độ dài ✓' && len.ok && len.shown && !(await ev(`!!document.querySelector('[data-error-for="password"]')`)), len);
-    await typeIn('regPassword', 'secret1');
-    await typeIn('regConfirm', 'secret');
+    check('8 characters: "Đủ độ dài ✓" in green, the red message gone', len.text === 'Đủ độ dài ✓' && len.ok && len.shown && !(await ev(`!!document.querySelector('[data-error-for="password"]')`)), len);
+    await typeIn('regPassword', 'zz-secret1');
+    await typeIn('regConfirm', 'zz-secret');
     check('browser: the confirmation says at once when it does not match', (await ev(`(document.querySelector('[data-error-for="confirmPassword"]') || {}).textContent`)) === 'Mật khẩu xác nhận không khớp.');
     await send('Input.insertText', { text: '1' });
     check('… and when it does', await ev(`!document.querySelector('[data-error-for="confirmPassword"]') && (document.querySelector('[data-ok-for="confirmPassword"]') || {}).textContent === 'Mật khẩu xác nhận khớp.'`));
@@ -440,7 +456,7 @@ await suite(async (b) => {
       st.path === '/dang-nhap' && /Đăng ký thành công/.test(st.note || '') && st.email === browserEmail && st.focus === 'loginPassword' && !st.loggedIn, st);
     await b.nav('/dang-nhap', 200);
     check('the welcome note shows once only', !(await ev(`!!document.querySelector('[data-registered]')`)));
-    await typeIn('loginEmail', browserEmail); await typeIn('loginPassword', 'secret1');
+    await typeIn('loginEmail', browserEmail); await typeIn('loginPassword', 'zz-secret1');
     await b.reducedMotion(false); // normal speed first (this PC has "reduced motion" on); the admin login below checks it on
     l = b.waitLoad(); await ev(`document.querySelector('form[action="/dang-nhap"]').requestSubmit()`); await l; await sleep(300);
     check('logging in → Trang chủ, logged in', await ev(`location.pathname === '/' && !!document.querySelector('.user-menu')`));

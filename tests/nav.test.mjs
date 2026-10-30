@@ -270,6 +270,27 @@ await suite(async (b) => {
     await ev(`document.getElementById('navToggle').click()`); await sleep(60);
     const dOpening = await drawerLook(); await sleep(450); const dOpen = await drawerLook();
     check('phone: ☰ slides the drawer shut (then it is gone) and open again', dClosing.shown && dClosing.opacity < 1 && !dGone.open && !dGone.shown && dOpening.shown && dOpening.opacity < 1 && dOpen.opacity === 1, { dClosing, dGone, dOpening, dOpen });
+    // Keyboard and screen readers: ☰ says open/closed, Tab stays in the header (the page behind is covered), Esc closes
+    const tabKey = async (shift = false) => {
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, modifiers: shift ? 8 : 0 });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, modifiers: shift ? 8 : 0 });
+    };
+    const expanded = () => ev(`document.getElementById('navToggle').getAttribute('aria-expanded')`);
+    check('phone: ☰ tells screen readers the drawer is open (aria-expanded, aria-controls the menu)', (await expanded()) === 'true' && (await ev(`document.getElementById('navToggle').getAttribute('aria-controls')`)) === 'mainNav');
+    await ev(`document.getElementById('navToggle').focus()`);
+    const outside = [];
+    for (let i = 0; i < 40; i++) { await tabKey(i >= 30); if (!(await ev(`document.getElementById('siteHeader').contains(document.activeElement)`))) outside.push(i); }
+    check('phone: Tab and Shift+Tab stay inside the header while the drawer is open (40 presses)', outside.length === 0, outside);
+    await b.key('Escape', 'Escape', 27); await sleep(500);
+    check('phone: Esc closes the drawer and gives the focus back to ☰ (aria-expanded false)', !(await drawerLook()).open && (await ev(`document.activeElement.id`)) === 'navToggle' && (await expanded()) === 'false');
+    await b.reducedMotion(true);
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 }); await sleep(150);
+    const rmOpen = (await drawerLook()).open;
+    await b.key('Escape', 'Escape', 27); await sleep(300);
+    check('phone, reduced motion: Enter on ☰ opens the drawer, Esc closes it', rmOpen && !(await drawerLook()).open, rmOpen);
+    await b.reducedMotion(false);
+    await ev(`document.getElementById('navToggle').click()`); await sleep(450);
     const tp = await center('.main-nav .nav-dropdown:nth-of-type(2) .nav-dropdown-trigger');
     { const l = waitLoad();
       await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tp.x, y: tp.y }] });
@@ -277,6 +298,18 @@ await suite(async (b) => {
     check('phone: tapping a section title opens its landing page (/giai-phap)', (await ev('location.pathname')) === '/giai-phap');
     const l = waitLoad(); await ev(`document.querySelector('.main-nav a[href="/giai-phap/workshop"]').click()`); await l;
     check('phone: a submenu link opens its page', (await ev('location.pathname')) === '/giai-phap/workshop');
+  });
+
+  await part(b, 'tab icon (favicon)', async () => {
+    const ico = await fetch(BASE + '/favicon.ico');
+    const bytes = new Uint8Array(await ico.arrayBuffer());
+    check('/favicon.ico is an icon file (no "not found" on every first visit)', ico.status === 200 && /icon/.test(ico.headers.get('content-type') || '') && bytes[2] === 1 && bytes[4] === 1, ico.status);
+    const links = (html) => ({ icon: /<link rel="icon" href="\/images\/icon-32\.png" sizes="32x32" type="image\/png">/.test(html), apple: /<link rel="apple-touch-icon" href="\/images\/icon-180\.png">/.test(html) });
+    const pub = links(await (await fetch(BASE + '/')).text());
+    const adm = links(await (await fetch(BASE + '/admin', { headers: { cookie: `connect.sid=${admin.sid}` } })).text());
+    check('the website and the admin point to the tab icon and the iPhone home-screen icon', pub.icon && pub.apple && adm.icon && adm.apple, { pub, adm });
+    const files = await Promise.all(['/images/icon-32.png', '/images/icon-180.png'].map(async (p) => { const r = await fetch(BASE + p); return r.status === 200 && r.headers.get('content-type') === 'image/png'; }));
+    check('both icon pictures load', files.every(Boolean), files);
   });
 
   await part(b, 'logo always shown', async () => {
@@ -478,7 +511,7 @@ await suite(async (b) => {
     check(`"Hoàn tất" tag, selected chip/tab counts and tab name >= 4.5:1 in light and dark (${smallSeen} checked)`, smallSeen >= 8 && smallBad.length === 0, smallBad);
     // "Chưa có tài khoản? Đăng ký": the link is underlined, so it doesn't rely on colour (dark mode: same brightness as the text)
     await nav('/');
-    const under = await ev(`(() => { const box = document.createElement('div'); box.innerHTML = '<p class="auth-switch">x <a href="#">a</a></p><p class="login-needed-alt">x <a href="#">b</a></p>'; document.querySelector('main').appendChild(box);
+    const under = await ev(`(() => { const box = document.createElement('div'); box.innerHTML = '<p class="auth-switch">x <a href="#">a</a></p><p class="form-guest-login">x <a href="#">b</a></p>'; document.querySelector('main').appendChild(box);
       const r = [...box.querySelectorAll('a')].map((a) => getComputedStyle(a).textDecorationLine); box.remove(); return r; })()`);
     check('dark mode: "Đăng ký" / "Đăng nhập" links in the login lines are underlined', under.length === 2 && under.every((d) => d.includes('underline')), under);
     await b.setCookie('theme', 'dark');

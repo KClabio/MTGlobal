@@ -17,12 +17,12 @@
 <table class="data-table">
   <thead>
     <tr>
-      <th class="drag-cell"></th>
+      <th class="drag-cell"><span class="sr-only"><%= t('admin.common.order') %></span></th>
       <th><%= t('admin.common.image') %></th>
       <th><%= t('admin.products.colName') %></th>
       <th><%= section.key === 'equipment' ? t('admin.products.colGroup') : t('admin.products.colCategory') %></th>
       <th><%= t('admin.products.colStatus') %></th>
-      <th></th>
+      <th><span class="sr-only"><%= t('admin.common.actions') %></span></th>
     </tr>
   </thead>
   <tbody data-sortable="<%= section.sortType %>">

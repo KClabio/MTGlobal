@@ -5,6 +5,7 @@ const router = express.Router();
 const QuoteRequest = require('../models/QuoteRequest');
 const { requireAuth } = require('../middleware/auth');
 const { validateQuoteRequest, readQuoteValues } = require('../lib/quote-request');
+const requestMail = require('../lib/request-mail');
 
 router.use(requireAuth);
 
@@ -47,11 +48,13 @@ router.post('/yeu-cau/:id/sua', async (req, res) => {
   }
 
   const { name, phone, email, schoolOrCompany, message, interestedIn } = values;
+  const editedAt = new Date();
   const updated = await QuoteRequest.updateOne(
     { _id: request._id, user: req.user._id, status: EDITABLE },
-    { $set: { name, phone, email, schoolOrCompany, message, interestedIn, editedAt: new Date(), privacyAcceptedAt: new Date() } },
+    { $set: { name, phone, email, schoolOrCompany, message, interestedIn, editedAt, privacyAcceptedAt: editedAt } },
   );
   if (!updated.matchedCount) return res.redirect(303, '/tai-khoan?khoa=1');
+  requestMail.notifyChangedRequest({ ...request, name, phone, email, schoolOrCompany, message, interestedIn, editedAt }, { req, user: req.user });
   res.redirect(303, `/tai-khoan?da-sua=${request._id}`);
 });
 

@@ -35,7 +35,11 @@ const siteSettingsSchema = new mongoose.Schema({
     phone: { type: String, default: '' },
     email: { type: String, default: '' },
     mapEmbedUrl: { type: String, default: '' },
+    zalo: { type: String, default: '' }, // phone number of the company's Zalo: the chat button (partials/chat-button.ejs)
+    messenger: { type: String, default: '' }, // Facebook page name (m.me/<name>): the chat button
   },
+  // Who gets an email for each new or changed request (Cài đặt chung; lib/request-mail.js), at most 10 addresses
+  requestEmails: { type: [String], default: [] },
 }, { timestamps: true });
 
 module.exports = mongoose.model('SiteSettings', siteSettingsSchema);

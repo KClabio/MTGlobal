@@ -1,5 +1,6 @@
 <%
   const activeNav = typeof active !== 'undefined' ? active : '';
+  const newErrors = typeof unseenErrors !== 'undefined' ? unseenErrors : 0; // routes/admin.js
   // Same structure and order as the website menu (views/partials/header.ejs)
   const navGroups = [
     { items: [
@@ -31,6 +32,7 @@
       { key: 'yeu-cau', href: '/admin/yeu-cau', label: t('admin.nav.requests'), icon: 'inbox' },
       { key: 'nguoi-dung', href: '/admin/nguoi-dung', label: t('admin.nav.users'), icon: 'users' },
       { key: 'cai-dat', href: '/admin/cai-dat', label: t('admin.nav.settings'), icon: 'settings' },
+      { key: 'nhat-ky-loi', href: '/admin/nhat-ky-loi', label: t('admin.nav.errors'), icon: 'alert-triangle', badge: newErrors },
     ] },
   ];
 %>
@@ -42,6 +44,8 @@
   <title><%= t('admin.pageTitle') %></title>
   <%# The website's styles (some admin forms reuse them), then the admin's own, as one file (lib/assets.js) %>
   <link rel="stylesheet" href="<%= asset('/css/admin-all.css') %>">
+  <link rel="icon" href="/images/icon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/images/icon-180.png">
   <script nonce="<%= cspNonce %>">document.documentElement.classList.add('js');</script>
 </head>
 <body>
@@ -62,6 +66,7 @@
           <% group.items.forEach(function (item) { %>
             <a href="<%= item.href %>" class="<%= activeNav === item.key ? 'active' : '' %>"<%- activeNav === item.key ? ' aria-current="page"' : '' %>>
               <%- include('icon', { name: item.icon }) %><span><%= item.label %></span>
+              <% if (item.badge) { %><span class="admin-nav-badge"><span aria-hidden="true"><%= item.badge %></span><span class="sr-only">(<%= t('admin.nav.errorsNew', { n: item.badge }) %>)</span></span><% } %>
             </a>
           <% }) %>
         <% }) %>
@@ -85,15 +90,24 @@
         var KEY = 'adminNavScroll';
         var saved = null;
         try { saved = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) { /* storage blocked */ }
-        if (saved) bar.scrollTop = saved.top || 0;
-        var active = bar.querySelector('.admin-nav a.active');
-        if (active) {
-          var b = bar.getBoundingClientRect();
-          var a = active.getBoundingClientRect();
-          // Hidden behind the sticky language bar at the bottom counts as hidden too
-          var lang = bar.querySelector('.admin-lang');
-          var bottom = b.bottom - (lang && getComputedStyle(lang).position === 'sticky' ? lang.offsetHeight : 0);
-          if (a.top < b.top || a.bottom > bottom) bar.scrollTop += a.top - b.top - (bottom - b.top - a.height) / 2;
+        function place() {
+          if (saved) bar.scrollTop = saved.top || 0;
+          var active = bar.querySelector('.admin-nav a.active');
+          if (active) {
+            var b = bar.getBoundingClientRect();
+            var a = active.getBoundingClientRect();
+            // Hidden behind the sticky language bar at the bottom counts as hidden too
+            var lang = bar.querySelector('.admin-lang');
+            var bottom = b.bottom - (lang && getComputedStyle(lang).position === 'sticky' ? lang.offsetHeight : 0);
+            if (a.top < b.top || a.bottom > bottom) bar.scrollTop += a.top - b.top - (bottom - b.top - a.height) / 2;
+          }
+          return bar.scrollTop;
+        }
+        var placed = place();
+        // Until the site font has loaded, the stand-in font makes the menu a little shorter, so a position near the
+        // bottom is cut short: place it again once the font is there (unless the menu was scrolled meanwhile)
+        if (document.fonts && document.fonts.status !== 'loaded') {
+          document.fonts.ready.then(function () { if (bar.scrollTop === placed) place(); });
         }
         function save() {
           try { sessionStorage.setItem(KEY, JSON.stringify({ top: bar.scrollTop })); } catch (e) { /* storage blocked */ }

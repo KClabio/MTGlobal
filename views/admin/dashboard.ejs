@@ -14,6 +14,10 @@
   <a class="btn btn-primary btn-sm" href="/admin/yeu-cau?status=moi"><%- include('partials/icon', { name: 'inbox', size: 16 }) %> <%= t('admin.dashboard.viewNew') %></a>
 </div>
 
+<% if (unseenErrors) { %>
+  <p class="error-notice"><%- include('partials/icon', { name: 'alert-triangle', size: 18 }) %> <%= t('admin.errors.dashNotice', { n: unseenErrors }) %> <a href="/admin/nhat-ky-loi"><%= t('admin.errors.dashLink') %></a></p>
+<% } %>
+
 <!-- KPI tiles -->
 <div class="kpi-grid">
   <a class="kpi" href="/admin/yeu-cau?status=moi">
@@ -189,6 +193,61 @@
     <% } %>
   </section>
 </div>
+
+<!-- Visits to the public pages, last 30 days, and the pages that brought requests (lib/page-views.js) -->
+<% const v = dash.visits; const fmtDay = function (d) { return new Date(d + 'T12:00:00+07:00').toLocaleDateString(lang === 'en' ? 'en-GB' : 'vi-VN', { day: 'numeric', month: 'numeric' }); }; %>
+<section class="panel visits-panel" data-visits>
+  <header class="panel-head">
+    <span class="icon-chip chip-green"><%- include('partials/icon', { name: 'eye', size: 18 }) %></span>
+    <div>
+      <h2><%= t('admin.dashboard.visitsTitle') %></h2>
+      <p><%= t('admin.dashboard.visitsSub', { days: v.days }) %></p>
+    </div>
+    <strong class="visits-total" data-visits-total><%= v.total.toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN') %></strong>
+  </header>
+  <figure class="visits-chart">
+    <svg viewBox="0 0 300 64" preserveAspectRatio="none" role="img" focusable="false"
+         aria-label="<%= t('admin.dashboard.visitsAria', { days: v.days, n: v.total, from: fmtDay(v.first), to: fmtDay(v.last) }) %>">
+      <% v.bars.forEach(function (b) { if (b.h) { %><rect x="<%= b.x %>" y="<%= b.y %>" width="<%= b.w %>" height="<%= b.h %>" rx="1"><title><%= fmtDay(b.day) %>: <%= b.n %></title></rect><% } }) %>
+      <line x1="0" y1="62.5" x2="300" y2="62.5" />
+    </svg>
+    <figcaption><span><%= fmtDay(v.first) %></span><span><%= fmtDay(v.last) %></span></figcaption>
+  </figure>
+  <div class="visits-cols">
+    <div>
+      <h3><%= t('admin.dashboard.visitsTop') %></h3>
+      <% if (v.topPages.length) { %>
+        <ul class="hbar-list" data-visits-top>
+          <% v.topPages.forEach(function (p) { %>
+            <li class="hbar-row visits-row">
+              <a class="hbar-label" href="<%= p.path %>" target="_blank" rel="noopener"><%= p.path %></a>
+              <span class="hbar-track" aria-hidden="true"><span class="hbar-fill" style="width:<%= p.width %>%;"></span></span>
+              <span class="hbar-value"><%= p.n %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p class="panel-empty"><%= t('admin.dashboard.visitsEmpty') %></p>
+      <% } %>
+    </div>
+    <div>
+      <h3><%= t('admin.dashboard.broughtTitle') %></h3>
+      <p class="form-hint"><%= t('admin.dashboard.broughtHint') %></p>
+      <% if (v.requests.length) { %>
+        <table class="data-table visits-table" data-visits-requests>
+          <thead><tr><th scope="col"><%= t('admin.dashboard.colPage') %></th><th scope="col" class="num"><%= t('admin.dashboard.colRequests') %></th><th scope="col" class="num"><%= t('admin.dashboard.colViews') %></th><th scope="col" class="num"><%= t('admin.dashboard.colPer100') %></th></tr></thead>
+          <tbody>
+            <% v.requests.forEach(function (r) { %>
+              <tr><td><%= r.path %></td><td class="num"><%= r.requests %></td><td class="num"><%= r.views %></td><td class="num"><%= r.per100 === null ? '–' : r.per100.toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN') %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } else { %>
+        <p class="panel-empty"><%= t('admin.dashboard.broughtEmpty', { days: v.days }) %></p>
+      <% } %>
+    </div>
+  </div>
+</section>
 
 <!-- Website content inventory -->
 <section class="panel">

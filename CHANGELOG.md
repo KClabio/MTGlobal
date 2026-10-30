@@ -6,7 +6,43 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.1.1] - 2026-10-24
+## [1.2.0] - 2026-10-30
+
+### Added
+- **Requests without an account:** Liên hệ, the robot pages and the Dịch vụ pages now take a request from anyone, with just a name, a phone number or email and a message. A short line above the form offers to log in instead, which fills the form in and brings the visitor back to it. Without an account one internet address can send 5 requests an hour, and requests filled in by robots are quietly dropped.
+- **Email to staff for each new request:** in Admin → Cài đặt chung → "Email thông báo", type the addresses that should get each new request (up to 10). The email holds the whole request, and pressing "Reply" answers the sender. Staff also get an email when a customer changes a sent request.
+- **Confirmation email to the sender:** whoever gives an email gets a short "MTG đã nhận được yêu cầu tư vấn của bạn" in Vietnamese or English, with the company's phone and email. It never repeats what was typed into the form, so nobody can use it to send their own words to a stranger, and one address gets at most 3 a day.
+- **Zalo / Messenger button:** a round button at the bottom right of every page opens Zalo or Messenger, each shown with its own logo. Enter the Zalo number and the Facebook page in Admin → Thông tin công ty. The same links are shown on Liên hệ and in the footer, and with neither filled in there is no button.
+
+  ![The Zalo / Messenger menu at the bottom right](docs/screenshots/1.2.0/chat-menu.jpg)
+- **"Lượt xem trang" on Tổng quan:** the website now counts its own page views per day, with no cookies, no outside company and nothing about the visitor. The admin overview shows the last 30 days, the most viewed pages, and which pages bring requests, with "per 100 views", the number to compare in A/B tests. The counts are deleted after 24 months, like requests, and the draft privacy policy now explains this.
+
+  ![Tổng quan: "Lượt xem trang" (test numbers)](docs/screenshots/1.2.0/page-views.jpg)
+- **"Nhật ký lỗi" in the admin:** every server error is now saved, once per kind of error, with how often it happened, the page and the time (kept 90 days, without form contents, cookies or emails). A red count in the admin menu and a notice on Tổng quan show new ones, with "Đã xem" and "Xoá". With `ALERT_EMAIL_TO` and an email account set on the server (see `.env.example`), an alert email goes out at most once an hour per kind of error.
+- **Printing:** a printed page now holds only the content: the logo at the top, no menu, buttons or theme switch, black text on white paper even from dark mode, web addresses written after outside links, pictures kept whole, and a footer with just the company and its contacts. A Giải pháp page prints whole: every folded section opens and every photo tab is shown.
+
+  ![Về MTG on paper](docs/screenshots/1.2.0/print-ve-mtg.jpg)
+
+### Fixed
+- Keyboard users now see the blue focus ring on form fields (website and admin), around the search boxes, around partner logos and on videos.
+- Screen readers announced the last column of the admin lists (the Sửa / Xoá buttons) and the drag column without a name; they are now read as "Thao tác" and "Thứ tự".
+- A form sent completely empty (as spam robots do) showed the error page and filled Nhật ký lỗi; it now gets the normal "please fill in" answer.
+- Admin → Tổng quan no longer scrolls sideways on phones: the "Lượt xem trang" lists now fit the screen, even with long page addresses.
+- The phone menu (☰) now works by keyboard: Esc closes it, Tab stays inside the menu instead of slipping onto the page behind, and screen readers hear whether it is open.
+- The website and the admin now have a tab icon: the MTG letters, also used when a phone saves the site to its home screen.
+- Screen readers now hear headings in order on every page, a card's picture no longer repeats the card's title, and the pie charts on Tổng quan are read as one picture with a summary (the groups that open their own chart are real buttons in the legend). Nothing changes on screen.
+- Signing up twice at the same moment with one email showed the error page; it now shows "Email này đã được đăng ký" like the normal check.
+- Projects with the same name (for example several "Phòng STEM INNOVATION" rooms) now have different page titles, with the school added, so Google and Facebook/Zalo previews tell them apart.
+- The request lists and Tổng quan stay fast as the number of requests grows: the database now keeps indexes for them.
+
+### Security
+- **Requests without an account are guarded against spam robots:** a hidden box that only robots fill in (their requests are quietly dropped), at most 5 requests an hour from one internet address, and at most 3 confirmation emails a day to one address. The confirmation email never repeats what was typed into the form, so it can't be used to send messages to strangers.
+- **Stronger passwords:** new passwords need at least 8 characters and may not be one of the most used passwords (such as "12345678" or "matkhau123"), one repeated character or a plain run like "abcdefgh". This applies to sign-up, "Đổi mật khẩu" and a Google account's first password; existing passwords keep working.
+- **Server errors are recorded safely:** Nhật ký lỗi keeps the technical details for the team, never form contents, cookies or email addresses, and customers can't open it.
+- **Robust forms:** a form sent completely empty, or far too big, gets a normal answer instead of an error.
+- **Up-to-date packages:** body-parser, multer and qs were updated to versions without known problems.
+
+## [1.1.1] - 2026-10-24 · `5a73553`
 
 ### Added
 - **"Hỗ trợ" (Help) page** at `/ho-tro`, in Vietnamese and English: 21 ready-written questions and answers on using the website, in five groups (Tài khoản, Gửi yêu cầu, Sản phẩm & giải pháp, Quyền riêng tư & dữ liệu, Sử dụng website). It has a search box (accents optional), a tile for each group, answers that slide open, and a "Vẫn cần hỗ trợ?" band with the company's phone, email and a "Gửi yêu cầu" button. It is linked in the footer and the account menu, and short "need help?" lines lead to the right group from the login and sign-up pages, every request form, "Yêu cầu của tôi" and Hồ sơ.

@@ -12,6 +12,7 @@ const Service = require('../models/Service');
 const SiteSettings = require('../models/SiteSettings');
 const { toPlainText } = require('../lib/text');
 const { upsertRobotStem } = require('./add-robot-stem');
+const { addStairRobotMedia } = require('./add-stair-robot-media');
 const { resetSolutionPage, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
 const { migrateBanners } = require('./migrate-banners');
 const { STARTER_QUESTIONS } = require('../lib/service-content');
@@ -299,6 +300,7 @@ async function main() {
     descriptionVi: toPlainText(STAIR_ROBOT_DESCRIPTION_VI), descriptionEn: toPlainText(STAIR_ROBOT_DESCRIPTION_EN),
     videos: videoUrls, comingSoon: false, featured: true, order: 0,
   });
+  (await addStairRobotMedia(Product)).forEach((line) => console.log('  ' + line)); // photos, short clips, specs
 
   console.log('Đang tạo 3 sản phẩm robot còn lại (chưa có nội dung đầy đủ)...');
   for (let i = 0; i < OTHER_ROBOTS.length; i++) {

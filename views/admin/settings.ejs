@@ -59,6 +59,17 @@
         <label for="mapEmbedUrl"><%= t('admin.settings.map') %></label>
         <input class="form-control" id="mapEmbedUrl" name="mapEmbedUrl" value="<%= contact.mapEmbedUrl || '' %>">
       </div>
+      <%# The website's chat button (partials/chat-button.ejs): shown only for the filled ones %>
+      <div class="form-group">
+        <label for="zalo"><%= t('admin.settings.zalo') %></label>
+        <input class="form-control" id="zalo" name="zalo" inputmode="tel" value="<%= contact.zalo || '' %>" aria-describedby="zaloHint" placeholder="0912345678">
+        <p class="form-hint" id="zaloHint"><%= t('admin.settings.zaloHint') %></p>
+      </div>
+      <div class="form-group">
+        <label for="messenger"><%= t('admin.settings.messenger') %></label>
+        <input class="form-control" id="messenger" name="messenger" value="<%= contact.messenger || '' %>" aria-describedby="messengerHint" placeholder="facebook.com/mtg.vn">
+        <p class="form-hint" id="messengerHint"><%= t('admin.settings.messengerHint') %></p>
+      </div>
       <p class="form-hint"><%= t('admin.settings.brandMoved') %> <a href="/admin/cai-dat"><%= t('admin.nav.settings') %> →</a></p>
       <button type="submit" class="btn btn-primary btn-block"><%= t('admin.settings.save') %></button>
     </aside>

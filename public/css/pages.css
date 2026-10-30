@@ -163,7 +163,7 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 /* ---- STEM equipment: search + one Phần per tab (switched on by main.js; without JS all parts show) ---- */
 .equip-tools { display: grid; gap: 14px; margin-bottom: 28px; }
 .equip-search, .search-pill { display: flex; align-items: center; gap: 10px; max-width: 440px; padding: 0 16px; border: 1px solid var(--mtg-border); border-radius: 999px; background: var(--mtg-surface); color: var(--mtg-muted); }
-.equip-search:focus-within, .search-pill:focus-within { border-color: var(--mtg-blue); box-shadow: 0 0 0 3px var(--mtg-blue-tint); }
+.equip-search:focus-within, .search-pill:focus-within { border-color: var(--mtg-blue); outline: 2px solid var(--mtg-blue); outline-offset: 2px; }
 .equip-search input, .search-pill input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 11px 0; font: inherit; color: var(--mtg-ink); }
 .equip-tabs { display: grid; grid-template-columns: repeat(var(--tabs, 4), minmax(0, 1fr)); gap: 10px; transition: opacity .2s ease; }
 .equip-tab { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 10px 14px; border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius-sm); background: var(--mtg-surface); color: var(--mtg-heading); font: inherit; font-size: .92rem; text-align: left; cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
@@ -222,7 +222,7 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 }
 .trail-node { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: var(--node); height: var(--node); margin: 0 auto 16px;
   border-radius: 50%; background: var(--mtg-gradient-brand); color: #fff; font-size: 1.15rem; font-weight: 800; box-shadow: 0 6px 16px rgba(21, 101, 192, .25), 0 0 0 5px var(--mtg-surface); }
-.trail-body h3 { font-size: 1rem; margin: 0 0 6px; }
+.trail-body :is(h2, h3) { font-size: 1rem; margin: 0 0 6px; }
 .trail-body .card-text { font-size: .92rem; color: var(--mtg-muted); }
 /* Reveal (main.js adds .is-drawn when the trail scrolls into view): stop 1 appears, the line runs to stop 2, it appears, and so on */
 .js .process-trail .trail-step:not(:last-child)::after { transform: scaleX(0); transition: transform var(--seg) linear; transition-delay: calc(var(--i) * var(--seg)); }
@@ -237,12 +237,12 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 .trail-body { border-radius: var(--mtg-radius-sm); }
 .js .process-trail.is-settled .trail-node, .js .process-trail.is-settled .trail-body { transition-delay: 0s;
   transition: transform calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease, background-color calc(180ms * var(--anim)) ease; }
-.trail-body h3 { transition: color calc(180ms * var(--anim)) ease; }
+.trail-body :is(h2, h3) { transition: color calc(180ms * var(--anim)) ease; }
 @media (hover: hover) {
   .process-trail .trail-body { padding: 8px 10px 10px; margin: -8px -10px 0; } /* room for the highlight, without moving the text */
   .js .process-trail.is-settled .trail-step:hover .trail-node { transform: scale(1.12); box-shadow: 0 8px 22px rgba(21, 101, 192, .35), 0 0 0 5px var(--mtg-surface), 0 0 0 10px var(--mtg-blue-tint); }
   .js .process-trail.is-settled .trail-step:hover .trail-body { background: var(--mtg-blue-tint); }
-  .process-trail.is-settled .trail-step:hover .trail-body h3 { color: var(--mtg-blue); }
+  .process-trail.is-settled .trail-step:hover .trail-body :is(h2, h3) { color: var(--mtg-blue); }
 }
 /* Phones and narrow screens: the trail runs down the left side */
 @media (max-width: 900px) {
@@ -317,7 +317,26 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 .help-link { margin: 14px 0 0; text-align: center; font-size: .9rem; color: var(--mtg-muted); }
 .help-link a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
+/* ---- Robot pages (/san-pham/…): upright photo tiles, specs, and the videos across the whole page width ---- */
+.product-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 28px; }
+.product-photos:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.product-specs { margin-top: 20px; }
+.product-specs th { width: 40%; }
+/* Upright tiles (phone videos), five in a row on wide screens; a short last row stays centred.
+   A wide video (.is-wide, set by main.js once its size is known) gets a row of its own at 16:9. */
+.product-videos { --pv-gap: 20px; --pv-cols: 5; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--pv-gap); }
+.product-video { flex: 0 0 calc((100% - (var(--pv-cols) - 1) * var(--pv-gap)) / var(--pv-cols)); min-width: 0; aspect-ratio: 9 / 16;
+  background: #000; border-radius: var(--mtg-radius); overflow: hidden; box-shadow: var(--mtg-shadow); }
+.product-video.is-wide { flex-basis: min(100%, 680px); aspect-ratio: 16 / 9; }
+.product-video video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
+
 /* ---- Responsive ---- */
+@media (max-width: 1100px) { .product-videos { --pv-cols: 3; } }
+@media (max-width: 560px) {
+  .product-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .product-photos > :first-child { grid-column: 1 / -1; } /* the first photo takes the whole width */
+  .product-videos { --pv-cols: 2; --pv-gap: 12px; }
+}
 @media (max-width: 960px) {
   .service-aside { position: static; }
 }
@@ -332,4 +351,16 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
   .help-topic:last-child:nth-child(odd) { grid-column: 1 / -1; } /* a lone last tile takes the whole row */
   .help-topic-icon { width: 36px; height: 36px; }
   .help-group-title { font-size: 1.1rem; }
+}
+
+/* ---- Printing: the whole page, nothing to click. Every photo tab and equipment part is shown (main.js opens the folds
+   before printing) and the process trail is drawn in full; the jump menu, "Khám phá thêm", the contact band,
+   videos and the equipment search are left out ---- */
+@media print {
+  .page-jump, .next-steps, .cta-band, .equip-tools, .media-tablist, .product-videos { display: none !important; }
+  .media-tabs .media-tabpanel[hidden] { display: grid !important; }
+  .media-tabs.is-tabbed .media-tabpanel + .media-tabpanel { margin-top: 24px; }
+  .media-tabpanel .media-frame { max-height: none; }
+  .equip-panel[hidden] { display: block !important; }
+  .js .process-trail .trail-node, .js .process-trail .trail-body, .js .process-trail .trail-step .trail-body::before { opacity: 1 !important; transform: none !important; }
 }

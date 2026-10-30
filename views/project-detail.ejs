@@ -1,4 +1,9 @@
-<%- include('partials/header', { title: pick(project, 'title') + ' - MTG', description: pick(project, 'description'), image: project.images && project.images[0], bannerKey: 'du-an' }) %>
+<%
+  // Several projects share a name ("Phòng STEM INNOVATION PETROVIETNAM"): the school makes each page title unique
+  const projectTitle = pick(project, 'title');
+  const pageName = project.schoolName && !projectTitle.includes(project.schoolName) ? `${projectTitle} – ${project.schoolName}` : projectTitle;
+%>
+<%- include('partials/header', { title: pageName + ' - MTG', description: pick(project, 'description'), image: project.images && project.images[0], bannerKey: 'du-an' }) %>
 
 <%- include('partials/page-banner', {
   pill: t('nav.solutionProjects'),

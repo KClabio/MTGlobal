@@ -103,6 +103,62 @@ export const scenarios = [
         if (v && (v.high || v.critical)) ctx.finding({ severity: 'high', title: 'Packages with known security flaws', detail: list.join(', '), fix: 'Update them (npm audit fix), then run the tests.' });
         else if (v && (v.moderate || v.low)) ctx.finding({ severity: 'low', title: 'Packages with minor known flaws', detail: list.join(', '), fix: 'Update at the next routine update.' });
       }
+
+      // ---- Active attack probes (authorized, against the local QA copy only): injection, XSS, bad IDs ----
+      // Each sends hostile input and confirms the site rejects or escapes it; a finding is raised only on a real failure.
+
+      // 1) NoSQL operator injection on login: an object body (email[$ne]=…) must not sign anyone in.
+      const nosql = [];
+      for (const body of [
+        new URLSearchParams([['email[$ne]', ''], ['password[$ne]', '']]),
+        new URLSearchParams([['email[$gt]', ''], ['password[$gt]', '']]),
+        new URLSearchParams([['email[$regex]', '.*'], ['password[$ne]', '']]),
+      ]) {
+        const inj = new Client();
+        const r = await inj.post('/dang-nhap', body);
+        const account = await inj.get('/tai-khoan');
+        nosql.push({ sent: body.toString(), loginStatus: r.status, accountStatus: account.status, bypassed: r.status === 303 || account.status === 200 });
+      }
+      ctx.result('nosqlLogin', nosql);
+      if (nosql.some((x) => x.bypassed)) ctx.finding({ severity: 'critical', title: 'Login can be bypassed with a NoSQL operator', detail: JSON.stringify(nosql.filter((x) => x.bypassed)), fix: 'Only accept a string email and password (reject objects) before the database query.' });
+
+      // 2) Stored XSS: a request whose name/message carry a script must be shown escaped in the admin and in "Tài khoản".
+      const XSS = '[QA-ATTACK]<script>alert(1)</script><img src=x onerror=alert(2)>';
+      const victim = new Client();
+      await victim.login(QA_ACCOUNTS.customer(23), QA_PASSWORD);
+      const sent = await victim.post('/lien-he', { name: `QA Attack ${XSS}`, email: 'qa-attack@example.com', phone: '0901234567', schoolOrCompany: 'Trường QA', message: XSS, interestedIn: 'khac' });
+      const admin = new Client(); await admin.login(QA_ACCOUNTS.admin, QA_PASSWORD);
+      const adminList = await admin.get('/admin/yeu-cau');
+      const mine = await victim.get('/tai-khoan');
+      // Only a real, unescaped tag is dangerous: correctly escaped content keeps the harmless substring
+      // "onerror=alert(2)" inside &lt;img …&gt;, so match the full tag with its angle brackets intact.
+      const rawPayload = (html) => html.includes('<script>alert(1)</script>') || html.includes('<img src=x onerror=alert(2)>');
+      const reflectedRaw = { adminList: rawPayload(adminList.text), myRequests: rawPayload(mine.text) };
+      const escapedShown = adminList.text.includes('&lt;script&gt;') || mine.text.includes('&lt;script&gt;');
+      ctx.result('storedXss', { submitted: sent.status, reflectedRaw, escapedShown });
+      if (reflectedRaw.adminList || reflectedRaw.myRequests) ctx.finding({ severity: 'critical', title: 'Stored cross-site scripting in a request', detail: `A request's text was shown unescaped (${JSON.stringify(reflectedRaw)}), so an attacker's script would run in the staff browser.`, fix: 'Escape request text in the views (EJS <%= %>).' });
+      await (await ctx.infra.db()).collection('quoterequests').deleteMany({ message: { $regex: '\\[QA-ATTACK\\]' } });
+
+      // 3) Bad / injected IDs in the URL must give a clean 404, never a server error page.
+      const badIds = ['not-an-objectid', '..%2f..%2f..%2fetc%2fpasswd', '{"$ne":null}', '000000000000000000000000'];
+      const idProbes = [];
+      const crashed = (r) => r.status >= 500 || /Đã xảy ra lỗi|Something went wrong|at Object\.|at async |node_modules/.test(r.text);
+      for (const id of badIds) {
+        const g = await victim.get(`/tai-khoan/yeu-cau/${id}/sua`);
+        const d = await victim.get(`/giai-phap/du-an/${id}`);
+        idProbes.push({ id, editStatus: g.status, projectStatus: d.status, crash: crashed(g) || crashed(d) });
+      }
+      ctx.result('badIds', idProbes);
+      if (idProbes.some((x) => x.crash)) ctx.finding({ severity: 'medium', title: 'A bad address shows the server error page', detail: JSON.stringify(idProbes.filter((x) => x.crash)), fix: 'Validate IDs and answer 404 (mongoose.isValidObjectId / findById().catch).' });
+
+      // 4) Reflected XSS sweep: a payload placed in query strings must not come back unescaped anywhere.
+      const refl = [];
+      for (const url of ['/dang-nhap?next=', '/lien-he?quan_tam=', '/giai-phap/thiet-bi?q=', '/tin-tuc?q=']) {
+        const r = await victim.get(url + encodeURIComponent('"><script>alert(3)</script>'));
+        refl.push({ url, status: r.status, raw: r.text.includes('<script>alert(3)</script>') });
+      }
+      ctx.result('reflectedXss', refl);
+      if (refl.some((x) => x.raw)) ctx.finding({ severity: 'high', title: 'Reflected cross-site scripting from a query value', detail: JSON.stringify(refl.filter((x) => x.raw)), fix: 'Escape any query value echoed into a page.' });
     },
   },
   {

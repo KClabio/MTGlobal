@@ -48,9 +48,9 @@ await suite(async (b) => {
     const id = {};
     for (const n of names) {
       c[n] = client();
-      const r = await c[n].req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
+      const r = await c[n].req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'zz-secret1', confirmPassword: 'zz-secret1', agreePrivacy: '1' }) });
       if (r.status !== 303) throw new Error(`register ${n} failed: ${r.status}`);
-      await c[n].req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'secret1' }) }); // signing up doesn't log in
+      await c[n].req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'zz-secret1' }) }); // signing up doesn't log in
       id[n] = String((await users.findOne({ email: mail(n) }))._id);
     }
     await users.updateMany({ email: { $in: [mail('owner'), mail('owner2')] } }, { $set: { role: 'owner' } });
@@ -111,7 +111,7 @@ await suite(async (b) => {
     r = await c.owner.req('/admin/nguoi-dung/not-an-id/xoa', { method: 'POST' });
     check('invalid id handled (redirect, no crash)', r.status === 302 && r.location === '/admin/nguoi-dung');
     const fresh = client();
-    r = await fresh.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('owner'), password: 'secret1' }) });
+    r = await fresh.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('owner'), password: 'zz-secret1' }) });
     check('owner login lands on Trang chủ (not the admin), like everyone', r.status === 303 && r.location === '/', r);
   });
 
@@ -146,8 +146,8 @@ await suite(async (b) => {
     };
     const adminC = client(), ownerC = client();
     for (const [c, n] of [[adminC, 'admin'], [ownerC, 'owner']]) {
-      await c.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
-      await c.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'secret1' }) });
+      await c.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'zz-secret1', confirmPassword: 'zz-secret1', agreePrivacy: '1' }) });
+      await c.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'zz-secret1' }) });
       await d.collection('users').updateOne({ email: mail(n) }, { $set: { role: n } });
     }
     const id = async (col, q) => String((await d.collection(col).findOne(q))._id);
@@ -196,8 +196,8 @@ await suite(async (b) => {
     const evil = await fetch(BASE + `/admin/yeu-cau/${reqDoc.insertedId}/trang-thai`, { method: 'POST', body: new URLSearchParams({ status: 'moi' }), redirect: 'manual', headers: { cookie: adminC.cookie(), referer: 'https://evil.example/phish' } });
     check('an outside Referer is ignored (no open redirect)', evil.headers.get('location') === '/admin/yeu-cau', evil.headers.get('location'));
     const cust = client();
-    await cust.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: 'ZZ cust', email: mail('cust'), password: 'secret1', confirmPassword: 'secret1', agreePrivacy: '1' }) });
-    await cust.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('cust'), password: 'secret1' }) });
+    await cust.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: 'ZZ cust', email: mail('cust'), password: 'zz-secret1', confirmPassword: 'zz-secret1', agreePrivacy: '1' }) });
+    await cust.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('cust'), password: 'zz-secret1' }) });
     const custId = await id('users', { email: mail('cust') });
     r = await ownerC.act(`/admin/nguoi-dung/${custId}/vai-tro`, new URLSearchParams({ role: 'admin' }));
     expectToast('owner promotes user -> green', r.landed, 'success', 'ZZ cust');
@@ -225,6 +225,11 @@ await suite(async (b) => {
       r = await adminC.act(`/admin/doi-tac/${ptid}/sua`, form({ name: `${MARK} đối tác 2` }), '/admin/doi-tac');
       expectToast('database error on save -> red "Không thực hiện được"', r.landed, 'error', 'Không thực hiện được');
       check('... and the change was not saved', (await d.collection('partners').findOne({ _id: new mongoose.Types.ObjectId(ptid) })).name === `${MARK} đối tác`);
+      // The failure is in Admin → Nhật ký lỗi (lib/error-log.js saves it just after the page is answered); removed at once
+      let logged = null;
+      for (let i = 0; i < 20 && !logged; i++) { logged = await d.collection('errorlogs').findOne({ where: `POST /admin/doi-tac/${ptid}/sua` }); if (!logged) await sleep(100); }
+      check('... and the failure is saved in the error log', !!logged && logged.name === 'MongoServerError', logged && logged.where);
+      await d.collection('errorlogs').deleteMany({ where: `POST /admin/doi-tac/${ptid}/sua` });
     } finally {
       await d.command({ collMod: 'partners', validator: {}, validationLevel: 'off' });
     }
@@ -818,6 +823,8 @@ await suite(async (b) => {
     await clickNav('/admin/du-an');
     s = await state();
     check('a middle position (120px) is kept exactly when the clicked item is visible', Math.abs(s.top - 120) <= 2 && s.active === '/admin/du-an' && s.visibleV, s);
+    // From an item that stays visible with the menu scrolled to the bottom (else the menu rightly scrolls to show it)
+    await clickNav('/admin/nguoi-dung');
     await ev(`document.querySelector('.admin-sidebar').scrollTop = 99999`);
     const beforeLang = await state();
     { const l = b.waitLoad(); await ev(`document.querySelector('.admin-lang a[hreflang="en"]').click()`); await l; await sleep(300); }
@@ -850,8 +857,8 @@ await suite(async (b) => {
     await shot('admin-menu-closed-390');
     await b.clickAt('.admin-menu-btn'); await sleep(700);
     m = await menu();
-    check('tapping ☰ slides the menu in from the left: logo, all 17 links with their group titles, VI/EN and the light/dark switch',
-      m.onScreen && m.logo && m.links === 17 && m.groups === 6 && m.lang === 'VI/EN' && m.theme && m.expanded === 'true', m);
+    check('tapping ☰ slides the menu in from the left: logo, all 18 links with their group titles, VI/EN and the light/dark switch',
+      m.onScreen && m.logo && m.links === 18 && m.groups === 6 && m.lang === 'VI/EN' && m.theme && m.expanded === 'true', m);
     check('… with a dark backdrop, the page behind locked (no scroll, no Tab) and the focus on the current page "Tổng quan"', m.scrim && m.pageLocked && m.inert && m.focus === 'menu:Tổng quan', m);
     await shot('admin-menu-open-390');
     await b.key('Escape', 'Escape', 27); await sleep(700);

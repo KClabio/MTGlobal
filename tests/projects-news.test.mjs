@@ -50,6 +50,12 @@ await suite(async (b) => {
     const moved = await ev(`[...document.querySelectorAll('[data-search-group]')].map((g) => g.id + ':' + g.querySelectorAll('[data-search-item]').length).join(' ')`);
     check('the project moves into the Đại học section (and "Khác" disappears)', moved === 'thcs:4 thpt:3 dai-hoc:1', moved);
     await d.collection('projects').updateOne({ _id: petro._id }, { $set: { level: petro.level || '' } });
+    // Projects with the same name get the school in the page title, so search results and link previews tell them apart
+    const ids = (await d.collection('projects').find({}, { projection: { _id: 1 } }).toArray()).map((p) => String(p._id));
+    for (const lang of ['vi', 'en']) {
+      const titles = await ev(`Promise.all(${JSON.stringify(ids)}.map((id) => fetch('/giai-phap/du-an/' + id + '?lang=${lang}').then((r) => r.text()).then((h) => (h.match(/<title>([^<]*)<\\/title>/) || [])[1])))`);
+      check(`${lang.toUpperCase()}: every project page has its own title`, new Set(titles).size === titles.length && titles.some((t) => t.includes('– THCS Tây Mỗ 3 - MTG')), titles);
+    }
   });
 
   await part(b, 'news search', async () => {

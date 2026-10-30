@@ -66,12 +66,14 @@ await suite(async (b) => {
     // A banner override in Cài đặt chung shows on the card (checked at the function level with the same settings shape)
     const t = (k) => k;
     const fake = { banners: { workshop: { subtitleVi: 'ZZ dòng mới' } } };
-    const built = buildHomeDomains({ settings: fake, lang: 'vi', t, robots: [], services });
+    const built = buildHomeDomains({ settings: fake, lang: 'vi', t, services });
     check('a workshop banner override in Cài đặt chung becomes the workshop card text', built.find((x) => x.key === 'workshop').text === 'ZZ dòng mới');
-    const withPhoto = buildHomeDomains({ settings: {}, lang: 'vi', t, robots: [{ images: [] }, { images: ['/uploads/images/robot.jpg'] }], services: [{ ...services[0], heroImage: '/uploads/images/svc.jpg' }] });
-    const noServices = buildHomeDomains({ settings: {}, lang: 'vi', t, robots: [], services: [] });
-    check('an uploaded robot photo / service hero image replaces the default picture; no services = no Dịch vụ card',
-      withPhoto.find((x) => x.key === 'products').image === '/uploads/images/robot.jpg' && withPhoto.find((x) => x.key === 'dich-vu').image === '/uploads/images/svc.jpg' && withPhoto.length === 7 && noServices.length === 6, withPhoto.map((x) => [x.key, x.image]));
+    const withPhoto = buildHomeDomains({ settings: {}, lang: 'vi', t, services: [{ ...services[0], heroImage: '/uploads/images/svc.jpg' }] });
+    const noServices = buildHomeDomains({ settings: {}, lang: 'vi', t, services: [] });
+    check('an uploaded service hero image replaces the default picture; no services = no Dịch vụ card',
+      withPhoto.find((x) => x.key === 'dich-vu').image === '/uploads/images/svc.jpg' && withPhoto.length === 7 && noServices.length === 6, withPhoto.map((x) => [x.key, x.image]));
+    // The robot card keeps its own picture (the stair-climbing machine on white), even now the robot has photos
+    check('the Robotics card shows the stair-climbing machine picture', /\/assets\/home\/robot-leo-cau-thang\.jpg/.test(cards[0].img || ''), cards[0].img);
 
     // ---- 3. Mouse wheel (the owner's PC prefers reduced motion; the eased path is tested too) ----
     for (const motion of ['reduce', 'no-preference']) {

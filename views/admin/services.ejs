@@ -6,7 +6,7 @@
 
 <div style="overflow-x:auto;">
 <table class="data-table">
-  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.services.colTitle') %></th><th><%= t('admin.services.colSlug') %></th><th></th></tr></thead>
+  <thead><tr><th class="drag-cell"><span class="sr-only"><%= t('admin.common.order') %></span></th><th><%= t('admin.common.image') %></th><th><%= t('admin.services.colTitle') %></th><th><%= t('admin.services.colSlug') %></th><th><span class="sr-only"><%= t('admin.common.actions') %></span></th></tr></thead>
   <tbody data-sortable="services">
     <% services.forEach(function (s) { %>
       <tr data-id="<%= s._id %>">

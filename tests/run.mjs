@@ -27,7 +27,9 @@ let serverLog = '';
 if (!(await up())) {
   // "Đăng nhập bằng Google" talks to the fake Google of tests/lib/fake-google.mjs (google.test.mjs starts it on :3002)
   const fakeGoogle = { GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret', GOOGLE_OAUTH_TEST_URL: 'http://localhost:3002', GOOGLE_REDIRECT_URL: '' };
-  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ...fakeGoogle }, stdio: ['ignore', 'pipe', 'pipe'] });
+  // The error log (errors.test.mjs): a page that fails on purpose, and alert emails written to tests/output/mail
+  const errorTest = { ERROR_TEST_ROUTE: '1', MAIL_TEST_DIR: path.join(ROOT, 'tests', 'output', 'mail'), ALERT_EMAIL_TO: 'alerts@example.com' };
+  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ...fakeGoogle, ...errorTest }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.on('data', (d) => { serverLog += d; });
   server.stderr.on('data', (d) => { serverLog += d; });
   let ok = false;

@@ -3,8 +3,8 @@
   const qfPrefill = typeof prefillInterestedIn !== 'undefined' ? prefillInterestedIn : null;
   const qfCompact = typeof compact !== 'undefined' && compact;
   const qfErrors = typeof errors !== 'undefined' && errors ? errors : {};
-  // Requests need an account (routes/index.js): a logged-out visitor sees a login box instead of the form.
-  // A logged-in one starts from what their profile has (name, email, phone, organisation), all still editable;
+  // Anyone may send (routes/index.js); a guest sees a "log in to fill this in" line above the empty form.
+  // A logged-in visitor starts from what their profile has (name, email, phone, organisation), all still editable;
   // after a failed send, what they typed is shown again instead.
   const qfUser = typeof user !== 'undefined' && user ? user : null;
   const qfTyped = typeof values !== 'undefined' && values ? values : {};
@@ -22,25 +22,19 @@
   // Changing a sent request (views/request-edit.ejs) reuses this form with its own button text and a "Hủy" link
   const qfSubmitLabel = typeof submitLabel !== 'undefined' && submitLabel ? submitLabel : t('forms.submitRequest');
   const qfCancelHref = typeof cancelHref !== 'undefined' && cancelHref ? cancelHref : null;
+  // The guest line's login comes back to this form (routes/auth.js, returnPath)
+  const qfLoginHref = '/dang-nhap?yeu-cau=1&ve=' + encodeURIComponent(qfAction === '/lien-he' && qfPrefill ? '/lien-he?quan_tam=' + qfPrefill : (typeof pagePath !== 'undefined' ? pagePath.replace(/\/yeu-cau$/, '') : '/lien-he'));
   const qfInvalid = (key) => (qfErrors[key] || ((key === 'phone' || key === 'email') && qfErrors.contact) ? ' is-invalid' : '');
 %>
-<% if (!qfUser) { %>
-<div class="form-card login-needed<%= qfCompact ? ' form-card--compact' : '' %>" data-login-needed>
-  <span class="login-needed-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-  <h3 class="login-needed-title"><%= t('auth.requestNeedsAccountTitle') %></h3>
-  <p class="login-needed-text"><%= t('auth.requestNeedsAccount') %></p>
-  <a class="btn btn-primary btn-block" href="/dang-nhap?yeu-cau=1"><%= t('nav.login') %></a>
-  <p class="login-needed-alt"><%= t('auth.noAccount') %> <a href="/dang-ky?yeu-cau=1"><%= t('nav.register') %></a></p>
-</div>
-<% } else { %>
 <div class="form-card<%= qfCompact ? ' form-card--compact' : '' %>">
   <% if (typeof sent !== 'undefined' && sent) { %>
     <div class="request-sent" data-request-sent>
       <span class="request-sent-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>
       <p class="request-sent-text" role="status"><%= t('forms.requestSuccess') %></p>
+      <% if (!qfUser) { %><p class="request-sent-note" data-guest-sent><%= t('forms.guestSentNote') %></p><% } %>
       <div class="request-sent-actions">
         <a class="btn btn-ghost" href="<%= qfBackHref %>" data-back-to-form>← <%= t('forms.backToForm') %></a>
-        <a class="btn btn-primary" href="/tai-khoan" data-see-requests><%= t('forms.seeMyRequests') %></a>
+        <% if (qfUser) { %><a class="btn btn-primary" href="/tai-khoan" data-see-requests><%= t('forms.seeMyRequests') %></a><% } %>
       </div>
     </div>
   <% } else { %>
@@ -57,6 +51,16 @@
           data-err-answer="<%= t('forms.errAnswerRequired') %>"
           data-err-number="<%= t('forms.errAnswerNumber') %>"
           data-err-agree="<%= t('privacy.errAgree') %>">
+      <% if (!qfUser && !qfCancelHref) { %>
+        <p class="form-guest-login" data-guest-login><%= t('forms.guestLoginText') %> <a href="<%= qfLoginHref %>"><%= t('forms.guestLoginLink') %></a></p>
+      <% } %>
+      <%# A trap for robots: people never see this box (hidden from sight, screen readers and Tab); a filled one isn't saved %>
+      <div class="form-trap" aria-hidden="true">
+        <label for="qf-website">Website</label>
+        <input type="text" id="qf-website" name="website" tabindex="-1" autocomplete="off" value="">
+      </div>
+      <%# The site page opened before this one (main.js, from document.referrer): which pages bring requests %>
+      <input type="hidden" name="cameFrom" value="<%= qfValues.cameFrom || '' %>" data-came-from>
       <div class="form-row">
         <div class="form-group">
           <label for="qf-name"><%= t('forms.name') %> *</label>
@@ -151,4 +155,3 @@
     </form>
   <% } %>
 </div>
-<% } %>

@@ -1,0 +1,57 @@
+<%- include('partials/head', { active: 'nhat-ky-loi' }) %>
+<% const when = (d) => new Date(d).toLocaleString(lang === 'en' ? 'en-GB' : 'vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short' }); %>
+
+<div class="admin-topbar">
+  <div>
+    <h1><%= t('admin.errors.title') %> <span class="count-badge"><%= errors.length %></span></h1>
+    <p class="admin-subtitle"><%= t('admin.errors.subtitle', { days: keepDays }) %></p>
+  </div>
+  <% if (unseenErrors) { %>
+    <form method="POST" action="/admin/nhat-ky-loi/da-xem">
+      <button class="btn btn-primary btn-sm" type="submit"><%= t('admin.errors.markAllSeen') %></button>
+    </form>
+  <% } %>
+</div>
+
+<p class="error-email"><%= alertEmail ? t('admin.errors.emailOn', { email: alertEmail }) : t('admin.errors.emailOff') %></p>
+
+<% if (errors.length) { %>
+<div style="overflow-x:auto;">
+<table class="data-table error-table">
+  <thead><tr><th><%= t('admin.errors.colError') %></th><th><%= t('admin.errors.colWhere') %></th><th><%= t('admin.errors.colCount') %></th><th><%= t('admin.errors.colFirst') %></th><th><%= t('admin.errors.colLast') %></th><th><span class="sr-only"><%= t('admin.common.actions') %></span></th></tr></thead>
+  <tbody>
+    <% errors.forEach(function (e) { %>
+      <tr data-id="<%= e._id %>" class="<%= e.seen ? 'is-seen' : '' %>">
+        <td>
+          <% if (!e.seen) { %><span class="tag tag-red"><%= t('admin.errors.new') %></span><% } %>
+          <span class="error-msg"><%= e.name %>: <%= e.message %></span>
+          <% if (e.stack) { %>
+            <details><summary><%= t('admin.errors.details') %></summary><pre><%= e.stack %></pre></details>
+          <% } %>
+        </td>
+        <td class="error-where"><%= e.where || '—' %></td>
+        <td><%= e.count %></td>
+        <td><%= when(e.firstAt) %></td>
+        <td><%= when(e.lastAt) %></td>
+        <td>
+          <div class="row-actions">
+            <% if (!e.seen) { %>
+              <form method="POST" action="/admin/nhat-ky-loi/<%= e._id %>/da-xem">
+                <button class="btn btn-ghost btn-sm" type="submit"><%= t('admin.errors.markSeen') %></button>
+              </form>
+            <% } %>
+            <form method="POST" action="/admin/nhat-ky-loi/<%= e._id %>/xoa" data-confirm="<%= t('admin.errors.confirmDelete') %>">
+              <button class="btn btn-danger btn-sm" type="submit"><%= t('admin.common.delete') %></button>
+            </form>
+          </div>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+</div>
+<% } else { %>
+  <p class="empty-note"><%= t('admin.errors.empty') %></p>
+<% } %>
+
+<%- include('partials/foot') %>

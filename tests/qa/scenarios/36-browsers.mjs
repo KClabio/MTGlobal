@@ -82,8 +82,12 @@ export const scenarios = [
             const f = await page.evaluate(() => {
               const el = document.activeElement;
               if (!el || el === document.body) return null;
+              const outlined = (cs) => cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0;
               const cs = getComputedStyle(el);
-              const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || (cs.boxShadow && cs.boxShadow !== 'none');
+              // An outline on the box drawn around the field (a search pill) counts too, up to 2 levels up
+              // (outline only: many boxes have a resting shadow that says nothing about focus)
+              const ring = outlined(cs) || (cs.boxShadow && cs.boxShadow !== 'none')
+                || [el.parentElement, el.parentElement && el.parentElement.parentElement].some((a) => a && a !== document.body && outlined(getComputedStyle(a)));
               const r = el.getBoundingClientRect();
               return { id: el.tagName + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '') + ':' + (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30), ring, onScreen: r.width > 0 && r.height > 0 };
             });

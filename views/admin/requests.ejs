@@ -24,7 +24,7 @@
 
 <div style="overflow-x:auto;">
 <table class="data-table">
-  <thead><tr><th><%= t('admin.requests.colDate') %></th><th><%= t('admin.requests.colName') %></th><th><%= t('admin.requests.colContact') %></th><th><%= t('admin.requests.colInterest') %></th><th><%= t('admin.requests.colMessage') %></th><th><%= t('admin.requests.colStatus') %></th><th></th></tr></thead>
+  <thead><tr><th><%= t('admin.requests.colDate') %></th><th><%= t('admin.requests.colName') %></th><th><%= t('admin.requests.colContact') %></th><th><%= t('admin.requests.colInterest') %></th><th><%= t('admin.requests.colMessage') %></th><th><%= t('admin.requests.colStatus') %></th><th><span class="sr-only"><%= t('admin.common.actions') %></span></th></tr></thead>
   <tbody data-list="requests">
     <% requests.forEach(function (r) { %>
       <tr data-id="<%= r._id %>" data-search="<%= [r.name, r.schoolOrCompany, r.phone, (r.phone || '').replace(/\D/g, ''), r.email, r.message].concat((r.details || []).map(function (d) { return [d.valueVi, d.valueEn].join(' '); })).filter(Boolean).join(' ') %>" data-filter="<%= r.interestedIn %>">

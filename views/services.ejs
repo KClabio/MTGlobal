@@ -9,12 +9,14 @@
 <%# Dịch vụ landing page: one card per service (lib/home-domains.js → buildServiceCards), then the consultation band %>
 <section class="section">
   <div class="container">
+    <%# Hidden heading for screen readers: the card titles (h3) sit under it, not straight under the page title %>
+    <h2 class="sr-only"><%= t('lists.services') %></h2>
     <div class="card-grid cols-2 service-cards">
       <% cards.forEach(function (card) { %>
         <a class="card accent-<%= card.accent %>" href="<%= card.url %>">
           <div class="card-media<%= card.contain ? ' is-contain' : '' %><%= card.image ? '' : ' is-art' %>">
             <% if (card.image) { %>
-              <%- picture(card.image, card.title, { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px' }) %>
+              <%- picture(card.image, '', { sizes: '(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 380px' }) %>
             <% } else { %>
               <%- include('admin/partials/icon', { name: card.icon, size: 72 }) %>
             <% } %>

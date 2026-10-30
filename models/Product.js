@@ -11,6 +11,8 @@ const PRODUCT_CATEGORIES = [
 const specSchema = new mongoose.Schema({
   key: { type: String, trim: true },
   value: { type: String, trim: true },
+  keyEn: { type: String, default: '', trim: true },
+  valueEn: { type: String, default: '', trim: true },
 }, { _id: false });
 
 const productSchema = new mongoose.Schema({

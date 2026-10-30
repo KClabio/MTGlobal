@@ -76,6 +76,15 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
     var field = function (name) { return form.elements[name]; };
     var value = function (name) { return field(name) ? field(name).value.trim() : ''; };
 
+    // The site page opened just before this one, for the admin's "Trang mang lại yêu cầu" (kept after a failed send)
+    var cameFrom = form.querySelector('[data-came-from]');
+    if (cameFrom && !cameFrom.value && document.referrer) {
+      try {
+        var from = new URL(document.referrer);
+        if (from.origin === location.origin && from.pathname !== location.pathname) cameFrom.value = from.pathname;
+      } catch (e) { /* not an address: leave it empty */ }
+    }
+
     function clearError(name) {
       var input = field(name);
       if (!input) return;
@@ -368,7 +377,7 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
 (function () {
   var PHONE_RE = /^[0-9+()\-.\s]{8,20}$/;
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  var PASSWORD_MIN = 6;
+  var PASSWORD_MIN = 8; // lib/passwords.js (the server also refuses common passwords)
   var FIELDS = ['name', 'email', 'phone', 'password', 'confirmPassword', 'agreePrivacy'];
 
   document.querySelectorAll('[data-register-form]').forEach(function (form) {
@@ -570,23 +579,44 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
   });
 })();
 
-// ☰ menu: slides down when opened; when closed it slides back up first (layout.css: body.nav-closing), then goes
+// ☰ menu: slides down when opened; when closed it slides back up first (layout.css: body.nav-closing), then goes.
+// While it is open, Esc closes it (focus back on ☰) and Tab stays inside the header: the page behind is covered.
 (function () {
   var toggle = document.getElementById('navToggle');
   if (!toggle) return;
   var body = document.body;
+  var header = document.getElementById('siteHeader');
   var timer = null;
+  function isOpen() { return body.classList.contains('nav-open') && !body.classList.contains('nav-closing'); }
   function finish() {
     clearTimeout(timer);
     body.classList.remove('nav-open', 'nav-closing');
   }
   toggle.addEventListener('click', function () {
-    if (!body.classList.contains('nav-open') || body.classList.contains('nav-closing')) {
+    if (!isOpen()) {
       clearTimeout(timer);
       body.classList.remove('nav-closing');
       body.classList.add('nav-open');
+      toggle.setAttribute('aria-expanded', 'true');
       return;
     }
+    close();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!isOpen()) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); toggle.focus(); return; }
+    if (e.key !== 'Tab' || !header) return;
+    var items = [].filter.call(header.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'), function (el) {
+      return !el.disabled && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+    });
+    if (!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    var inside = header.contains(document.activeElement);
+    if (e.shiftKey && (document.activeElement === first || !inside)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (document.activeElement === last || !inside)) { e.preventDefault(); first.focus(); }
+  });
+  function close() {
+    toggle.setAttribute('aria-expanded', 'false');
     var nav = document.querySelector('.main-nav');
     var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
     body.classList.add('nav-closing');
@@ -596,7 +626,7 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
       if (body.classList.contains('nav-closing')) finish();
     });
     timer = setTimeout(finish, Math.round(220 * anim) + 250); // in case animationend doesn't come
-  });
+  }
 })();
 
 // Header dropdowns (menu groups and the account menu) open while hovered (CSS :hover). A mouse click never pins one
@@ -1087,6 +1117,20 @@ document.addEventListener('contextmenu', function (e) {
   if (e.target.closest && e.target.closest('video')) e.preventDefault();
 });
 
+// Robot pages: video tiles are upright (phone videos); a wide video gets a row of its own (pages.css .is-wide) once its
+// size is known. Starting one video pauses the others.
+(function () {
+  var tiles = document.querySelectorAll('[data-product-video]');
+  tiles.forEach(function (tile) {
+    var v = tile.querySelector('video');
+    function shape() { if (v.videoWidth > v.videoHeight) tile.classList.add('is-wide'); }
+    if (v.readyState >= 1) shape(); else v.addEventListener('loadedmetadata', shape);
+    v.addEventListener('play', function () {
+      tiles.forEach(function (other) { var o = other.querySelector('video'); if (o !== v && !o.paused) o.pause(); });
+    });
+  });
+})();
+
 // Giải pháp pages: pictures behind tabs (gallery shown as "tabs"). Without JS every picture stays on the page.
 (function () {
   document.querySelectorAll('[data-media-tabs]').forEach(function (wrap) {
@@ -1317,6 +1361,21 @@ document.addEventListener('contextmenu', function (e) {
   });
 })();
 
+// Printing a Giải pháp page prints all of it: the closed folds open (at once, no slide) and close again afterwards
+(function () {
+  var opened = [];
+  window.addEventListener('beforeprint', function () {
+    document.querySelectorAll('details.solution-fold:not([open]), details.card-more:not([open])').forEach(function (fold) {
+      fold.open = true;
+      opened.push(fold);
+    });
+  });
+  window.addEventListener('afterprint', function () {
+    opened.forEach(function (fold) { fold.open = false; });
+    opened = [];
+  });
+})();
+
 // Hỗ trợ page: a link to one question (/ho-tro#q-<id>, e.g. from the admin's "Xem trang") opens it and scrolls to it
 (function () {
   if (!document.querySelector('.help-page')) return;
@@ -1505,4 +1564,26 @@ document.addEventListener('contextmenu', function (e) {
   // Once more after pictures and fonts have settled (they can change heights above the spot)
   if (document.readyState === 'complete') requestAnimationFrame(restore);
   else window.addEventListener('load', function () { requestAnimationFrame(restore); });
+})();
+
+// Chat button with two choices (partials/chat-button.ejs): opens a small menu of Zalo and Messenger; Esc, a click
+// outside or opening a link closes it (Esc gives the focus back to the button)
+(function () {
+  var wrap = document.querySelector('[data-chat]');
+  if (!wrap) return;
+  var button = wrap.querySelector('[data-chat-fab]');
+  var menu = wrap.querySelector('[data-chat-menu]');
+  function setOpen(open, focusButton) {
+    menu.hidden = !open;
+    button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) menu.querySelector('a').focus();
+    else if (focusButton) button.focus();
+  }
+  button.addEventListener('click', function () { setOpen(menu.hidden); });
+  wrap.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !menu.hidden) { e.preventDefault(); setOpen(false, true); }
+  });
+  menu.addEventListener('click', function (e) { if (e.target.closest('a')) setOpen(false); });
+  wrap.addEventListener('focusout', function (e) { if (!menu.hidden && e.relatedTarget && !wrap.contains(e.relatedTarget)) setOpen(false); });
+  document.addEventListener('click', function (e) { if (!menu.hidden && !wrap.contains(e.target)) setOpen(false); });
 })();

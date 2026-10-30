@@ -16,6 +16,7 @@
     { key: 'brand', label: G('tabBrand') },
     { key: 'home', label: G('tabHome') },
     { key: 'banners', label: G('tabBanners'), count: banners.length },
+    { key: 'email', label: G('tabEmail') },
     { key: 'reset', label: G('tabReset') },
   ];
 %>
@@ -134,6 +135,17 @@
         <% }) %>
       </div>
     <% }) %>
+    </div>
+  </section>
+
+  <!-- Who gets an email for each new or changed request (lib/request-mail.js) -->
+  <section class="admin-tab-panel" role="tabpanel" id="panel-email" data-panel="email" aria-labelledby="tab-email"<%= openTab === 'email' ? '' : ' hidden' %>>
+    <div class="settings-card">
+      <h2 class="admin-panel-title"><label for="requestEmails"><%= G('requestEmails') %></label></h2>
+      <p class="form-hint" id="requestEmailsHint"><%= G('requestEmailsHint', { max: requestEmailsMax }) %></p>
+      <% if (!mailReady) { %><p class="form-alert info" data-mail-off><%= G('mailOff') %></p><% } %>
+      <textarea class="form-control" id="requestEmails" name="requestEmails" rows="4" aria-describedby="requestEmailsHint" spellcheck="false" autocomplete="off"
+                placeholder="kinhdoanh@mtg.vn"><%= typeof requestEmailsText !== 'undefined' && requestEmailsText !== null ? requestEmailsText : (settings.requestEmails || []).join('\n') %></textarea>
     </div>
   </section>
 

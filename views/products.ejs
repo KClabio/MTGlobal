@@ -8,6 +8,8 @@
 
 <section class="section">
   <div class="container">
+    <%# Hidden heading for screen readers: the card titles (h3) sit under it, not straight under the page title %>
+    <h2 class="sr-only"><%= t('lists.robots') %></h2>
     <div class="card-grid cols-4">
       <%# Only the first card with a photo loads at once (the page's main picture on a phone); the rest load lazily %>
       <% let mainPicture = false; %>

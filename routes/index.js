@@ -15,6 +15,8 @@ const { buildHomeDomains, buildSolutionCards, buildServiceCards } = require('../
 const { groupEquipmentByPart, partSlug } = require('../lib/equipment-parts');
 const { policyText } = require('../lib/privacy-policy');
 const { getHelpItems, groupHelpItems } = require('../lib/help-topics');
+const requestThrottle = require('../lib/request-throttle');
+const requestMail = require('../lib/request-mail');
 
 const ROBOT_CATEGORIES = [
   'robot-leo-cau-thang',
@@ -31,7 +33,7 @@ router.get('/', async (req, res) => {
     Service.find().sort({ order: 1, _id: 1 }).lean(),
   ]);
   const { settings, lang, t } = res.locals;
-  const domains = buildHomeDomains({ settings, lang, t, robots, services });
+  const domains = buildHomeDomains({ settings, lang, t, services });
   res.render('index', { featuredProjects, robots, partners, domains });
 });
 
@@ -79,24 +81,22 @@ router.get('/san-pham/:category', async (req, res) => {
 // Requests sent from a robot's page are always "Sản phẩm Robot thông minh" (the category isn't taken from the form),
 // and they note which robot they are about (shown with the request in the admin and in "Yêu cầu của tôi")
 router.post('/san-pham/:category/yeu-cau', async (req, res) => {
-  if (needsLogin(req, res)) return;
   const product = await findRobot(req.params.category);
   if (!product) return res.status(404).render('404');
 
   const values = { ...readQuoteValues(req), interestedIn: 'san-pham-robot' };
   const robot = { kind: 'product', labelVi: 'Sản phẩm', labelEn: 'Product', valueVi: product.nameVi || product.nameEn || '', valueEn: product.nameEn || product.nameVi || '' };
   const errors = validateQuoteRequest(values, res.locals.t);
-  if (Object.keys(errors).length) {
-    return res.status(400).render('product-detail', {
+  const refused = Object.keys(errors).length ? 400 : await sendRequest(req, res, { ...values, details: [robot] });
+  if (refused) {
+    return res.status(refused).render('product-detail', {
       product,
       sent: false,
-      error: res.locals.t('forms.errSummary'),
+      error: refusedText(refused, res.locals.t),
       errors,
       values,
     });
   }
-
-  await saveQuoteRequest({ ...values, details: [robot] }, req.user);
   // Redirect after POST so a page refresh doesn't send the request twice
   res.redirect(303, `/san-pham/${product.category}?da-gui=1#yeu-cau`);
 });
@@ -155,7 +155,6 @@ router.get('/dich-vu/:slug', async (req, res) => {
 
 // A service page's request: the category is the service itself, plus answers to that service's own questions
 router.post('/dich-vu/:slug/yeu-cau', async (req, res) => {
-  if (needsLogin(req, res)) return;
   const service = await Service.findOne({ slug: req.params.slug }).lean();
   if (!service) return res.status(404).render('404');
 
@@ -163,17 +162,16 @@ router.post('/dich-vu/:slug/yeu-cau', async (req, res) => {
   const values = { ...readQuoteValues(req), interestedIn };
   const answers = readServiceAnswers(service, req.body, res.locals.t);
   const errors = { ...validateQuoteRequest(values, res.locals.t), ...answers.errors };
-  if (Object.keys(errors).length) {
-    return res.status(400).render('service-detail', {
+  const refused = Object.keys(errors).length ? 400 : await sendRequest(req, res, { ...values, details: answers.details });
+  if (refused) {
+    return res.status(refused).render('service-detail', {
       service,
       sent: false,
-      error: res.locals.t('forms.errSummary'),
+      error: refusedText(refused, res.locals.t),
       errors,
       values: { ...values, ...answers.values },
     });
   }
-
-  await saveQuoteRequest({ ...values, details: answers.details }, req.user);
   res.redirect(303, `/dich-vu/${service.slug}?da-gui=1#yeu-cau`);
 });
 
@@ -190,21 +188,16 @@ router.get('/tin-tuc/:id', async (req, res) => {
 });
 
 // ---- Liên hệ / quote requests ----
-// Consultation requests need an account: a logged-out visitor goes to the login page, which says why
-// ("Xin hãy đăng nhập để yêu cầu tư vấn"). The robot and Dịch vụ pages show a login box instead of their form.
-function needsLogin(req, res) {
-  if (req.user) return false;
-  res.redirect(303, '/dang-nhap?yeu-cau=1');
-  return true;
-}
-
+// Anyone may send a request. An account only fills the form in from the profile and lists the requests in "Tài khoản".
 router.get('/lien-he', (req, res) => {
-  if (needsLogin(req, res)) return;
   // ?da-gui=1: the thank-you card after sending (a redirect, so reloading it doesn't send the request again)
   res.render('contact', { sent: req.query['da-gui'] === '1', error: null, errors: {}, values: {}, prefillInterestedIn: req.query.quan_tam || null });
 });
 
-function saveQuoteRequest(values, user) {
+// "/giai-phap/workshop" for a page of this site; '' for anything else (another site, a made-up value)
+const sitePath = (value) => (typeof value === 'string' && /^\/(?!\/)[^\s?#]{0,200}$/.test(value) ? value : '');
+
+function saveQuoteRequest(values, user, req) {
   return QuoteRequest.create({
     name: values.name,
     phone: values.phone,
@@ -215,25 +208,39 @@ function saveQuoteRequest(values, user) {
     details: values.details || [],
     user: user ? user._id : null,
     privacyAcceptedAt: new Date(), // the form refuses to send without the consent tick (lib/quote-request.js)
+    sourcePage: req.path.replace(/\/yeu-cau$/, ''), // the page whose form sent it
+    cameFrom: sitePath(values.cameFrom),
   });
 }
 
+// Saves a checked request and tells staff and the sender by email (lib/request-mail.js, not waited for).
+// Returns 0 when done, or 429 when this address already sent 5 requests without an account this hour
+// (lib/request-throttle.js). A filled-in hidden "website" box (a trap only robots see: partials/quote-form.ejs)
+// is answered as if sent, but nothing is saved.
+async function sendRequest(req, res, values) {
+  if (typeof req.body.website === 'string' && req.body.website.trim()) return 0;
+  if (!req.user && !(await requestThrottle.take('guestRequest', req.ip))) return 429;
+  const request = await saveQuoteRequest(values, req.user, req);
+  requestMail.notifyNewRequest(request, { req, lang: res.locals.lang, user: req.user });
+  return 0;
+}
+
+const refusedText = (status, t) => t(status === 429 ? 'forms.errTooManyRequests' : 'forms.errSummary');
+
 router.post('/lien-he', async (req, res) => {
-  if (needsLogin(req, res)) return;
   const values = readQuoteValues(req);
 
   const errors = validateQuoteRequest(values, res.locals.t);
-  if (Object.keys(errors).length) {
-    return res.status(400).render('contact', {
+  const refused = Object.keys(errors).length ? 400 : await sendRequest(req, res, values);
+  if (refused) {
+    return res.status(refused).render('contact', {
       sent: false,
-      error: res.locals.t('forms.errSummary'),
+      error: refusedText(refused, res.locals.t),
       errors,
       values,
       prefillInterestedIn: values.interestedIn || null,
     });
   }
-
-  await saveQuoteRequest(values, req.user);
   res.redirect(303, '/lien-he?da-gui=1');
 });
 

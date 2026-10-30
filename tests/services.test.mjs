@@ -10,7 +10,8 @@ await suite(async (b) => {
   const { send, ev, sleep } = b;
   const MARK = `ZZTEST-forms-${stamp}`;
   removeLater('quoterequests', { name: { $regex: '^' + MARK } });
-  // Requests need an account: the forms are used logged in as a customer whose profile has a phone and an organisation
+  removeLater('loginthrottles', { _id: { $regex: '^(request-ip|confirm-to|ip):' } }); // the guest and confirmation limits (lib/request-throttle.js), and the wrong-login count of the empty login below
+  // Most checks send logged in, as a customer whose profile has a phone and an organisation (guests: their own part)
   const requester = await createUser('requester', 'customer');
   const PROFILE = { name: `ZZ requester`, email: requester.email, phone: '0912 000 111', schoolOrCompany: 'ZZ Trường Thử' };
   await (await db()).collection('users').updateOne({ _id: requester.id }, { $set: { phone: PROFILE.phone, schoolOrCompany: PROFILE.schoolOrCompany } });
@@ -184,36 +185,81 @@ await suite(async (b) => {
     check('saved with category san-pham-robot', saved && saved.interestedIn === 'san-pham-robot', saved && saved.interestedIn);
   });
 
-  await part(b, 'requests need an account; the form starts from the profile', async () => {
-    const col = (await db()).collection('quoterequests');
-    const svc = await (await db()).collection('services').findOne({});
+  await part(b, 'requests without an account; the form starts from the profile when logged in', async () => {
+    const d = await db();
+    const col = d.collection('quoterequests');
+    const svc = await d.collection('services').findOne({});
+    const clearLimit = () => d.collection('loginthrottles').deleteMany({ _id: { $regex: '^request-ip:' } });
     const guest = (path, init = {}) => fetch(BASE + path, { redirect: 'manual', ...init, headers: { cookie: 'lang=vi', ...(init.headers || {}) } });
-    // Logged out
+    const send = (path, fields) => guest(path, { method: 'POST', body: new URLSearchParams({ phone: '0912345678', message: 'Hỏi thử', agreePrivacy: '1', ...fields }) });
+    await clearLimit();
+
+    // Logged out: the form is there, with a "log in to fill this in" line that comes back to the same form
     let r = await guest('/lien-he?quan_tam=workshop-stem');
-    check('logged out: Liên hệ (every "Yêu cầu tư vấn" button) → the login page', r.status === 303 && r.headers.get('location') === '/dang-nhap?yeu-cau=1', { status: r.status, at: r.headers.get('location') });
+    let html = await r.text();
+    const loginHref = (h) => ((h.match(/data-guest-login>[^<]*<a href="([^"]+)"/) || [])[1] || '').replace(/&amp;/g, '&');
+    check('logged out: Liên hệ shows the form (200), "Workshop" already chosen', r.status === 200 && html.includes('data-quote-form') && /<option value="workshop-stem" selected>/.test(html), r.status);
+    check('… with the line "Đã có tài khoản? Đăng nhập để điền sẵn thông tin…" leading back to the form', loginHref(html) === '/dang-nhap?yeu-cau=1&ve=%2Flien-he%3Fquan_tam%3Dworkshop-stem', loginHref(html));
+    check('… and no login box any more', !html.includes('data-login-needed'));
     for (const lang of ['vi', 'en']) {
-      const html = await (await fetch(`${BASE}/dang-nhap?yeu-cau=1`, { headers: { cookie: `lang=${lang}` } })).text();
-      const note = (html.match(/data-need-login>([^<]*)</) || [])[1];
-      check(`login page says why (${lang}): "${note}"`, note === (lang === 'vi' ? 'Xin hãy đăng nhập để yêu cầu tư vấn.' : 'Please log in to request a consultation.') && html.includes('href="/dang-ky?yeu-cau=1"'));
+      const page = await (await fetch(`${BASE}/dang-nhap?yeu-cau=1`, { headers: { cookie: `lang=${lang}` } })).text();
+      const note = (page.match(/data-need-login>([^<]*)</) || [])[1];
+      check(`login page says what logging in gives (${lang}): "${note}"`, note === (lang === 'vi' ? 'Đăng nhập để điền sẵn thông tin của bạn vào biểu mẫu; sau đó bạn sẽ quay lại biểu mẫu.' : 'Log in to have your details filled in; you&#39;ll then come back to the form.'), note);
     }
     check('the plain login page has no such note', !(await (await fetch(`${BASE}/dang-nhap`)).text()).includes('data-need-login'));
-    const sends = [['/lien-he', {}], ['/san-pham/robot-cat-co/yeu-cau', {}], [`/dich-vu/${svc.slug}/yeu-cau`, {}]];
-    for (const [path] of sends) {
-      r = await guest(path, { method: 'POST', body: new URLSearchParams({ name: `${MARK}-guest`, phone: '0912345678', message: 'x' }) });
-      check(`logged out: sending ${path} → the login page`, r.status === 303 && r.headers.get('location') === '/dang-nhap?yeu-cau=1', r.status);
+
+    // Sending without an account, from the three kinds of form
+    const sends = [['/lien-he', '/lien-he?da-gui=1', '/lien-he'], ['/san-pham/robot-cat-co/yeu-cau', '/san-pham/robot-cat-co?da-gui=1#yeu-cau', '/san-pham/robot-cat-co'], [`/dich-vu/${svc.slug}/yeu-cau`, `/dich-vu/${svc.slug}?da-gui=1#yeu-cau`, `/dich-vu/${svc.slug}`]];
+    // The service's required questions answered (a choice: its first option)
+    const answers = Object.fromEntries((svc.questions || []).filter((q) => q.required).map((q) => [`q_${q.key}`, q.type === 'choice' ? '0' : q.type === 'number' ? '1' : 'ZZ']));
+    for (const [path, to, page] of sends) {
+      const name = `${MARK}-guest-${page.split('/').pop()}`;
+      r = await send(path, { name, cameFrom: '/giai-phap/stem-lab', ...(path.startsWith('/dich-vu/') ? answers : {}) });
+      const saved = await col.findOne({ name });
+      check(`logged out: sending ${path} → saved, back on the page with the thank-you`, r.status === 303 && r.headers.get('location') === to && !!saved, { status: r.status, at: r.headers.get('location') });
+      check('… as a guest request, with the page it came from and the page before', saved && saved.user === null && saved.sourcePage === page && saved.cameFrom === '/giai-phap/stem-lab', saved && { user: saved.user, sourcePage: saved.sourcePage, cameFrom: saved.cameFrom });
     }
-    check('… and nothing was saved', (await col.countDocuments({ name: `${MARK}-guest` })) === 0);
+    r = await send('/lien-he', { name: `${MARK}-guest-far`, cameFrom: 'https://evil.example/x' });
+    check('a "page before" from another site is not stored', ((await col.findOne({ name: `${MARK}-guest-far` })) || {}).cameFrom === '');
+    html = await (await guest('/lien-he?da-gui=1')).text();
+    check('guest thank-you: "MTG sẽ liên hệ với bạn qua số điện thoại hoặc email…", no "Xem yêu cầu của tôi"', html.includes('data-guest-sent') && html.includes('MTG sẽ liên hệ với bạn qua số điện thoại hoặc email bạn đã gửi.') && !html.includes('data-see-requests'));
+    html = await (await fetch(`${BASE}/lien-he?da-gui=1`, { headers: asRequester() })).text();
+    check('logged in, the thank-you still offers "Xem yêu cầu của tôi"', html.includes('data-see-requests') && !html.includes('data-guest-sent'));
+
+    // The robots' trap: a filled hidden box looks sent but saves nothing
+    r = await send('/lien-he', { name: `${MARK}-trap`, website: 'http://spam.example' });
+    check('a filled hidden "website" box (robots) → answered as sent, nothing saved', r.status === 303 && r.headers.get('location') === '/lien-he?da-gui=1' && !(await col.findOne({ name: `${MARK}-trap` })));
+    check('the trap box is out of sight, out of Tab and hidden from screen readers', /<div class="form-trap" aria-hidden="true">[\s\S]*?name="website" tabindex="-1" autocomplete="off"/.test(await (await guest('/lien-he')).text()));
+
+    // At most 5 requests an hour from one address without an account
+    await clearLimit();
+    for (let i = 1; i <= 5; i++) await send('/lien-he', { name: `${MARK}-limit-${i}` });
+    r = await send('/lien-he', { name: `${MARK}-limit-6` });
+    html = await r.text();
+    check('6th guest request within an hour → 429 with "Bạn đã gửi nhiều yêu cầu trong một giờ qua…", what was typed kept', r.status === 429 && html.includes('Bạn đã gửi nhiều yêu cầu trong một giờ qua.') && html.includes(`value="${MARK}-limit-6"`), r.status);
+    check('… 5 saved, the 6th not', (await col.countDocuments({ name: { $regex: `^${MARK}-limit-` } })) === 5);
+    r = await fetch(BASE + '/lien-he', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: `${MARK}-limit-account`, phone: '0912345678', message: 'x', agreePrivacy: '1' }), headers: asRequester() });
+    check('… an account is not limited', r.status === 303 && !!(await col.findOne({ name: `${MARK}-limit-account` })));
+    await clearLimit();
+
+    // "Đăng nhập" from a form comes back to that form (and only to a form page)
+    const loginBack = async (ve) => {
+      const first = await fetch(`${BASE}/dang-nhap?yeu-cau=1&ve=${encodeURIComponent(ve)}`, { redirect: 'manual' });
+      const cookie = first.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+      const res = await fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ email: requester.email, password: requester.password, forRequest: '1' }), headers: { cookie } });
+      return res.headers.get('location');
+    };
+    check('logging in from a robot page\'s form → back on that form', (await loginBack('/san-pham/robot-cat-co')) === '/san-pham/robot-cat-co#yeu-cau');
+    check('… from Liên hệ with a chosen topic → back with it', (await loginBack('/lien-he?quan_tam=workshop-stem')) === '/lien-he?quan_tam=workshop-stem#yeu-cau');
+    check('… another address (another site, or a non-form page) → Trang chủ', (await loginBack('//evil.example')) === '/' && (await loginBack('https://evil.example/')) === '/' && (await loginBack('/admin')) === '/');
     await b.nav('/san-pham/robot-cat-co', 300);
-    const box = await ev(`(() => { const a = document.querySelector('#yeu-cau [data-login-needed]'); return { form: !!document.querySelector('[data-quote-form]'), box: !!a, text: a && a.textContent.replace(/\\s+/g, ' ').trim(), login: a && a.querySelector('a.btn').getAttribute('href'), register: a && a.querySelector('.login-needed-alt a').getAttribute('href') }; })()`);
-    check('logged out: the robot page shows a login box instead of the form', !box.form && box.box && /Bạn cần đăng nhập để gửi yêu cầu tư vấn/.test(box.text) && box.login === '/dang-nhap?yeu-cau=1' && box.register === '/dang-ky?yeu-cau=1', box);
-    await b.shot('robot-login-box');
-    await b.nav(`/dich-vu/${svc.slug}`, 300);
-    check('logged out: the Dịch vụ page too', await ev(`!document.querySelector('[data-quote-form]') && !!document.querySelector('#yeu-cau [data-login-needed]')`));
-    let l = b.waitLoad(); await ev(`document.querySelector('#yeu-cau [data-login-needed] a.btn').click()`); await l; await sleep(200);
-    check('its button opens the login page with the note', await ev(`location.pathname === '/dang-nhap' && !!document.querySelector('[data-need-login]')`));
+    check('logged out in the browser: the robot page shows the form with the login line', await ev(`!!document.querySelector('#yeu-cau [data-quote-form]') && !!document.querySelector('#yeu-cau [data-guest-login] a')`));
+    await b.shot('robot-guest-form');
+    let l = b.waitLoad(); await ev(`document.querySelector('#yeu-cau [data-guest-login] a').click()`); await l; await sleep(200);
+    check('its "Đăng nhập…" link opens the login page with the note', await ev(`location.pathname === '/dang-nhap' && !!document.querySelector('[data-need-login]')`));
     await b.nav('/giai-phap/workshop', 300);
     l = b.waitLoad(); await ev(`document.querySelector('.next-steps .cta-band-btn').click()`); await l; await sleep(200);
-    check('a "Đăng ký workshop" / "Yêu cầu tư vấn" button while logged out → the login page with the note', await ev(`location.pathname === '/dang-nhap' && !!document.querySelector('[data-need-login]')`));
+    check('a "Đăng ký workshop" / "Yêu cầu tư vấn" button while logged out → the Liên hệ form', await ev(`location.pathname === '/lien-he' && !!document.querySelector('[data-quote-form]')`));
     // Logged in: every form starts from the profile, still editable
     await b.login(requester.sid);
     const filled = () => ev(`(() => { const f = document.querySelector('[data-quote-form]'); return { name: f.elements.name.value, email: f.elements.email.value, phone: f.elements.phone.value, schoolOrCompany: f.elements.schoolOrCompany.value, locked: [...f.elements].some((e) => e.readOnly || e.disabled) }; })()`);
@@ -307,6 +353,19 @@ await suite(async (b) => {
     await b.nav(`/tai-khoan/yeu-cau/${robotReq._id}/sua`, 300);
     check('edit page in the browser: form ready, "Cập nhật yêu cầu" next to "Hủy"', await ev(`!!document.querySelector('[data-quote-form] .form-actions-row .btn-primary') && document.querySelector('[data-quote-form] [name=message]').value === 'Đổi nội dung'`));
     await b.shot('request-edit');
+  });
+
+  await part(b, 'a form sent without any data (robots) gets the normal answer, not a server error', async () => {
+    const logs = (await db()).collection('errorlogs');
+    const before = await logs.countDocuments();
+    const empty = async (path) => (await fetch(BASE + path, { method: 'POST', redirect: 'manual', headers: { cookie: 'lang=vi' } })).status;
+    const got = {};
+    for (const path of ['/lien-he', '/san-pham/robot-cat-co/yeu-cau', '/dich-vu/tu-van-du-hoc/yeu-cau', '/dang-ky']) got[path] = await empty(path);
+    check('Liên hệ, a robot page, a service page and Đăng ký answer 400 ("please fill in")', Object.values(got).every((s) => s === 400), got);
+    const login = await fetch(BASE + '/dang-nhap', { method: 'POST', redirect: 'manual', headers: { cookie: 'lang=vi' } });
+    const loginHtml = await login.text();
+    check('Đăng nhập answers 400 with its form and "Email hoặc mật khẩu không đúng."', login.status === 400 && loginHtml.includes('Email hoặc mật khẩu không đúng.'), login.status);
+    check('… and nothing lands in Nhật ký lỗi', (await logs.countDocuments()) === before);
   });
 
   await part(b, 'message limit (3,000 characters) and a form too big for the server', async () => {

@@ -558,9 +558,9 @@ await suite(async (b) => {
     check('reduced motion: the trail still takes its time (not finished after 1 s)', slow < 4, slow);
     await sleep(2500);
     check('… and is complete and settled after about 3 s', await ev(`(() => { const t = document.querySelector('.process-trail'); return t.classList.contains('is-settled') && [...t.querySelectorAll('.trail-node')].every((x) => +getComputedStyle(x).opacity > 0.99); })()`));
-    const look = () => ev(`(() => { const s = document.querySelector('.process-trail .trail-step:nth-child(2)'); return { node: getComputedStyle(s.querySelector('.trail-node')).transform, bg: getComputedStyle(s.querySelector('.trail-body')).backgroundColor, title: getComputedStyle(s.querySelector('h3')).color }; })()`);
+    const look = () => ev(`(() => { const s = document.querySelector('.process-trail .trail-step:nth-child(2)'); return { node: getComputedStyle(s.querySelector('.trail-node')).transform, bg: getComputedStyle(s.querySelector('.trail-body')).backgroundColor, title: getComputedStyle(s.querySelector('.trail-body :is(h2, h3)')).color }; })()`);
     const calm = await look();
-    await b.hover('.process-trail .trail-step:nth-child(2) .trail-body h3'); await sleep(300);
+    await b.hover('.process-trail .trail-step:nth-child(2) .trail-body :is(h2, h3)'); await sleep(300);
     const lit = await look();
     check('hovering a step lights it up (bigger node, tinted text box, blue title)', /^matrix\(1\.1/.test(lit.node) && lit.bg !== calm.bg && lit.title !== calm.title, { calm, lit });
     await b.mouse('mouseMoved', { x: 5, y: 5 }); await sleep(300);

@@ -70,7 +70,7 @@ await suite(async (b) => {
   await part(b, 'watch-only videos', async () => {
     await nav('/san-pham/robot-leo-cau-thang', 400);
     const vids = await ev(`[...document.querySelectorAll('video')].map((v) => ({ list: v.getAttribute('controlslist'), pip: v.disablePictureInPicture, remote: v.disableRemotePlayback, controls: v.controls }))`);
-    check('robot page videos: controls kept; download, speed, picture-in-picture and casting removed', vids.length === 3 && vids.every((v) => v.controls && v.list === 'nodownload noplaybackrate noremoteplayback' && v.pip && v.remote), vids);
+    check('robot page videos: controls kept; download, speed, picture-in-picture and casting removed', vids.length === 6 && vids.every((v) => v.controls && v.list === 'nodownload noplaybackrate noremoteplayback' && v.pip && v.remote), vids);
     const ctx = await ev(`(() => { const v = document.querySelector('video'); const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true }); v.dispatchEvent(e); const d = document.createElement('div'); document.body.appendChild(d); const e2 = new MouseEvent('contextmenu', { bubbles: true, cancelable: true }); d.dispatchEvent(e2); d.remove(); return { video: e.defaultPrevented, elsewhere: e2.defaultPrevented }; })()`);
     check('right-click is blocked on videos only', ctx.video && !ctx.elsewhere, ctx);
     const play = await ev(`(async () => { const v = document.querySelector('video'); v.muted = true; v.scrollIntoView({ block: 'center' }); await v.play(); await new Promise((r) => setTimeout(r, 1200)); const t = v.currentTime; v.pause(); return { t, err: v.error && v.error.code }; })()`);
@@ -85,6 +85,58 @@ await suite(async (b) => {
       await nav(url, 300);
       check(`${url}: its videos are watch-only too`, await ev(`[...document.querySelectorAll('video')].length > 0 && [...document.querySelectorAll('video')].every((v) => v.getAttribute('controlslist') === 'nodownload noplaybackrate noremoteplayback' && v.disablePictureInPicture)`));
     }
+  });
+
+  await part(b, 'robot page: photos, specs and videos', async () => {
+    const url = '/san-pham/robot-leo-cau-thang';
+    const layout = () => ev(`(async () => {
+      const vids = [...document.querySelectorAll('[data-product-video] video')];
+      await Promise.all(vids.map((v) => v.readyState >= 1 ? 0 : new Promise((r) => { v.addEventListener('loadedmetadata', r, { once: true }); setTimeout(r, 4000); })));
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const box = (el) => { const r = el.getBoundingClientRect(); return { x: Math.round(r.left), y: Math.round(r.top + scrollY), w: Math.round(r.width), h: Math.round(r.height) }; };
+      return {
+        photos: [...document.querySelectorAll('.product-photos .media-figure')].map((f) => ({ ...box(f.querySelector('.media-frame')), zoom: !!f.querySelector('[data-image-view]') })),
+        column: box(document.querySelector('.admin-form-grid > div')),
+        videos: [...document.querySelectorAll('[data-product-video]')].map((t) => ({ ...box(t), wide: t.classList.contains('is-wide'), vw: t.querySelector('video').videoWidth, vh: t.querySelector('video').videoHeight })),
+        grid: box(document.querySelector('.product-videos')),
+        specs: [...document.querySelectorAll('.product-specs th')].map((th) => th.textContent.trim()),
+        overflow: document.documentElement.scrollWidth - innerWidth,
+      };
+    })()`);
+    for (const motion of [false, true]) {
+      await b.reducedMotion(motion);
+      await b.viewport(1280);
+      await nav(url + '?lang=vi', 400);
+      const L = await layout();
+      const sameRow = L.photos.length === 3 && L.photos.every((p) => p.y === L.photos[0].y);
+      check(`1280px${motion ? ' (reduced motion)' : ''}: 3 upright photos side by side, each opens larger`, sameRow && L.photos.every((p) => p.zoom && p.h > p.w), L.photos);
+      check('the videos take the page width (wider than the photo column)', L.grid.w > L.column.w + 200, { grid: L.grid.w, column: L.column.w });
+      const tall = L.videos.filter((v) => !v.wide), wide = L.videos.filter((v) => v.wide);
+      check('upright videos are 9:16 tiles, five in the first row', tall.length === 5 && tall.every((v) => Math.abs(v.h / v.w - 16 / 9) < 0.05 && v.vh > v.vw) && tall.every((v) => v.y === tall[0].y), tall);
+      check('the wide video has a row of its own at 16:9', wide.length === 1 && wide[0].vw > wide[0].vh && wide[0].y > tall[0].y + tall[0].h && Math.abs(wide[0].w / wide[0].h - 16 / 9) < 0.05, wide);
+      check('Vietnamese spec names', JSON.stringify(L.specs) === JSON.stringify(['Tải trọng tối đa', 'Công suất động cơ', 'Pin']), L.specs);
+    }
+    await b.reducedMotion(true);
+    await ev(`document.querySelector('.product-photos [data-image-view]').click()`); await sleep(500);
+    const box = await ev(`(() => { const d = document.querySelector('dialog.plan-zoom'); return { open: !!(d && d.open), title: d && d.querySelector('.plan-zoom-title').textContent, w: d && d.querySelector('.plan-zoom-img').naturalWidth }; })()`);
+    check('a photo click shows it larger in the box, with the product name', box.open && /Robot/.test(box.title) && box.w > 500, box);
+    await ev(`document.querySelector('dialog.plan-zoom').close()`); await sleep(300);
+    const one = await ev(`(async () => { const v = [...document.querySelectorAll('[data-product-video] video')]; v.forEach((x) => { x.muted = true; }); await v[0].play(); await v[1].play(); await new Promise((r) => setTimeout(r, 300)); const s = v.map((x) => x.paused); v[1].pause(); return s; })()`);
+    check('starting a video pauses the one already playing', one[0] === true && one[1] === false, one);
+    await shot('robot-page-1280', true);
+
+    await nav(url + '?lang=en', 400);
+    check('English spec names on the English page', JSON.stringify((await layout()).specs) === JSON.stringify(['Max load', 'Motor power', 'Battery']));
+
+    await b.viewport(360, 780);
+    await nav(url + '?lang=vi', 400);
+    const P = await layout();
+    check('360px: the first photo takes the whole width, the other two side by side', P.photos[0].w > P.photos[1].w * 1.8 && P.photos[1].y === P.photos[2].y && P.photos[1].y > P.photos[0].y, P.photos);
+    const rows = {}; P.videos.filter((v) => !v.wide).forEach((v) => { rows[v.y] = (rows[v.y] || 0) + 1; });
+    check('360px: two video tiles a row, nothing wider than the screen', Math.max(...Object.values(rows)) === 2 && P.overflow <= 0, { rows, overflow: P.overflow });
+    await shot('robot-page-360', true);
+    await b.viewport(1280);
+    await b.reducedMotion(false);
   });
 
   await part(b, '"Sắp ra mắt" overlay', async () => {

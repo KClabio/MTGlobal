@@ -116,10 +116,10 @@ await suite(async (b) => {
 
     // Setting a first password, then logging in with it
     r = await v4.go('/ho-so/mat-khau', { method: 'POST', body: new URLSearchParams({ newPassword: 'abc', confirmPassword: 'abc' }) });
-    check('first password: too short refused', r.status === 400 && r.text.includes('tối thiểu 6 ký tự'), r.status);
-    r = await v4.go('/ho-so/mat-khau', { method: 'POST', body: new URLSearchParams({ newPassword: 'gpass12', confirmPassword: 'gpass12' }) });
+    check('first password: too short refused', r.status === 400 && r.text.includes('tối thiểu 8 ký tự'), r.status);
+    r = await v4.go('/ho-so/mat-khau', { method: 'POST', body: new URLSearchParams({ newPassword: 'gpass-1234', confirmPassword: 'gpass-1234' }) });
     check('first password set: the message, and the card is now "Đổi mật khẩu" with "Mật khẩu hiện tại"', r.status === 200 && r.text.includes('Đã đặt mật khẩu.') && r.text.includes('id="currentPassword"'), r.status);
-    r = await visitor().go('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: EMAIL, password: 'gpass12' }) });
+    r = await visitor().go('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: EMAIL, password: 'gpass-1234' }) });
     check('… and the email + password login works too', r.status === 303 && r.location === '/', r.status);
   });
 

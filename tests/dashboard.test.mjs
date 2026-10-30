@@ -84,7 +84,7 @@ await suite(async (b) => {
     const pieRows = (view) => {
       const start = html.indexOf(`data-pie-view="${view}"`);
       const part = html.slice(start, html.indexOf('</ul>', start));
-      return [...part.matchAll(/legend-label">([^<]+)<\/span>\s*<span class="legend-count">(\d+)<\/span>\s*<span class="legend-pct">(\d+)%/g)].map((m) => ({ label: m[1].replace(/&amp;/g, '&'), n: Number(m[2]), pct: Number(m[3]) }));
+      return [...part.matchAll(/class="legend-label[^"]*"[^>]*>([^<]+)(?:<span class="sr-only">[^<]*<\/span>)?<\/(?:span|button)>\s*<span class="legend-count">(\d+)<\/span>\s*<span class="legend-pct">(\d+)%/g)].map((m) => ({ label: m[1].replace(/&amp;/g, '&'), n: Number(m[2]), pct: Number(m[3]) }));
     };
     const dbInterest = Object.fromEntries((await qr.aggregate([{ $group: { _id: '$interestedIn', n: { $sum: 1 } } }]).toArray()).map((x) => [x._id, x.n]));
     const n = (code) => dbInterest[code] || 0;
@@ -227,15 +227,17 @@ await suite(async (b) => {
     const backed = await ev(`({ view: ${shownView}, sweep: parseFloat(getComputedStyle(document.querySelector('[data-pie-view="top"] .pie-sweep')).strokeDashoffset) })`);
     check('"← Tất cả mục quan tâm": back to the 4 groups, which sweep in again', backed.view === 'top' && backed.sweep > 0.05, backed);
     await sleep(1300);
-    // Keyboard: Enter on a legend row opens its group, Escape comes back to that group's slice
-    await ev(`document.querySelector('[data-pie-view="top"] .legend-row[data-drill="services"]').focus()`);
-    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+    // Keyboard: Enter on a legend row's button opens its group, Escape comes back to that button
+    await ev(`document.querySelector('[data-pie-view="top"] .legend-drill[data-drill="services"]').focus()`);
+    // As a real keyboard sends it (with its text), so the button's own Enter press fires
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
     await sleep(600);
     const kb = await ev(`({ view: ${shownView}, rows: [...document.querySelectorAll('[data-pie-view="services"] .legend-label')].map((l) => l.textContent) })`);
     check('keyboard: Enter on "Dịch vụ" opens its pie (Tư vấn du học, Phân phối)', kb.view === 'services' && kb.rows.length === 2, kb);
     await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
     await sleep(150);
-    check('Escape goes back, focus on the "Dịch vụ" slice', await ev(`!document.querySelector('[data-pie-view="top"]').hidden && document.activeElement === document.querySelector('[data-pie-view="top"] .pie-slice[data-key="services"]')`));
+    check('Escape goes back, focus on the "Dịch vụ" legend button', await ev(`!document.querySelector('[data-pie-view="top"]').hidden && document.activeElement === document.querySelector('[data-pie-view="top"] .legend-drill[data-drill="services"]')`));
     await sleep(1200);
     // "Khác" has nothing inside
     await clickEl('[data-pie-view="top"] .pie-slice[data-key="khac"]'); await sleep(600);

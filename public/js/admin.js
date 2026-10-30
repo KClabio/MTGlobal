@@ -127,10 +127,10 @@
     if (toast.dataset.text) showToast(toast.dataset.text, toast.dataset.type);
   }
 
-  // ---- Charts follow the mouse only: a click never focuses (and so never pins) a column, slice or row.
+  // ---- Charts follow the mouse only: a click never focuses (and so never pins) a column, slice, row or legend button.
   // They stay reachable with Tab, and keyboard focus still shows the same highlight and tooltip. ----
   var keyFocus = function (el) { try { return el.matches(':focus-visible'); } catch (err) { return true; } };
-  document.querySelectorAll('.chart-col, .pie-slice, .hbar-row, .legend-row[data-drill]').forEach(function (el) {
+  document.querySelectorAll('.chart-col, .pie-slice, .hbar-row, .legend-drill').forEach(function (el) {
     el.addEventListener('mousedown', function (e) { e.preventDefault(); });
   });
 
@@ -180,7 +180,8 @@
     col.addEventListener('blur', off);
   });
 
-  // ---- Pies: a slice and its legend row highlight together; the slice slides out, the others dim ----
+  // ---- Pies: a slice and its legend row highlight together; the slice slides out, the others dim. The slices answer
+  // the mouse; keyboard focus on a row's button (focusin) lights up the same pair. ----
   document.querySelectorAll('[data-pie]').forEach(function (wrap) {
     var pie = wrap.querySelector('.pie');
     var setHot = function (key) {
@@ -191,13 +192,14 @@
       var key = el.getAttribute('data-key');
       el.addEventListener('mouseenter', function () { setHot(key); });
       el.addEventListener('mouseleave', function () { setHot(null); });
-      el.addEventListener('focus', function () { if (keyFocus(el)) setHot(key); });
-      el.addEventListener('blur', function () { setHot(null); });
+      el.addEventListener('focusin', function (e) { if (keyFocus(e.target)) setHot(key); });
+      el.addEventListener('focusout', function () { setHot(null); });
     });
   });
 
   // ---- Interest pie: a group's slice (or legend row) opens that group's own pie; "← Tất cả mục quan tâm" (or Esc)
-  // goes back. The opened slice grows out while the others fade, then the new pie plays the same opening as on load ----
+  // goes back, with focus on that group's legend button. The opened slice grows out while the others fade, then the
+  // new pie plays the same opening as on load ----
   var interestPanel = document.querySelector('[data-interest-panel]');
   if (interestPanel) {
     var pieViews = Array.prototype.slice.call(interestPanel.querySelectorAll('[data-pie-view]'));
@@ -233,14 +235,12 @@
     var backToTop = function () {
       if (pieBusy || !pieView('top').hidden) return;
       showPie('top');
-      var slice = openedKey && pieView('top').querySelector('.pie-slice[data-key="' + openedKey + '"]');
-      if (slice) slice.focus({ preventScroll: true });
+      var row = openedKey && pieView('top').querySelector('.legend-drill[data-drill="' + openedKey + '"]');
+      if (row) row.focus({ preventScroll: true });
     };
+    // Slices (mouse) and legend buttons (mouse, Enter, Space)
     interestPanel.querySelectorAll('[data-drill]').forEach(function (el) {
       el.addEventListener('click', function () { drillInto(el.getAttribute('data-drill')); });
-      el.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); drillInto(el.getAttribute('data-drill')); }
-      });
     });
     interestPanel.querySelectorAll('[data-pie-back]').forEach(function (btn) { btn.addEventListener('click', backToTop); });
     interestPanel.addEventListener('keydown', function (e) { if (e.key === 'Escape') backToTop(); });

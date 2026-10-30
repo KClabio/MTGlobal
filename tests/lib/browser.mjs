@@ -99,6 +99,8 @@ export async function launch({ width = 1280, height = 900, cookies = { theme: 'l
     waitLoad: (timeout) => waitEvent('Page.loadEventFired', timeout),
     viewport: (w, h = 900) => send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 700 }),
     reducedMotion: (on = true) => send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: on ? 'reduce' : 'no-preference' }] }),
+    /** Lays the page out as for printing (the @media print rules), or back to the screen. */
+    printMedia: (on = true) => send('Emulation.setEmulatedMedia', { media: on ? 'print' : '' }),
     setCookie: (name, value) => send('Network.setCookie', { name, value, url: BASE }),
     clearCookie: (name) => send('Network.deleteCookies', { name, url: BASE }),
     /** Logs the tab in with a session id from fixtures.createUser(). */
@@ -138,7 +140,7 @@ export async function launch({ width = 1280, height = 900, cookies = { theme: 'l
       await b.nav('about:blank', 0);
       await send('Network.clearBrowserCookies');
       await send('Storage.clearDataForOrigin', { origin: new URL(BASE).origin, storageTypes: 'all' });
-      await send('Emulation.setEmulatedMedia', { features: [] });
+      await send('Emulation.setEmulatedMedia', { media: '', features: [] });
       await b.viewport(width, height);
       for (const [name, value] of Object.entries(cookies)) await b.setCookie(name, value);
     },

@@ -11,11 +11,20 @@ const { loadUser } = require('./middleware/auth');
 const { loadLanguage } = require('./lib/i18n');
 const { loadSiteSettings } = require('./lib/settings');
 const { startRetention } = require('./lib/retention');
+const errorLog = require('./lib/error-log');
 
 const indexRoutes = require('./routes/index');
 const authRoutes = require('./routes/auth');
 const accountRoutes = require('./routes/account');
 const adminRoutes = require('./routes/admin');
+
+// Errors outside any page (a forgotten await, a timer): logged like page errors (lib/error-log.js). After an uncaught
+// exception the server is in an unknown state, so it stops once the error is saved; the host then starts it again.
+process.on('unhandledRejection', (reason) => { errorLog.record(reason, { where: 'Unhandled promise rejection' }); });
+process.on('uncaughtException', (err) => {
+  const timeout = new Promise((resolve) => setTimeout(resolve, 3000).unref());
+  Promise.race([errorLog.record(err, { where: 'Uncaught exception' }), timeout]).finally(() => process.exit(1));
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,6 +59,7 @@ app.locals.LEVELS = require('./lib/project-levels').LEVELS; // school levels of 
 app.locals.levelFromSchool = require('./lib/project-levels').levelFromSchool;
 app.locals.INTEREST_GROUPS = require('./models/QuoteRequest').INTEREST_GROUPS; // "Bạn quan tâm đến" list (partials/quote-form.ejs)
 app.locals.isProductLine = require('./models/QuoteRequest').isProductLine; // robot name shown with the category (request lists)
+app.locals.chatLinks = require('./lib/chat-links').chatLinks; // Zalo / Messenger links (partials/chat-button.ejs, footer, Liên hệ)
 app.locals.QUOTE_MESSAGE_MAX = require('./lib/quote-request').MESSAGE_MAX; // request message limit + counter (partials/quote-form.ejs)
 app.locals.googleEnabled = require('./lib/google-auth').isConfigured(); // "Đăng nhập bằng Google" button (login, register)
 // Behind the host's HTTPS proxy (lib/trust-proxy.js turns TRUST_PROXY=1 into the number Express expects)
@@ -146,11 +156,20 @@ app.use((req, res, next) => {
 // to read then gets a clear page in the right language (error handler below), not the general error page
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+// A POST without any form data (robots, scripts) leaves req.body undefined in Express 5: treat it as an empty form,
+// so it gets the normal "please fill in" answer instead of a server error
+app.use((req, res, next) => { if (req.body === undefined) req.body = {}; next(); });
 
+app.use(require('./lib/page-views').countPageViews); // visits per public page and day, for the admin overview
 app.use('/', indexRoutes);
 app.use('/', authRoutes);
 app.use('/tai-khoan', accountRoutes);
 app.use('/admin', adminRoutes);
+
+// Tests only (tests/run.mjs sets ERROR_TEST_ROUTE): a page that fails, to check the error log and the alert email
+if (process.env.ERROR_TEST_ROUTE === '1') {
+  app.get('/__test/boom', () => { throw new Error('ZZ test error'); });
+}
 
 app.use((req, res) => {
   res.status(404).render('404');
@@ -171,7 +190,7 @@ app.use((err, req, res, next) => {
     if (req.is('json') || req.path.startsWith('/admin/thu-tu/')) return res.status(413).json({ ok: false });
     return res.status(413).render('413', { backHref: sameSiteReferer(req) });
   }
-  console.error(err);
+  errorLog.record(err, { req });
   if (res.headersSent) return next(err);
   if (dbGuard.isDbUnavailable(err)) return dbGuard.sendUnavailable(res);
   res.status(500).render('500');

@@ -57,3 +57,15 @@ ul { padding-left: 1.2em; }
 :root.lang-fading::view-transition-group(*),
 :root.lang-fading::view-transition-old(*),
 :root.lang-fading::view-transition-new(*) { animation-duration: calc(.3s * var(--anim)); animation-timing-function: ease; }
+
+/* ---- Printing: black on white (theme.css keeps the dark colours to the screen), no shadows or motion,
+   no buttons, web addresses written after outside links, pictures and headings kept with what follows ---- */
+@media print {
+  @page { margin: 14mm; }
+  *, *::before, *::after { box-shadow: none !important; text-shadow: none !important; transition: none !important; animation: none !important; }
+  body { background: #fff; }
+  main .btn { display: none !important; }
+  main p a[href^="http"]::after, main li a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .85em; color: var(--mtg-muted); overflow-wrap: anywhere; }
+  img, svg, figure, tr, .card, .media-figure { break-inside: avoid; }
+  h1, h2, h3, h4 { break-after: avoid; }
+}

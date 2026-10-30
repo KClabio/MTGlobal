@@ -26,7 +26,7 @@
     <% if (g.items.length) { %>
       <div style="overflow-x:auto;">
       <table class="data-table">
-        <thead><tr><th class="drag-cell"></th><th><%= t('admin.help.colQuestion') %></th><th><%= t('admin.help.colVisible') %></th><th></th></tr></thead>
+        <thead><tr><th class="drag-cell"><span class="sr-only"><%= t('admin.common.order') %></span></th><th><%= t('admin.help.colQuestion') %></th><th><%= t('admin.help.colVisible') %></th><th><span class="sr-only"><%= t('admin.common.actions') %></span></th></tr></thead>
         <tbody data-sortable="help-<%= g.key %>" data-list-part="help">
           <% g.items.forEach(function (it) { %>
             <tr data-id="<%= it._id %>" data-search="<%= [it.questionVi, it.questionEn].filter(Boolean).join(' ') %>" data-filter="<%= g.key %>">

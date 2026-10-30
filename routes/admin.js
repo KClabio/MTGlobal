@@ -16,7 +16,8 @@ const { requireAdmin } = require('../middleware/auth');
 const { uploadMedia, uploadServiceMedia, uploadPageMedia, uploadSingleImage, uploadSettingsImages, fileUrl, fileUrls, wrapUpload, removeLocalUpload, removeUpload, removeLocalMedia, PAGE_MEDIA_PREFIX } = require('../middleware/upload');
 const { clearSiteSettingsCache } = require('../lib/settings');
 const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
-const { isNonEmpty } = require('../lib/validators');
+const { isNonEmpty, isValidEmail } = require('../lib/validators');
+const { STAFF_EMAILS_MAX } = require('../lib/request-mail');
 const { isStaff, canDeleteUser, canChangeRole } = require('../lib/roles');
 const { getDashboardData } = require('../lib/dashboard');
 const { toPlainText, slugify } = require('../lib/text');
@@ -31,6 +32,10 @@ const { BANNERS } = require('../lib/banners');
 const { partSlug, groupEquipmentByPart } = require('../lib/equipment-parts');
 const { LEVELS: PROJECT_LEVELS, projectLevel } = require('../lib/project-levels');
 const { HELP_GROUPS, HELP_GROUP_KEYS, getHelpItems, groupHelpItems } = require('../lib/help-topics');
+const errorLog = require('../lib/error-log');
+const ErrorLog = require('../models/ErrorLog');
+const mailer = require('../lib/mailer');
+const { cleanZalo, cleanMessenger } = require('../lib/chat-links');
 
 router.use(requireAdmin);
 router.use(loadAdminLanguage);
@@ -42,6 +47,14 @@ function flash(req, type, text) {
 router.use((req, res, next) => {
   res.locals.flash = req.session.flash || null;
   if (req.session.flash) delete req.session.flash;
+  next();
+});
+// Server errors not looked at yet: a red count on "Nhật ký lỗi" in the menu and a notice on the dashboard
+router.use(async (req, res, next) => {
+  res.locals.unseenErrors = 0;
+  if (req.method === 'GET') {
+    try { res.locals.unseenErrors = await errorLog.unseenCount(); } catch (err) { /* the page still opens */ }
+  }
   next();
 });
 // Where to go back to after an action: the referring admin page on this site, never an outside URL
@@ -57,8 +70,10 @@ const done = (req, res, key, vars, to) => { flash(req, 'success', res.locals.t(k
 function parseSpecs(body) {
   const keys = [].concat(body.specKey || []);
   const values = [].concat(body.specValue || []);
+  const keysEn = [].concat(body.specKeyEn || []);
+  const valuesEn = [].concat(body.specValueEn || []);
   return keys
-    .map((key, i) => ({ key: (key || '').trim(), value: (values[i] || '').trim() }))
+    .map((key, i) => ({ key: (key || '').trim(), value: (values[i] || '').trim(), keyEn: (keysEn[i] || '').trim(), valueEn: (valuesEn[i] || '').trim() }))
     .filter((s) => s.key);
 }
 
@@ -744,9 +759,18 @@ function settingsView(settings) {
   return data;
 }
 
-const SETTINGS_TABS = ['brand', 'home', 'banners', 'reset'];
+const SETTINGS_TABS = ['brand', 'home', 'banners', 'email', 'reset'];
 
-async function renderGeneralSettings(res, { status = 200, settings, tab, error = null }) {
+// "Email nhận yêu cầu" box: one address per line (commas and spaces also split); returns { emails } or { error }
+function parseRequestEmails(text, t) {
+  const emails = [...new Set(String(text || '').split(/[\s,;]+/).map((e) => e.trim().toLowerCase()).filter(Boolean))];
+  const wrong = emails.find((e) => !isValidEmail(e));
+  if (wrong) return { error: t('admin.general.errRequestEmail', { email: wrong }) };
+  if (emails.length > STAFF_EMAILS_MAX) return { error: t('admin.general.errRequestEmailsMax', { max: STAFF_EMAILS_MAX }) };
+  return { emails };
+}
+
+async function renderGeneralSettings(res, { status = 200, settings, tab, error = null, requestEmailsText = null }) {
   // "Khôi phục mặc định" tab: the Giải pháp pages, with when each was last saved (none yet = still the default content)
   const saved = await SolutionPage.find({}, { slug: 1, updatedAt: 1 }).lean();
   const resetPages = SOLUTION_SLUGS.map((slug) => {
@@ -755,6 +779,7 @@ async function renderGeneralSettings(res, { status = 200, settings, tab, error =
   });
   res.status(status).render('admin/general-settings', {
     settings, banners: BANNERS, openTab: SETTINGS_TABS.includes(tab) ? tab : 'brand', error, resetPages,
+    requestEmailsText, requestEmailsMax: STAFF_EMAILS_MAX, mailReady: mailer.isConfigured(),
     tVi: makeTranslator('vi'), tEn: makeTranslator('en'), // the default texts shown as placeholders
   });
 }
@@ -786,6 +811,16 @@ router.post('/cai-dat', wrapUpload(uploadSettingsImages, async (req, res) => {
     Object.values(files).flat().forEach((file) => removeLocalUpload(fileUrl(file)));
     return await renderGeneralSettings(res, { status: 400, settings: settingsView(settings), tab: body.tab, error: uploadErrorText(req, t) });
   }
+  // Checked first, so a mistyped address saves nothing (and keeps what was typed on the Email tab)
+  let requestEmails = null;
+  if (typeof body.requestEmails === 'string') {
+    const parsed = parseRequestEmails(body.requestEmails, t);
+    if (parsed.error) {
+      Object.values(files).flat().forEach((file) => removeLocalUpload(fileUrl(file)));
+      return await renderGeneralSettings(res, { status: 400, settings: settingsView(settings), tab: 'email', error: parsed.error, requestEmailsText: body.requestEmails });
+    }
+    requestEmails = parsed.emails;
+  }
   const replaced = []; // old images to delete once the new settings are saved
   const swap = (oldUrl, newUrl) => { if (oldUrl && oldUrl !== newUrl) replaced.push(oldUrl); return newUrl; };
 
@@ -813,6 +848,8 @@ router.post('/cai-dat', wrapUpload(uploadSettingsImages, async (req, res) => {
     settings.banners.set(key, { subtitleVi: line(body[`bannerVi_${key}`]), subtitleEn: line(body[`bannerEn_${key}`]), image });
   }
 
+  if (requestEmails) settings.requestEmails = requestEmails;
+
   await settings.save();
   replaced.forEach(removeLocalUpload);
   clearSiteSettingsCache();
@@ -831,7 +868,7 @@ router.get('/thong-tin-cong-ty', async (req, res) => {
 
 router.post('/thong-tin-cong-ty', async (req, res) => {
   const settings = await loadSettings();
-  const { companyProfile, companyProfileEn, privacyPolicy, privacyPolicyEn, address, phone, email, mapEmbedUrl } = req.body;
+  const { companyProfile, companyProfileEn, privacyPolicy, privacyPolicyEn, address, phone, email, mapEmbedUrl, zalo, messenger } = req.body;
   // Plain text only: any tags typed or pasted in are stripped; the About page formats the paragraphs
   settings.companyProfile = toPlainText(companyProfile);
   settings.companyProfileEn = toPlainText(companyProfileEn);
@@ -841,20 +878,49 @@ router.post('/thong-tin-cong-ty', async (req, res) => {
   const ownText = (sent, draft) => (toPlainText(sent) === toPlainText(draft) ? '' : toPlainText(sent));
   if (typeof privacyPolicy === 'string') settings.privacyPolicy = ownText(privacyPolicy, before.vi);
   if (typeof privacyPolicyEn === 'string') settings.privacyPolicyEn = ownText(privacyPolicyEn, before.en);
+  // A post without the chat boxes (an older form) keeps the saved Zalo / Messenger
+  const saved = settings.contactInfo || {};
   settings.contactInfo = {
     address: (address || '').trim(),
     phone: (phone || '').trim(),
     email: (email || '').trim(),
     mapEmbedUrl: (mapEmbedUrl || '').trim(),
+    // The chat button's links (lib/chat-links.js): stored cleaned, '' when not usable
+    zalo: typeof zalo === 'string' ? cleanZalo(zalo) : saved.zalo || '',
+    messenger: typeof messenger === 'string' ? cleanMessenger(messenger) : saved.messenger || '',
   };
   await settings.save();
   clearSiteSettingsCache();
   done(req, res, 'admin.flash.settingsSaved', {}, '/admin/thong-tin-cong-ty');
 });
 
+// ---- Nhật ký lỗi (server errors, lib/error-log.js) ----
+router.get('/nhat-ky-loi', async (req, res) => {
+  const errors = await ErrorLog.find().sort({ seen: 1, lastAt: -1 }).limit(300).lean();
+  const alertEmail = mailer.isConfigured() ? process.env.ALERT_EMAIL_TO || '' : '';
+  res.render('admin/errors', { errors, keepDays: ErrorLog.KEEP_DAYS, alertEmail });
+});
+
+router.post('/nhat-ky-loi/da-xem', async (req, res) => {
+  await ErrorLog.updateMany({ seen: false }, { $set: { seen: true } });
+  done(req, res, 'admin.errors.flashAllSeen', {}, '/admin/nhat-ky-loi');
+});
+
+router.post('/nhat-ky-loi/:id/da-xem', async (req, res) => {
+  const found = mongoose.isValidObjectId(req.params.id) && await ErrorLog.findByIdAndUpdate(req.params.id, { $set: { seen: true } });
+  if (!found) return notFound(req, res, '/admin/nhat-ky-loi');
+  done(req, res, 'admin.errors.flashSeen', {}, '/admin/nhat-ky-loi');
+});
+
+router.post('/nhat-ky-loi/:id/xoa', async (req, res) => {
+  const found = mongoose.isValidObjectId(req.params.id) && await ErrorLog.findByIdAndDelete(req.params.id);
+  if (!found) return notFound(req, res, '/admin/nhat-ky-loi');
+  done(req, res, 'admin.errors.flashDeleted', {}, '/admin/nhat-ky-loi');
+});
+
 // Unexpected errors (database etc.): for form posts, go back with a red notification instead of an error page
 router.use((err, req, res, next) => {
-  console.error(err);
+  errorLog.record(err, { req });
   if (res.headersSent) return next(err);
   if (req.path.startsWith('/thu-tu/')) return res.status(500).json({ ok: false });
   if (req.method === 'POST') {

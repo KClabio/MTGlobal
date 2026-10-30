@@ -19,6 +19,10 @@ const quoteRequestSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   editedAt: { type: Date, default: null }, // last change by the sender ("Yêu cầu của tôi" → Sửa); staff see "Đã sửa lúc …"
   privacyAcceptedAt: { type: Date, default: null }, // when the sender ticked "Tôi đồng ý với Chính sách bảo mật" (sent or changed)
+  // Where it came from, for the admin overview's "Trang mang lại yêu cầu" (lib/dashboard.js): the page whose form sent it,
+  // and the site page the visitor opened just before (main.js fills it from document.referrer; '' when from elsewhere)
+  sourcePage: { type: String, default: '' },
+  cameFrom: { type: String, default: '' },
   // Answers to a service's own questions, copied at submit time so they still read correctly after the questions change
   details: [{
     _id: false,
@@ -29,6 +33,11 @@ const quoteRequestSchema = new mongoose.Schema({
     valueEn: { type: String, default: '' },
   }],
 }, { timestamps: true });
+
+// Lists read newest first, so only the shown requests are read (built by mongoose at startup)
+quoteRequestSchema.index({ createdAt: -1 }); // Admin → Yêu cầu, dashboard
+quoteRequestSchema.index({ status: 1, createdAt: -1 }); // the status tabs of Admin → Yêu cầu
+quoteRequestSchema.index({ user: 1, createdAt: -1 }); // "Yêu cầu của tôi", data download, account delete
 
 // Labels for these codes live in locales/*.json under admin.interest.* and admin.status.*
 const STATUSES = ['moi', 'da_lien_he', 'hoan_tat'];

@@ -61,6 +61,8 @@
             <div class="spec-row">
               <input class="form-control" name="specKey" placeholder="<%= t('admin.products.specKey') %>" value="<%= s.key %>">
               <input class="form-control" name="specValue" placeholder="<%= t('admin.products.specValue') %>" value="<%= s.value %>">
+              <input class="form-control" name="specKeyEn" placeholder="<%= t('admin.products.specKeyEn') %>" value="<%= s.keyEn %>" lang="en">
+              <input class="form-control" name="specValueEn" placeholder="<%= t('admin.products.specValueEn') %>" value="<%= s.valueEn %>" lang="en">
               <button type="button" class="btn btn-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
             </div>
           <% }) %>
@@ -69,6 +71,8 @@
           <div class="spec-row">
             <input class="form-control" name="specKey" placeholder="<%= t('admin.products.specKey') %>">
             <input class="form-control" name="specValue" placeholder="<%= t('admin.products.specValue') %>">
+            <input class="form-control" name="specKeyEn" placeholder="<%= t('admin.products.specKeyEn') %>" lang="en">
+            <input class="form-control" name="specValueEn" placeholder="<%= t('admin.products.specValueEn') %>" lang="en">
             <button type="button" class="btn btn-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
           </div>
         </template>

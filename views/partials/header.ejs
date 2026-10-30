@@ -45,6 +45,8 @@
   <link rel="preload" href="/fonts/be-vietnam-pro-400-latin.woff2" as="font" type="font/woff2" crossorigin>
   <%# All website styles joined into one file (lib/assets.js: fonts, theme, base, layout, components, home, pages) %>
   <link rel="stylesheet" href="<%= asset('/css/site.css') %>">
+  <link rel="icon" href="/images/icon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/images/icon-180.png">
   <script nonce="<%= cspNonce %>">document.documentElement.classList.add('js');</script>
   <% if (langFade) { %>
     <%# Opened from the VI / EN switch: the old page fades into this one (both pages must ask for it, main.js does it on the old one).
@@ -59,7 +61,7 @@
     <div class="container header-inner">
       <a href="/" class="logo"><%- include('logo') %></a>
 
-      <button class="nav-toggle" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+      <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false" aria-controls="mainNav"><span></span><span></span><span></span></button>
 
       <nav class="main-nav" id="mainNav">
         <a href="/"><%= t('nav.home') %></a>

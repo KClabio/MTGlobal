@@ -7,22 +7,29 @@
   bannerKey: 'products'
 }) %>
 
+<%
+  const pdName = pick(product, 'name');
+  const pdImages = product.images || [];
+  const pdVideos = product.videos || [];
+  // English spec text on the English page when it was filled in, else the Vietnamese
+  const pdSpec = function (s, field) { return (lang === 'en' && s[field + 'En']) || s[field]; };
+%>
 <section class="section">
   <div class="container admin-form-grid">
     <div>
-      <% if (product.images && product.images.length) { %>
+      <% if (pdImages.length === 1) { %>
         <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/10;">
-          <%- picture(product.images[0], pick(product, 'name'), { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
+          <%- picture(pdImages[0], pdName, { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
         </div>
-      <% } %>
-
-      <% if (product.videos && product.videos.length) { %>
-        <div class="video-stack">
-          <% product.videos.forEach(function (v) { %>
-            <%# Watch only: play/pause, time bar, volume, fullscreen; no download, speed, picture-in-picture or casting %>
-            <video controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture disableRemotePlayback preload="metadata" playsinline>
-              <source src="<%= v %>" type="video/mp4">
-            </video>
+      <% } else if (pdImages.length) { %>
+        <%# Upright tiles in a row; a click opens the picture larger in a box on the page (public/js/main.js, "Xem ảnh lớn").
+            On phones the first photo takes the whole width (pages.css). %>
+        <div class="product-photos" role="list" aria-label="<%= t('productPage.photos') %>">
+          <% pdImages.forEach(function (img, k) { %>
+            <div role="listitem">
+              <%- include('partials/media-figure', { src: img, caption: '', alt: pdName + ' (' + (k + 1) + '/' + pdImages.length + ')', ratio: '3/4', zoom: true,
+                    sizes: k === 0 ? '(max-width: 560px) 100vw, (max-width: 960px) 33vw, 270px' : '(max-width: 560px) 50vw, (max-width: 960px) 33vw, 270px', eager: k === 0 }) %>
+            </div>
           <% }) %>
         </div>
       <% } %>
@@ -39,10 +46,11 @@
       <% } %>
 
       <% if (product.specs && product.specs.length) { %>
-        <table class="data-table" style="margin-top:20px;">
+        <table class="data-table product-specs">
+          <caption class="sr-only"><%= t('productPage.specs') %></caption>
           <tbody>
             <% product.specs.forEach(function (s) { %>
-              <tr><th style="width:40%;"><%= s.key %></th><td><%= s.value %></td></tr>
+              <tr><th scope="row"><%= pdSpec(s, 'key') %></th><td><%= pdSpec(s, 'value') %></td></tr>
             <% }) %>
           </tbody>
         </table>
@@ -63,5 +71,26 @@
     </aside>
   </div>
 </section>
+
+<% if (pdVideos.length) { %>
+  <%# The whole page width, under the photos and the form. Tiles are upright (phone videos); public/js/main.js gives a
+      wide video the class is-wide, which puts it on its own row. %>
+  <section class="section section-alt product-videos-section" aria-labelledby="productVideosTitle">
+    <div class="container">
+      <div class="section-head"><h2 class="section-title" id="productVideosTitle"><%= t('productPage.videos') %></h2></div>
+      <div class="product-videos" role="list">
+        <% pdVideos.forEach(function (v) { %>
+          <div class="product-video" role="listitem" data-product-video>
+            <%# Watch only: play/pause, time bar, volume, fullscreen; no download, speed, picture-in-picture or casting.
+                #t=0.1 makes the tile show a frame of the video before it is played, not a black box. %>
+            <video controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture disableRemotePlayback preload="metadata" playsinline aria-label="<%= pdName %>">
+              <source src="<%= v %>#t=0.1" type="video/mp4">
+            </video>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </section>
+<% } %>
 
 <%- include('partials/footer') %>

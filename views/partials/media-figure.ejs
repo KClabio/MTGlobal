@@ -1,7 +1,8 @@
 <%#
   A captioned photo or video for solution-page galleries.
-  include('partials/media-figure', { src, caption, video: false, poster, ratio: '4/3', contain: false, alt, zoom: false })
+  include('partials/media-figure', { src, caption, video: false, poster, ratio: '4/3', contain: false, alt, zoom: false, sizes, eager })
   alt: the picture's text when it differs from the shown caption (defaults to the caption)
+  sizes, eager: passed to picture() (eager only for a photo on the first screen)
   zoom: a photo becomes a button that opens it larger in a box on the page (public/js/main.js, the "Xem ảnh lớn" box).
   A button, not a link to the file, so hovering previews nothing; without JS the picture just stays as it is.
 %><%
@@ -13,8 +14,8 @@
   const mfZoom = typeof zoom !== 'undefined' && zoom && !mfIsVideo;
 %><figure class="media-figure<%= mfContain ? ' is-contain' : '' %><%= mfZoom ? ' is-zoomable' : '' %>">
   <% if (mfZoom) { %>
-  <button type="button" class="media-zoom" data-image-view data-full="<%= src %>" data-title="<%= mfCaption %>" data-alt="<%= mfAlt %>"
-          aria-label="<%= t('solutionPage.viewFull') %><%= mfCaption ? ': ' + mfCaption : '' %>" data-back-label="<%= t('common.back') %>"
+  <button type="button" class="media-zoom" data-image-view data-full="<%= src %>" data-title="<%= mfCaption || mfAlt %>" data-alt="<%= mfAlt %>"
+          aria-label="<%= t('solutionPage.viewFull') %><%= mfCaption || mfAlt ? ': ' + (mfCaption || mfAlt) : '' %>" data-back-label="<%= t('common.back') %>"
           data-loading="<%= t('solutionPage.imageLoading') %>" data-failed="<%= t('solutionPage.imageFailed') %>" data-open="<%= t('solutionPage.openImage') %>">
   <% } %>
   <div class="media-frame" style="aspect-ratio:<%= mfRatio %>;">
@@ -24,7 +25,7 @@
         <source src="<%= src %>" type="video/mp4">
       </video>
     <% } else { %>
-      <%- picture(src, mfAlt, { sizes: '(max-width: 900px) 100vw, 720px' }) %>
+      <%- picture(src, mfAlt, { sizes: typeof sizes !== 'undefined' && sizes ? sizes : '(max-width: 900px) 100vw, 720px', eager: typeof eager !== 'undefined' && eager }) %>
     <% } %>
     <% if (mfZoom) { %>
       <span class="media-zoom-badge" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>

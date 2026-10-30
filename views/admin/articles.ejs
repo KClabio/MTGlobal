@@ -12,7 +12,7 @@
 
 <div style="overflow-x:auto;">
 <table class="data-table">
-  <thead><tr><th class="drag-cell"></th><th><%= t('admin.common.image') %></th><th><%= t('admin.articles.colTitle') %></th><th><%= t('admin.articles.colDate') %></th><th><%= t('admin.articles.colUploader') %></th><th><%= t('admin.articles.colVisible') %></th><th></th></tr></thead>
+  <thead><tr><th class="drag-cell"><span class="sr-only"><%= t('admin.common.order') %></span></th><th><%= t('admin.common.image') %></th><th><%= t('admin.articles.colTitle') %></th><th><%= t('admin.articles.colDate') %></th><th><%= t('admin.articles.colUploader') %></th><th><%= t('admin.articles.colVisible') %></th><th><span class="sr-only"><%= t('admin.common.actions') %></span></th></tr></thead>
   <tbody data-sortable="articles">
     <% articles.forEach(function (a) { %>
       <tr data-id="<%= a._id %>" data-search="<%= [a.titleVi, a.titleEn, a.uploader && a.uploader.name].filter(Boolean).join(' ') %>">

@@ -9,7 +9,7 @@
 
 <div style="overflow-x:auto;">
 <table class="data-table">
-  <thead><tr><th class="drag-cell"></th><th><%= t('admin.partners.colLogo') %></th><th><%= t('admin.partners.colName') %></th><th><%= t('admin.partners.colWebsite') %></th><th></th></tr></thead>
+  <thead><tr><th class="drag-cell"><span class="sr-only"><%= t('admin.common.order') %></span></th><th><%= t('admin.partners.colLogo') %></th><th><%= t('admin.partners.colName') %></th><th><%= t('admin.partners.colWebsite') %></th><th><span class="sr-only"><%= t('admin.common.actions') %></span></th></tr></thead>
   <tbody data-sortable="partners">
     <% partners.forEach(function (p) { %>
       <tr data-id="<%= p._id %>">

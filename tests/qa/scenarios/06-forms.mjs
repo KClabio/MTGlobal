@@ -53,13 +53,13 @@ export const scenarios = [
     async run(ctx) {
       const db = await ctx.infra.db();
       const stamp = Date.now();
-      const reg = (body) => new Client().post('/dang-ky', { name: 'QA Đăng ký', password: 'abcdef', confirmPassword: 'abcdef', ...body });
+      const reg = (body) => new Client().post('/dang-ky', { name: 'QA Đăng ký', password: 'qa-Signup-2026', confirmPassword: 'qa-Signup-2026', ...body });
       const out = {};
       out.ok = (await reg({ email: `qa-signup-${stamp}@example.com` })).status;
       const dupCase = await reg({ email: `QA-SIGNUP-${stamp}@Example.com` });
       out.duplicateOtherCapitals = { status: dupCase.status, message: errorsIn(dupCase.text)[0] || null };
       out.shortPassword = (await reg({ email: `qa-signup2-${stamp}@example.com`, password: 'abc', confirmPassword: 'abc' })).status;
-      out.mismatch = (await reg({ email: `qa-signup3-${stamp}@example.com`, confirmPassword: 'abcdeX' })).status;
+      out.mismatch = (await reg({ email: `qa-signup3-${stamp}@example.com`, confirmPassword: 'qa-Signup-2027' })).status;
       out.badEmail = (await reg({ email: 'not-an-email' })).status;
       const same = `qa-signup-race-${stamp}@example.com`;
       const race = await Promise.all([reg({ email: same }), reg({ email: same }), reg({ email: same })]);
@@ -68,9 +68,13 @@ export const scenarios = [
       if (out.duplicateOtherCapitals.status !== 400) ctx.finding({ severity: 'high', title: 'The same email can sign up twice with other capitals', detail: JSON.stringify(out.duplicateOtherCapitals), fix: 'Lower-case before checking.' });
       if (out.sameMoment.accounts !== 1) ctx.finding({ severity: 'high', title: 'Two accounts with the same email', detail: JSON.stringify(out.sameMoment), fix: 'Unique index on email.' });
       if (out.sameMoment.errorPages) ctx.finding({ severity: 'low', title: 'Signing up twice at the same moment shows the error page', detail: `${out.sameMoment.errorPages} of 3 simultaneous sign-ups with one email got the "something went wrong" page instead of "this email is already registered" (only one account was made, correctly).`, fix: 'Catch the duplicate-key error on save and show the normal message.' });
-      out.minPassword = 6;
-      ctx.result('passwordRule', 'at least 6 characters, nothing else required');
-      ctx.finding({ severity: 'low', title: 'Weak passwords are accepted', detail: 'The only rule is 6 characters: "123456" or "aaaaaa" work.', fix: 'At least 8 characters, and refuse the most common passwords.' });
+      // Weak passwords: each must be refused (400) and no account made
+      const weak = ['123456', 'aaaaaa', 'abc1234', '12345678', 'password', 'aaaaaaaa', 'iloveyou'];
+      out.weakPasswords = {};
+      for (const [i, pw] of weak.entries()) out.weakPasswords[pw] = (await reg({ email: `qa-signup-weak${i}-${stamp}@example.com`, password: pw, confirmPassword: pw })).status;
+      const weakAccepted = Object.keys(out.weakPasswords).filter((pw) => out.weakPasswords[pw] !== 400);
+      ctx.result('passwordRule', weakAccepted.length ? `accepted: ${weakAccepted.join(', ')}` : 'at least 8 characters, common passwords refused');
+      if (weakAccepted.length) ctx.finding({ severity: 'low', title: 'Weak passwords are accepted', detail: `These passwords were accepted: ${weakAccepted.map((pw) => `"${pw}"`).join(', ')}.`, fix: 'At least 8 characters, and refuse the most common passwords.' });
     },
     async cleanup(ctx) { await (await ctx.infra.db()).collection('users').deleteMany({ email: /^qa-signup/ }); },
   },

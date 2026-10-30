@@ -90,11 +90,12 @@
 .footer-inner { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 32px; }
 .footer-brand .logo { color: #fff; }
 .footer-brand p { color: rgba(255,255,255,.72); }
-.footer-brand .footer-company { margin: 18px 0 6px; color: #fff; font-weight: 700; font-size: .95rem; } /* matches .footer-col h4 */
+.footer-brand .footer-company { margin: 18px 0 6px; color: #fff; font-weight: 700; font-size: .95rem; } /* matches .footer-col .footer-title */
 .footer-brand .footer-about { max-width: 340px; margin: 0; font-size: .9rem; line-height: 1.6; text-wrap: pretty; }
 /* On the navy footer, present the white logo as a badge instead of a raw white block */
 .footer-brand .logo .logo-img { height: 56px; padding: 6px 12px; background: #fff; border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow); }
-.footer-col h4 { color: #fff; font-size: .95rem; margin-bottom: 14px; }
+/* h2 so the page's headings stay in order (an h4 straight after an h1 or h2 skips levels); sized like before */
+.footer-col .footer-title { color: #fff; font-size: .95rem; margin-bottom: 14px; }
 .footer-col a, .footer-col p { color: rgba(255,255,255,.72); font-size: .9rem; display: block; margin-bottom: 8px; }
 .footer-col a:hover { color: #fff; }
 .footer-bottom { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); text-align: center; font-size: .82rem; color: rgba(255,255,255,.55); }
@@ -187,3 +188,23 @@ body.nav-open .main-nav { animation: nav-drawer-in calc(.3s * var(--anim, 1)) cu
 body.nav-open.nav-closing .main-nav { animation: nav-drawer-out calc(.22s * var(--anim, 1)) ease forwards; }
 @keyframes nav-drawer-in { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
 @keyframes nav-drawer-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-12px); } }
+
+/* ---- Printing: the logo alone at the top, a plain banner, and the footer reduced to the company and its contacts ---- */
+@media print {
+  .site-header { position: static; box-shadow: none; border-bottom: 1px solid var(--mtg-border); }
+  .header-inner { padding: 0 0 10px; }
+  .brand-bar, .main-nav, .header-actions, .nav-toggle { display: none !important; }
+  .page-hero, .page-hero.has-image { background: none; color: var(--mtg-ink); padding: 20px 0 4px; text-align: left; }
+  .page-hero h1 { color: var(--mtg-heading); font-size: 1.7rem; }
+  .page-hero p, .page-hero.has-image p { color: var(--mtg-muted); margin-left: 0; }
+  .hero-back-row { display: none; }
+  .hero-pill { background: none; border: 1px solid var(--mtg-border); }
+  .section { padding: 20px 0; }
+  .section-alt { background: none; }
+  .site-footer { background: none; color: var(--mtg-ink); margin-top: 24px; padding: 14px 0 0; border-top: 1px solid var(--mtg-border); break-inside: avoid; }
+  .footer-inner { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .footer-inner > .footer-col:nth-child(2), .footer-col a[href^="/"], .footer-about, .footer-bottom-link { display: none; }
+  .footer-brand .logo .logo-img { height: 40px; padding: 0; }
+  .footer-brand p, .footer-brand .footer-company, .footer-col .footer-title, .footer-col a, .footer-col p { color: var(--mtg-ink); }
+  .footer-bottom { margin-top: 12px; padding-top: 0; border: 0; text-align: left; color: var(--mtg-muted); }
+}

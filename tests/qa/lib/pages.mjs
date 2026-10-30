@@ -1,7 +1,7 @@
 // Finds the site's public pages by following links from Trang chủ (like a search engine would)
 import { Client } from './http.mjs';
 
-const SKIP = /^\/(admin|dang-xuat|uploads|assets|images|css|js|vendor)(\/|$)|\.(jpe?g|png|webp|gif|svg|mp4|webm|pdf|zip|ico)$/i;
+const SKIP = /^\/(admin|dang-xuat|uploads|assets|images|css|js|vendor|fonts)(\/|$)|\.(jpe?g|png|webp|gif|svg|mp4|webm|pdf|zip|ico|woff2?|ttf)$/i;
 
 export function linksIn(html) {
   const out = new Set();

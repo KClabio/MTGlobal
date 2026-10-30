@@ -11,12 +11,13 @@ const { uploadAvatar, AVATAR_MAX_BYTES, isRealImageFile, fileUrl, wrapUpload, re
 const { isValidEmail, isValidPhone, isNonEmpty } = require('../lib/validators');
 const google = require('../lib/google-auth');
 const throttle = require('../lib/login-throttle');
+const errorLog = require('../lib/error-log');
 const { isStaff } = require('../lib/roles');
-
-const PASSWORD_MIN = 6;
+const { passwordProblem } = require('../lib/passwords');
 
 // Sign-up gatekeeping (the browser checks the same first: public/js/main.js, [data-register-form]): name required,
 // a valid email, a phone only if it looks like one (phone and school are optional), a long enough password typed twice
+// (and not a common one: lib/passwords.js, checked here only)
 function validateRegistration(values, password, confirmPassword, t) {
   const errors = {};
   if (!isNonEmpty(values.name)) errors.name = t('forms.errName');
@@ -24,17 +25,27 @@ function validateRegistration(values, password, confirmPassword, t) {
   else if (!isValidEmail(values.email)) errors.email = t('forms.errEmail');
   if (values.phone && !isValidPhone(values.phone)) errors.phone = t('forms.errPhone');
   if (!password) errors.password = t('auth.errPasswordRequired');
-  else if (password.length < PASSWORD_MIN) errors.password = t('auth.errPasswordLength');
+  else if (passwordProblem(password) === 'length') errors.password = t('auth.errPasswordLength');
+  else if (passwordProblem(password) === 'common') errors.password = t('auth.errPasswordCommon');
   if (!confirmPassword) errors.confirmPassword = t('auth.errConfirmRequired');
   else if (password && password !== confirmPassword) errors.confirmPassword = t('auth.errPasswordMatch');
   if (!values.agreePrivacy) errors.agreePrivacy = t('privacy.errAgree'); // consent to the Chính sách bảo mật (Decree 13)
   return errors;
 }
 
-// ?yeu-cau=1: sent here by a consultation request while logged out (routes/index.js): the page says so
+// ?yeu-cau=1: sent here from a request form's "Đăng nhập" line (partials/quote-form.ejs): the page says so
 const forRequest = (req) => req.query['yeu-cau'] === '1' || req.body?.forRequest === '1';
 
+// ?ve=<page>: after logging in (or signing up, then logging in), back to that request form. Only the pages that have
+// one are accepted, so the link can't send anyone to another site.
+const RETURN_PATH = /^\/(lien-he(\?quan_tam=[a-z-]+)?|san-pham\/[a-z0-9-]+|dich-vu\/[a-z0-9-]+)$/;
+function rememberReturn(req) {
+  const path = req.query.ve;
+  if (typeof path === 'string' && RETURN_PATH.test(path)) req.session.returnTo = path;
+}
+
 router.get('/dang-ky', (req, res) => {
+  rememberReturn(req);
   res.render('register', { error: null, errors: {}, values: {}, needLogin: forRequest(req) });
 });
 
@@ -51,14 +62,20 @@ router.post('/dang-ky', async (req, res) => {
     return res.status(400).render('register', { error: t('forms.errSummary'), errors, values, needLogin: forRequest(req) });
   }
 
-  await User.create({
-    name: values.name,
-    email: values.email,
-    passwordHash: await bcrypt.hash(password, 10),
-    phone: values.phone,
-    schoolOrCompany: values.schoolOrCompany,
-    privacyAcceptedAt: new Date(),
-  });
+  try {
+    await User.create({
+      name: values.name,
+      email: values.email,
+      passwordHash: await bcrypt.hash(password, 10),
+      phone: values.phone,
+      schoolOrCompany: values.schoolOrCompany,
+      privacyAcceptedAt: new Date(),
+    });
+  } catch (err) {
+    // The same email sent twice at the same moment: both pass the check above, the unique index refuses the second
+    if (err.code !== 11000) throw err;
+    return res.status(400).render('register', { error: t('forms.errSummary'), errors: { email: t('auth.errEmailTaken') }, values, needLogin: forRequest(req) });
+  }
 
   // Signing up doesn't log in: the login page welcomes them with the new email filled in; logging in leads to Trang chủ
   req.session.justRegistered = values.email;
@@ -66,19 +83,22 @@ router.post('/dang-ky', async (req, res) => {
 });
 
 router.get('/dang-nhap', (req, res) => {
+  rememberReturn(req);
   const registered = req.session.justRegistered || null;
   delete req.session.justRegistered;
   res.render('login', { error: null, registered: !!registered, email: registered || '', needLogin: forRequest(req) });
 });
 
-// Everyone (customer, admin, owner) lands on Trang chủ after logging in; staff open "Quản trị" from their name menu.
+// Everyone (customer, admin, owner) lands on Trang chủ after logging in, or back on the request form they came from
+// (rememberReturn); staff open "Quản trị" from their name menu.
 // A fresh session id at login; Trang chủ then says "Đăng nhập thành công" (server.js, partials/footer.ejs)
 function logIn(req, res, user) {
+  const back = req.session.returnTo;
   req.session.regenerate((err) => {
     if (err) return res.status(500).render('login', { error: res.locals.t('auth.errLogin'), registered: false, email: user.email, needLogin: false });
     req.session.userId = user._id;
     req.session.justLoggedIn = true;
-    req.session.save(() => res.redirect(303, '/'));
+    req.session.save(() => res.redirect(303, back ? `${back}#yeu-cau` : '/'));
   });
 }
 
@@ -123,7 +143,7 @@ router.get(google.CALLBACK_PATH, async (req, res) => {
   try {
     profile = await google.fetchProfile(req.query.code, google.redirectUri(req));
   } catch (err) {
-    console.error('Google login:', err.message);
+    errorLog.record(err, { req, where: 'Google login', status: 502 });
     return googleFailed(req, res, 'auth.googleFailed', 502);
   }
   if (!profile.emailVerified) return googleFailed(req, res, 'auth.googleUnverified');
@@ -212,7 +232,8 @@ router.post('/ho-so/mat-khau', requireAuth, async (req, res) => {
   // A Google account without a password sets its first one here (no current password to give)
   let error = null;
   if (user.passwordHash && !(await bcrypt.compare(currentPassword, user.passwordHash))) error = t('profile.errCurrentPassword');
-  else if (newPassword.length < PASSWORD_MIN) error = t('profile.errPasswordLength');
+  else if (passwordProblem(newPassword) === 'length') error = t('profile.errPasswordLength');
+  else if (passwordProblem(newPassword) === 'common') error = t('profile.errPasswordCommon');
   else if (newPassword === currentPassword) error = t('profile.errPasswordSame');
   else if (newPassword !== confirmPassword) error = t('profile.errPasswordMatch');
   if (error) return renderProfile(res, { status: 400, passwordState: { error } });

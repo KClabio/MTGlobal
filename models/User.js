@@ -17,4 +17,6 @@ const userSchema = new mongoose.Schema({
   privacyAcceptedAt: { type: Date, default: null },
 }, { timestamps: true });
 
+userSchema.index({ createdAt: -1 }); // Admin → Người dùng, newest first
+
 module.exports = mongoose.model('User', userSchema);

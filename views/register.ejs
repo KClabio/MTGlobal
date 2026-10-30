@@ -48,7 +48,7 @@
         <div class="form-row">
           <div class="form-group">
             <label for="regPassword"><%= t('forms.password') %> *</label>
-            <%- include('partials/password-input', { id: 'regPassword', name: 'password', autocomplete: 'new-password', invalid: !!rgErrors.password, minlength: 6 }) %>
+            <%- include('partials/password-input', { id: 'regPassword', name: 'password', autocomplete: 'new-password', invalid: !!rgErrors.password, minlength: 8 }) %>
             <%# Says while typing how many characters are still needed (public/js/main.js) %>
             <p class="form-hint field-hint" data-hint-for="password" data-password-length aria-live="polite"
                data-default="<%= t('auth.passwordHint') %>" data-short="<%= t('auth.passwordShort') %>" data-ok="<%= t('auth.passwordLongEnough') %>"<%= rgErrors.password ? ' hidden' : '' %>><%= t('auth.passwordHint') %></p>

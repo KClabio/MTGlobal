@@ -44,11 +44,12 @@
     <span class="page-jump-progress" aria-hidden="true"><span></span></span>
   </nav>
 <% } %>
+<% const heads = { h2: false }; // shared by the sections: which heading level comes next (partials/solution-section.ejs) %>
 <% blocks.forEach(function (block, b) { %>
   <section class="section<%= b % 2 ? ' section-alt' : '' %>"<% if (showJumps && block.anchor) { %> id="<%= block.anchor %>" data-jump-target<% } %>>
     <div class="container">
       <% block.forEach(function (s, i) { %>
-        <%- include('partials/solution-section', { s, sub: i > 0 }) %>
+        <%- include('partials/solution-section', { s, sub: i > 0, heads }) %>
       <% }) %>
     </div>
   </section>

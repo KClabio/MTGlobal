@@ -19,7 +19,7 @@ export async function db() {
 /** Registers a user through the site and returns { email, password, sid, id }. role: 'admin' | 'owner' | 'customer'. */
 export async function createUser(tag, role = 'admin') {
   const email = `zztest-${tag}-${STAMP}@example.com`;
-  const password = 'secret1';
+  const password = 'zz-secret1';
   const res = await fetch(BASE + '/dang-ky', { method: 'POST', redirect: 'manual', body: new URLSearchParams({ name: `ZZ ${tag}`, email, password, confirmPassword: password, agreePrivacy: '1' }) });
   if (res.status !== 303) throw new Error(`register failed for ${email} (HTTP ${res.status})`);
   // Signing up doesn't log in: log in like a visitor would
@@ -56,6 +56,8 @@ export async function cleanup() {
   for (const u of await d.collection('users').find({ email: new RegExp(`^zztest-.*-${STAMP}@example\\.com$`) }).toArray()) {
     if (!users.some((id) => String(id) === String(u._id))) users.push(u._id);
   }
+  // errors a test caused on purpose while logged in as a temp account (Admin → Nhật ký lỗi, lib/error-log.js)
+  await d.collection('errorlogs').deleteMany({ userId: { $in: users } });
   for (const id of users) {
     await d.collection('sessions').deleteMany({ session: { $regex: String(id) } });
     await d.collection('users').deleteOne({ _id: id });

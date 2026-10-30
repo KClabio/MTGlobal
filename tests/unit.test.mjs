@@ -219,4 +219,59 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('orderMedia: ticked photos are dropped; one value or none works too', eq(orderMedia([a, b, c], [c, b, a], [b]), [c, a]) && eq(orderMedia([a, b], b, a), [b]) && eq(orderMedia([a, b]), [a, b]) && eq(orderMedia(undefined, [a]), []));
 }
 
+// Visit counts are deleted with the same 24-month cut-off (lib/retention.js); a stand-in replaces the database call
+{
+  const PageView = appRequire('./models/PageView.js');
+  const { deleteOldPageViews } = appRequire('./lib/retention.js');
+  const real = PageView.deleteMany;
+  let asked = null;
+  PageView.deleteMany = async (filter) => { asked = filter; return { deletedCount: 2 }; };
+  try {
+    const count = await deleteOldPageViews(new Date('2026-10-22T10:00:00Z'));
+    check('retention: visit counts of days before 2024-10-22 are deleted', count === 2 && asked && asked.day && asked.day.$lt === '2024-10-22', asked);
+  } finally {
+    PageView.deleteMany = real;
+  }
+}
+
+// Which page views count (lib/page-views.js): public pages shown to a real browser, not staff, robots or the admin
+{
+  const { shouldCount, cleanPath, dayOf } = appRequire('./lib/page-views.js');
+  const CHROME = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+  const view = ({ method = 'GET', path = '/ve-mtg', status = 200, type = 'text/html; charset=utf-8', agent = CHROME, user = null, purpose = '' } = {}) => shouldCount(
+    { method, path, user, get: (h) => ({ 'User-Agent': agent, 'Sec-Purpose': purpose })[h] || '' },
+    { statusCode: status, get: () => type },
+  );
+  check('counted: a public page shown in a browser, to a visitor or a customer', view() && view({ user: { role: 'customer' } }));
+  check('not counted: staff, the admin and account pages, errors and redirects, files, HEAD',
+    !view({ user: { role: 'admin' } }) && !view({ user: { role: 'owner' } }) && !view({ path: '/admin/yeu-cau' }) && !view({ path: '/tai-khoan' }) && !view({ path: '/dang-nhap' })
+    && !view({ status: 404 }) && !view({ status: 303 }) && !view({ type: 'application/json' }) && !view({ method: 'HEAD' }));
+  check('not counted: search engines, link previews, headless browsers, scripts, prefetches',
+    !view({ agent: 'Mozilla/5.0 (compatible; Googlebot/2.1)' }) && !view({ agent: 'facebookexternalhit/1.1' }) && !view({ agent: 'Mozilla/5.0 HeadlessChrome/130' }) && !view({ agent: 'curl/8.4' }) && !view({ agent: 'node' }) && !view({ purpose: 'prefetch' }));
+  check('pages are counted by their address in small letters, without a trailing slash', cleanPath('/San-Pham/Robot-Cat-Co/') === '/san-pham/robot-cat-co' && cleanPath('/') === '/' && cleanPath('') === '/');
+  check("the day is Vietnam's: 17:30 UTC on 30 Oct is already 31 Oct", dayOf(new Date('2026-10-30T17:30:00Z')) === '2026-10-31' && dayOf(new Date('2026-10-30T16:30:00Z')) === '2026-10-30');
+}
+
+// Chat button links (lib/chat-links.js): Zalo as digits, Messenger as the Facebook page name
+{
+  const { cleanZalo, cleanMessenger, chatLinks } = appRequire('./lib/chat-links.js');
+  check('Zalo: spaces, dots and + are dropped; too short or not a number → empty', cleanZalo('0912 345.678') === '0912345678' && cleanZalo('+84 912 345 678') === '84912345678' && cleanZalo('123') === '' && cleanZalo('abc') === '');
+  check('Messenger: a page name, an m.me or facebook.com link all give the name; anything else → empty',
+    cleanMessenger('mtg.vn') === 'mtg.vn' && cleanMessenger('https://m.me/mtg.vn') === 'mtg.vn' && cleanMessenger('https://www.facebook.com/mtg.vn/?ref=x') === 'mtg.vn'
+    && cleanMessenger('javascript:alert(1)') === '' && cleanMessenger('https://evil.example/x/y') === '' && cleanMessenger('') === '');
+  check('chat links: only the filled ones, Zalo first', JSON.stringify(chatLinks({ zalo: '0912345678', messenger: 'mtg.vn' })) === JSON.stringify([{ kind: 'zalo', url: 'https://zalo.me/0912345678' }, { kind: 'messenger', url: 'https://m.me/mtg.vn' }])
+    && JSON.stringify(chatLinks({ messenger: 'mtg.vn' })) === JSON.stringify([{ kind: 'messenger', url: 'https://m.me/mtg.vn' }]) && chatLinks({}).length === 0 && chatLinks(undefined).length === 0);
+}
+
+// The sender's confirmation never carries what was typed into the form (lib/request-mail.js)
+{
+  const { senderMail, staffMail } = appRequire('./lib/request-mail.js');
+  const request = { name: 'Visit evil.example now', email: 'x@example.com', phone: '', schoolOrCompany: 'Spam Co', message: 'Click http://evil.example', interestedIn: 'khac', details: [], createdAt: new Date('2026-10-30T03:00:00Z') };
+  const mine = senderMail(request, { lang: 'vi', settings: { contactInfo: { phone: '1900 1234', email: 'info@mtg.vn' } }, base: 'https://mtg.vn' });
+  check("confirmation: no name, school or message, only the category label, the time and the company's own contacts",
+    !/evil|Spam/.test(mine.text + mine.subject) && mine.text.includes('"Khác"') && mine.text.includes('10:00 30/10/2026') && mine.text.includes('Điện thoại: 1900 1234') && mine.text.includes('Email: info@mtg.vn'), mine.text);
+  const staff = staffMail({ ...request, name: 'An\r\nBcc: x@evil.example' }, { base: 'https://mtg.vn', user: null, changed: false });
+  check("staff email: a line break typed in the name can't reach the subject line", !/[\r\n]/.test(staff.subject) && staff.subject.includes('An Bcc: x@evil.example'), staff.subject);
+}
+
 process.exit(result() ? 1 : 0);

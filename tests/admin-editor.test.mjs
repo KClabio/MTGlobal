@@ -49,8 +49,8 @@ await suite(async (b) => {
 
   await part(b, 'sidebar and access', async () => {
     const EXPECTED_NAV = {
-      vi: [[null, ['Tổng quan']], ['Robotics thông minh', ['Sản phẩm robot']], ['Giải pháp', ['Tư vấn, thiết kế & triển khai', 'Thiết bị, học liệu, Robot STEM', 'Workshop trải nghiệm STEM', 'Đào tạo STEM', 'Dự án tham khảo', 'Tập huấn & triển khai']], ['Dịch vụ', ['Dịch vụ']], ['Tin tức', ['Tin tức']], ['Về MTG & Liên hệ', ['Thông tin công ty', 'Đối tác đồng hành', 'Hỗ trợ']], ['Quản lý', ['Yêu cầu tư vấn', 'Người dùng', 'Cài đặt chung']]],
-      en: [[null, ['Overview']], ['Smart Robotics', ['Robot products']], ['Solutions', ['Consulting, design & deployment', 'Equipment, materials & STEM robots', 'Hands-on STEM workshops', 'STEM training', 'Reference projects', 'Training & rollout']], ['Services', ['Services']], ['News', ['News']], ['About & Contact', ['Company info', 'Partners', 'Help']], ['Management', ['Consultation requests', 'Users', 'General settings']]],
+      vi: [[null, ['Tổng quan']], ['Robotics thông minh', ['Sản phẩm robot']], ['Giải pháp', ['Tư vấn, thiết kế & triển khai', 'Thiết bị, học liệu, Robot STEM', 'Workshop trải nghiệm STEM', 'Đào tạo STEM', 'Dự án tham khảo', 'Tập huấn & triển khai']], ['Dịch vụ', ['Dịch vụ']], ['Tin tức', ['Tin tức']], ['Về MTG & Liên hệ', ['Thông tin công ty', 'Đối tác đồng hành', 'Hỗ trợ']], ['Quản lý', ['Yêu cầu tư vấn', 'Người dùng', 'Cài đặt chung', 'Nhật ký lỗi']]],
+      en: [[null, ['Overview']], ['Smart Robotics', ['Robot products']], ['Solutions', ['Consulting, design & deployment', 'Equipment, materials & STEM robots', 'Hands-on STEM workshops', 'STEM training', 'Reference projects', 'Training & rollout']], ['Services', ['Services']], ['News', ['News']], ['About & Contact', ['Company info', 'Partners', 'Help']], ['Management', ['Consultation requests', 'Users', 'General settings', 'Error log']]],
     };
     for (const lang of ['vi', 'en']) {
       const groups = navOf(await (await adminGet(`/admin/trang/workshop?alang=${lang}`)).text());
@@ -449,7 +449,7 @@ await suite(async (b) => {
     const save = async () => { const l = b.waitLoad(); await click(await ev("document.querySelector('.page-form-actions button[type=submit]') ? '.page-form-actions button[type=submit]' : 'form button[type=submit].btn-primary'")); await l; await sleep(400); return ev(`(() => { const t = document.getElementById('adminToast'); return { shown: !t.hidden, error: t.classList.contains('is-error'), text: t.textContent.trim(), url: location.pathname + location.search }; })()`); };
     try {
       const en = navOf(await (await adminGet('/admin/cai-dat?alang=en')).text());
-      check('EN sidebar: "General settings" under Management, "Company info" under About & Contact', en.find(([n]) => n === 'Management')[1].at(-1).label === 'General settings' && en.find(([n]) => n === 'About & Contact')[1][0].label === 'Company info');
+      check('EN sidebar: "General settings" under Management, "Company info" under About & Contact', en.find(([n]) => n === 'Management')[1].some((i) => i.label === 'General settings') && en.find(([n]) => n === 'About & Contact')[1][0].label === 'Company info');
       // Defaults: every banner shows today's line, no image
       const bad = [];
       for (const bn of BANNERS) for (const lang of ['vi', 'en']) {
@@ -589,7 +589,9 @@ await suite(async (b) => {
       check('save redirects back to Thông tin công ty', r.status === 302 && r.headers.get('location') === '/admin/thong-tin-cong-ty', r.status);
       check('VI saved without tags', saved.companyProfile === 'Đoạn một.\n\nĐoạn hai & ba.', saved.companyProfile);
       check('EN saved without tags', saved.companyProfileEn === 'First para.\nSame para, new line.\n\nSecond para.', saved.companyProfileEn);
-      check('contact details untouched', JSON.stringify(saved.contactInfo) === JSON.stringify(original.contactInfo));
+      // The chat boxes (Zalo, Messenger) start empty on an older settings record: compare with them filled in
+      const contact = (c) => JSON.stringify(Object.entries({ zalo: '', messenger: '', ...c }).sort());
+      check('contact details untouched', contact(saved.contactInfo) === contact(original.contactInfo), { saved: saved.contactInfo, original: original.contactInfo });
       const page = await (await adminGet('/admin/thong-tin-cong-ty')).text();
       check('the form shows the plain-text hint and the text without tags', page.includes('Chỉ nhập văn bản thường, không cần thẻ HTML.') && /name="companyProfile" rows="\d+">Đoạn một\.\n\nĐoạn hai &amp; ba\.<\/textarea>/.test(page));
       let html = await about('vi');

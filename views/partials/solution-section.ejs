@@ -1,6 +1,8 @@
 <%#
   One section of an editable "Giải pháp" page. s: the section; sub: true when it continues the previous section's block
   (it then gets a smaller heading). Text is plain text rendered by formatText (paragraphs, "- " lists).
+  heads: { h2 } shared by the page's sections, true once one of them has written an h2. Until then, a sub-title or a
+  card / step / tab title is the page's first heading under the h1, so it is an h2 (same look), never a skipped level.
 %><%
   const ssTitle = pick(s, 'title');
   const ssSubtitle = pick(s, 'subtitle');
@@ -12,6 +14,9 @@
     return include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: pick(m, 'caption'), ratio: s.ratio, contain: m.contain, zoom: s.display === 'zoom' });
   };
   const ssCentered = !sub && s.kind !== 'text';
+  const ssHeads = typeof heads !== 'undefined' && heads ? heads : { h2: true };
+  const ssH2 = function () { ssHeads.h2 = true; return ''; }; // call where an h2 is written
+  const ssItemTag = function () { return ssHeads.h2 ? 'h3' : 'h2'; };
   // display 'collapsed': the whole section folds under its title (a <details>, opened by a click — works without JS)
   const ssFold = s.display === 'collapsed' && ssTitle;
   // display 'compact' (cards): the first paragraph of a card shows, the rest folds under "Xem chi tiết"
@@ -59,14 +64,14 @@
   <% } else if (ssTitle || (ssSubtitle && s.kind !== 'text')) { %>
     <% if (ssCentered) { %>
       <div class="section-head">
-        <% if (ssTitle) { %><h2 class="section-title"><%= ssTitle %></h2><% } %>
+        <% if (ssTitle) { %><h2 class="section-title"><%= ssTitle %></h2><%= ssH2() %><% } %>
         <% if (ssSubtitle) { %><p class="section-subtitle"><%= ssSubtitle %></p><% } %>
       </div>
     <% } else if (sub) { %>
-      <% if (ssTitle) { %><h3 class="solution-subtitle"><%= ssTitle %></h3><% } %>
+      <% if (ssTitle) { const tag = ssItemTag(); %><<%= tag %> class="solution-subtitle"><%= ssTitle %></<%= tag %>><%= ssH2() %><% } %>
       <% if (ssSubtitle) { %><p class="solution-subtext"><%= ssSubtitle %></p><% } %>
     <% } else if (s.kind === 'text' && !(s.media && s.media.length)) { %>
-      <h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2>
+      <h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2><%= ssH2() %>
     <% } %>
   <% } %>
 
@@ -74,7 +79,7 @@
     <% if (s.media && s.media.length) { %>
       <div class="card-grid cols-2 solution-split">
         <div>
-          <% if (ssTitle && !sub && !ssFold) { %><h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2><% } %>
+          <% if (ssTitle && !sub && !ssFold) { %><h2 class="section-title" style="text-align:left;"><%= ssTitle %></h2><%= ssH2() %><% } %>
           <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
           <% if (ssButtons.length) { %>
             <div class="section-cta is-start">
@@ -96,9 +101,9 @@
   <% } else if (s.kind === 'cards') { %>
     <% if (ssText) { %><div class="section-text"><%- ssFormat(ssText) %></div><% } %>
     <div class="card-grid<%= s.columns === 2 ? ' cols-2' : '' %><%= s.display === 'compact' ? ' is-compact' : '' %>">
-      <% (s.items || []).forEach(function (it) { %>
+      <% const cardTag = ssItemTag(); (s.items || []).forEach(function (it) { %>
         <div class="card"><div class="card-body">
-          <% if (pick(it, 'title')) { %><h3><%= pick(it, 'title') %></h3><% } %>
+          <% if (pick(it, 'title')) { %><<%= cardTag %>><%= pick(it, 'title') %></<%= cardTag %>><% } %>
           <% if (pick(it, 'text')) { %><div class="card-text"><%- ssCardText(pick(it, 'text')) %></div><% } %>
         </div></div>
       <% }) %>
@@ -109,11 +114,11 @@
     <%# One continuous trail through numbered stops: across the page on wide screens, down the left side on phones.
         public/js/main.js fills the line from stop to stop when it scrolls into view. %>
     <ol class="process-trail" style="--steps:<%= (s.items || []).length %>;">
-      <% (s.items || []).forEach(function (it, n) { %>
+      <% const stepTag = ssItemTag(); (s.items || []).forEach(function (it, n) { %>
         <li class="trail-step" style="--i:<%= n %>;">
           <span class="trail-node" aria-hidden="true"><%= n + 1 %></span>
           <div class="trail-body">
-            <h3><%= pick(it, 'title') %></h3>
+            <<%= stepTag %>><%= pick(it, 'title') %></<%= stepTag %>>
             <% if (pick(it, 'text')) { %><div class="card-text"><%- ssFormat(pick(it, 'text')) %></div><% } %>
           </div>
         </li>
@@ -131,11 +136,11 @@
         <% }) %>
       </div>
       <%# Each panel: the picture on the left, its description on the right (stacked on phones), so both fit one screen %>
-      <% s.media.forEach(function (m, k) { const tp = ssTabParts(m); %>
+      <% const tabTag = ssItemTag(); s.media.forEach(function (m, k) { const tp = ssTabParts(m); %>
         <div class="media-tabpanel" role="tabpanel" id="mp-<%= s.uid %>-<%= k %>" aria-labelledby="mt-<%= s.uid %>-<%= k %>">
           <%- include('media-figure', { src: m.src, video: m.type === 'video', poster: m.poster, caption: '', alt: pick(m, 'caption'), ratio: s.ratio, contain: m.contain }) %>
           <div class="media-tabpanel-text">
-            <% if (tp.tab) { %><h3 class="media-tabpanel-title"><%= tp.tab %></h3><% } %>
+            <% if (tp.tab) { %><<%= tabTag %> class="media-tabpanel-title"><%= tp.tab %></<%= tabTag %>><% } %>
             <% if (tp.lead) { %><p class="media-tabpanel-lead"><%= tp.lead %></p><% } %>
             <% if (tp.items.length) { %>
               <ul class="media-tabpanel-list">

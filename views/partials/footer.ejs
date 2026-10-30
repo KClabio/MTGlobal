@@ -13,7 +13,7 @@
       </div>
 
       <div class="footer-col">
-        <h4><%= t('footer.quickLinks') %></h4>
+        <h2 class="footer-title"><%= t('footer.quickLinks') %></h2>
         <a href="/san-pham"><%= t('nav.products') %></a>
         <a href="/giai-phap"><%= t('nav.solutions') %></a>
         <a href="/dich-vu"><%= t('nav.services') %></a>
@@ -22,7 +22,7 @@
       </div>
 
       <div class="footer-col">
-        <h4><%= t('footer.contactInfo') %></h4>
+        <h2 class="footer-title"><%= t('footer.contactInfo') %></h2>
         <% if (settings && settings.contactInfo && settings.contactInfo.address) { %>
           <p><%= settings.contactInfo.address %></p>
         <% } %>
@@ -32,6 +32,9 @@
         <% if (settings && settings.contactInfo && settings.contactInfo.email) { %>
           <a href="mailto:<%= settings.contactInfo.email %>"><%= settings.contactInfo.email %></a>
         <% } %>
+        <% chatLinks(settings && settings.contactInfo).forEach(function (l) { %>
+          <a href="<%= l.url %>" target="_blank" rel="noopener" data-footer-chat="<%= l.kind %>"><%= t('chat.' + l.kind) %></a>
+        <% }) %>
         <a href="/lien-he"><%= t('common.contactUs') %></a>
         <a href="/ho-tro"><%= t('nav.help') %></a>
       </div>
@@ -44,6 +47,8 @@
       </div>
     </div>
   </footer>
+
+  <%- include('chat-button') %>
 
   <% if (typeof loginNotice !== 'undefined' && loginNotice) { %>
     <%# Shown once after logging in; public/js/main.js hides it after a few seconds (CSS fades it out without JS) %>
