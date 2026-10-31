@@ -18,7 +18,7 @@ const { clearSiteSettingsCache } = require('../lib/settings');
 const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
 const { isNonEmpty, isValidEmail } = require('../lib/validators');
 const { STAFF_EMAILS_MAX } = require('../lib/request-mail');
-const { isStaff, canDeleteUser, canChangeRole } = require('../lib/roles');
+const { isStaff, canDeleteUser, canChangeRole, canResetTwoStep } = require('../lib/roles');
 const { getDashboardData } = require('../lib/dashboard');
 const { toPlainText, slugify } = require('../lib/text');
 const { orderMedia } = require('../lib/media-order');
@@ -707,7 +707,7 @@ async function renderUsers(res, { status = 200 } = {}) {
   const users = await User.find().sort({ createdAt: -1 }).lean();
   // Owners pinned on top, newest first inside each group (sort is stable). The "Tìm theo" search re-sorts in the browser.
   users.sort((a, b) => (b.role === 'owner') - (a.role === 'owner'));
-  res.status(status).render('admin/users', { users, canDeleteUser, canChangeRole });
+  res.status(status).render('admin/users', { users, canDeleteUser, canChangeRole, canResetTwoStep });
 }
 
 // Permission refused: stay on the list (403) with a red notification
@@ -728,8 +728,20 @@ router.post('/nguoi-dung/:id/vai-tro', async (req, res) => {
   if (!target) return notFound(req, res, '/admin/nguoi-dung');
   if (!canChangeRole(req.user, target)) return forbidden(res);
   const role = req.body.role === 'admin' ? 'admin' : 'customer';
-  await User.updateOne({ _id: target._id }, { role });
+  // Back to customer: their two-step login goes too (made admin again later, they set it up again)
+  await User.updateOne({ _id: target._id }, role === 'admin' ? { role } : { role, $unset: { twoFactor: 1 } });
   done(req, res, role === 'admin' ? 'admin.flash.promoted' : 'admin.flash.demoted', { name: target.name }, safeBack(req, '/admin/nguoi-dung')); // keeps ?vai-tro=
+});
+
+// "Đặt lại 2 bước": an owner clears an admin's two-step login (lost phone and backup codes). The admin is logged out
+// everywhere and sets it up again (new QR code) at their next login. Owners are reset with scripts/reset-2fa.js.
+router.post('/nguoi-dung/:id/2-buoc/dat-lai', async (req, res) => {
+  const target = await findTargetUser(req.params.id);
+  if (!target) return notFound(req, res, '/admin/nguoi-dung');
+  if (!canResetTwoStep(req.user, target)) return forbidden(res);
+  await User.updateOne({ _id: target._id }, { $unset: { twoFactor: 1 } });
+  await mongoose.connection.collection('sessions').deleteMany({ session: { $regex: `"userId":"${target._id}"` } });
+  done(req, res, 'admin.flash.twoStepReset', { name: target.name }, safeBack(req, '/admin/nguoi-dung'));
 });
 
 // Owners can delete admins and customers; admins can delete customers only (see lib/roles.js)

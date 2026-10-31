@@ -14,6 +14,8 @@ const throttle = require('../lib/login-throttle');
 const errorLog = require('../lib/error-log');
 const { isStaff } = require('../lib/roles');
 const { passwordProblem } = require('../lib/passwords');
+const twoFactor = require('../lib/two-factor');
+const QRCode = require('qrcode');
 
 // Sign-up gatekeeping (the browser checks the same first: public/js/main.js, [data-register-form]): name required,
 // a valid email, a phone only if it looks like one (phone and school are optional), a long enough password typed twice
@@ -91,16 +93,144 @@ router.get('/dang-nhap', (req, res) => {
 
 // Everyone (customer, admin, owner) lands on Trang chủ after logging in, or back on the request form they came from
 // (rememberReturn); staff open "Quản trị" from their name menu.
-// A fresh session id at login; Trang chủ then says "Đăng nhập thành công" (server.js, partials/footer.ejs)
+// A fresh session id at login; Trang chủ then says "Đăng nhập thành công" (server.js, partials/footer.ejs).
+// Staff (owner, admin) are not logged in yet: they go on to the two-step code page (below), half-way for 10 minutes.
 function logIn(req, res, user) {
-  const back = req.session.returnTo;
+  const back = req.session.returnTo ? `${req.session.returnTo}#yeu-cau` : '/';
   req.session.regenerate((err) => {
     if (err) return res.status(500).render('login', { error: res.locals.t('auth.errLogin'), registered: false, email: user.email, needLogin: false });
+    if (isStaff(user.role)) {
+      req.session.twoStep = { userId: String(user._id), back, at: Date.now() };
+      return req.session.save(() => res.redirect(303, '/dang-nhap/xac-minh'));
+    }
     req.session.userId = user._id;
     req.session.justLoggedIn = true;
-    req.session.save(() => res.redirect(303, back ? `${back}#yeu-cau` : '/'));
+    req.session.save(() => res.redirect(303, back));
   });
 }
+
+// ---- Two-step login for staff (lib/two-factor.js) ----
+// /dang-nhap/xac-minh asks for the code from the authenticator app (or a backup code); an account without two-step yet
+// (first login after the change, or a customer just made admin) sets it up there first: QR code, key, one code to
+// confirm, then the 10 backup codes once (/dang-nhap/ma-du-phong). "Đổi điện thoại" on Hồ sơ uses the same setup.
+
+/** The half-finished login of this session: { p, user }, or null when there is none, it is older than 10 minutes,
+ *  or the account is gone or no longer staff */
+async function pendingStep(req) {
+  const p = req.session.twoStep;
+  if (!p || !p.userId || Date.now() - p.at > twoFactor.PENDING_MS) return null;
+  const user = await User.findById(p.userId).catch(() => null);
+  if (!user || !isStaff(user.role)) return null;
+  return { p, user };
+}
+
+const isSetup = (p, user) => !!p.change || !twoFactor.isEnabled(user);
+
+async function renderTwoStep(req, res, { p, user }, { status = 200, error = null } = {}) {
+  const view = { mode: p.change ? 'change' : isSetup(p, user) ? 'setup' : 'verify', error, email: user.email };
+  if (view.mode !== 'verify') {
+    if (!twoFactor.open(p.newSecret)) {
+      p.newSecret = twoFactor.seal(twoFactor.newSecret()); // one key per setup visit: a reload shows the same QR code
+      await new Promise((resolve) => req.session.save(resolve));
+    }
+    const secret = twoFactor.open(p.newSecret);
+    view.qr = await QRCode.toDataURL(twoFactor.otpauthUri(user.email, secret), { margin: 1, width: 220, errorCorrectionLevel: 'M' });
+    view.key = twoFactor.groupKey(secret);
+  }
+  res.set('Cache-Control', 'no-store');
+  res.status(status).render('two-step', view);
+}
+
+/** Log the staff member in for real: a new session id, marked as having passed the code */
+function finishTwoStep(req, res, userId, target, extra = {}) {
+  req.session.regenerate((err) => {
+    if (err) return res.redirect(303, '/dang-nhap');
+    Object.assign(req.session, { userId, twoStepOk: true, justLoggedIn: true }, extra);
+    req.session.save(() => res.redirect(303, target));
+  });
+}
+
+/**
+ * Checks a typed code for an account with two-step set up: a 6-digit app code (never one already used), or, when
+ * allowed, one backup code (used up). Counts wrong codes (5 → 15 minutes' wait). → { ok } or { status, error }
+ */
+async function checkStaffCode(req, res, user, code, { allowBackup }) {
+  const t = res.locals.t;
+  const wait = await throttle.checkCode(String(user._id), req.ip);
+  if (wait) return { status: 429, error: t('auth.errTooMany', { minutes: wait }) };
+  const tf = user.twoFactor;
+  if (allowBackup) {
+    const i = twoFactor.findBackup(tf.backupCodes, code);
+    if (i >= 0) {
+      tf.backupCodes.splice(i, 1);
+      await user.save();
+      await throttle.succeedCode(String(user._id));
+      return { ok: true, usedBackup: true };
+    }
+  }
+  const r = twoFactor.checkCode(twoFactor.open(tf.secret), code, { lastStep: tf.lastStep });
+  if (!r.ok) {
+    await throttle.failCode(String(user._id), req.ip);
+    return { status: 400, error: t(r.reused ? 'twoStep.errReused' : 'twoStep.errWrong') };
+  }
+  tf.lastStep = r.step;
+  await user.save();
+  await throttle.succeedCode(String(user._id));
+  return { ok: true };
+}
+
+const expired = (req, res) => {
+  delete req.session.twoStep;
+  res.status(400).render('login', { error: res.locals.t('twoStep.expired'), registered: false, email: '', needLogin: false });
+};
+
+router.get('/dang-nhap/xac-minh', async (req, res) => {
+  const pending = await pendingStep(req);
+  if (!pending) return expired(req, res);
+  renderTwoStep(req, res, pending);
+});
+
+router.post('/dang-nhap/xac-minh', async (req, res) => {
+  const pending = await pendingStep(req);
+  if (!pending) return expired(req, res);
+  const { p, user } = pending;
+  const code = typeof req.body.code === 'string' ? req.body.code.trim() : '';
+
+  if (!isSetup(p, user)) {
+    const r = await checkStaffCode(req, res, user, code, { allowBackup: true });
+    if (!r.ok) return renderTwoStep(req, res, pending, { status: r.status, error: r.error });
+    return finishTwoStep(req, res, user._id, p.back || '/');
+  }
+
+  // Setup (or a new phone): one correct code from the new key turns it on; new backup codes replace any old ones
+  const wait = await throttle.checkCode(String(user._id), req.ip);
+  if (wait) return renderTwoStep(req, res, pending, { status: 429, error: res.locals.t('auth.errTooMany', { minutes: wait }) });
+  const secret = twoFactor.open(p.newSecret);
+  const r = secret ? twoFactor.checkCode(secret, code) : { ok: false };
+  if (!r.ok) {
+    await throttle.failCode(String(user._id), req.ip);
+    return renderTwoStep(req, res, pending, { status: 400, error: res.locals.t('twoStep.errWrong') });
+  }
+  const { codes, hashes } = twoFactor.newBackupCodes();
+  user.twoFactor = { secret: p.newSecret, enabledAt: new Date(), backupCodes: hashes, lastStep: r.step };
+  await user.save();
+  await throttle.succeedCode(String(user._id));
+  // No "Đăng nhập thành công" notice here: on a phone it would cover the codes, and the page says it is ready
+  finishTwoStep(req, res, user._id, '/dang-nhap/ma-du-phong', { newBackupCodes: codes, backupCodesNext: p.back || '/', justLoggedIn: false });
+});
+
+// The new backup codes, shown once (a reload sends you on): download as a text file, print, or copy them
+router.get('/dang-nhap/ma-du-phong', requireAuth, (req, res) => {
+  const codes = req.session.newBackupCodes;
+  const next = req.session.backupCodesNext || '/';
+  if (!Array.isArray(codes) || !codes.length) {
+    delete req.session.backupCodesNext; // a reload after the codes were shown: on to the page that was asked for
+    return req.session.save(() => res.redirect(/^\/(?!\/)/.test(next) ? next : '/'));
+  }
+  delete req.session.newBackupCodes; // the codes themselves only once
+  res.set('Cache-Control', 'no-store');
+  req.session.save(() => res.render('two-step-codes', { codes, next }));
+});
 
 router.post('/dang-nhap', async (req, res) => {
   const email = typeof req.body.email === 'string' ? req.body.email.toLowerCase().trim() : '';
@@ -173,8 +303,11 @@ router.post('/dang-xuat', (req, res) => {
 
 const BIO_MAX = 500;
 
-function renderProfile(res, { status = 200, profileState = {}, passwordState = {}, deleteState = {}, values = null } = {}) {
-  res.status(status).render('profile', { profileState, passwordState, deleteState, values, avatarMaxBytes: AVATAR_MAX_BYTES });
+function renderProfile(res, { status = 200, profileState = {}, passwordState = {}, deleteState = {}, twoStepState = {}, values = null } = {}) {
+  const u = res.locals.user;
+  const tf = u && isStaff(u.role) && u.twoFactor && u.twoFactor.enabledAt ? u.twoFactor : null;
+  const twoStep = tf ? { since: tf.enabledAt, backupLeft: (tf.backupCodes || []).length } : null;
+  res.status(status).render('profile', { profileState, passwordState, deleteState, twoStepState, twoStep, values, avatarMaxBytes: AVATAR_MAX_BYTES });
 }
 
 router.get('/ho-so', requireAuth, (req, res) => {
@@ -244,12 +377,46 @@ router.post('/ho-so/mat-khau', requireAuth, async (req, res) => {
   res.locals.user = user.toObject(); // the card now shows "Đổi mật khẩu"
   const done = { success: true, message: firstPassword ? t('profile.passwordSet') : null };
 
-  // New session id after a credential change; keep the user logged in
+  // New session id after a credential change; keep the user logged in (and past the two-step code, for staff)
+  const twoStepOk = req.session.twoStepOk;
   req.session.regenerate((err) => {
     if (err) return renderProfile(res, { passwordState: done });
     req.session.userId = user._id;
+    if (twoStepOk) req.session.twoStepOk = true;
     req.session.save(() => renderProfile(res, { passwordState: done }));
   });
+});
+
+// Hồ sơ → "Đăng nhập 2 bước" (staff with it set up): both actions ask for a current app code first.
+//  - "Tạo mã dự phòng mới": 10 new backup codes, the old ones stop working;
+//  - "Đổi điện thoại": the setup again (new QR code); the old phone keeps working until the new one is confirmed.
+async function staffWithTwoStep(req, res) {
+  if (!isStaff(req.user.role)) { res.status(403).render('403'); return null; }
+  const user = await User.findById(req.user._id);
+  if (!twoFactor.isEnabled(user)) { res.redirect(303, '/admin'); return null; } // not set up yet: Quản trị starts the setup
+  return user;
+}
+
+router.post('/ho-so/2-buoc/ma-du-phong', requireAuth, async (req, res) => {
+  const user = await staffWithTwoStep(req, res);
+  if (!user) return;
+  const r = await checkStaffCode(req, res, user, String(req.body.code || ''), { allowBackup: false });
+  if (!r.ok) return renderProfile(res, { status: r.status, twoStepState: { error: r.error } });
+  const { codes, hashes } = twoFactor.newBackupCodes();
+  user.twoFactor.backupCodes = hashes;
+  await user.save();
+  req.session.newBackupCodes = codes;
+  req.session.backupCodesNext = '/ho-so';
+  req.session.save(() => res.redirect(303, '/dang-nhap/ma-du-phong'));
+});
+
+router.post('/ho-so/2-buoc/doi-dien-thoai', requireAuth, async (req, res) => {
+  const user = await staffWithTwoStep(req, res);
+  if (!user) return;
+  const r = await checkStaffCode(req, res, user, String(req.body.code || ''), { allowBackup: false });
+  if (!r.ok) return renderProfile(res, { status: r.status, twoStepState: { error: r.error } });
+  req.session.twoStep = { userId: String(user._id), back: '/ho-so', at: Date.now(), change: true };
+  req.session.save(() => res.redirect(303, '/dang-nhap/xac-minh'));
 });
 
 // "Tải dữ liệu của tôi" (Decree 13: a copy of your data): the account and every request sent, as one JSON file.

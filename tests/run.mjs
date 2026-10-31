@@ -29,7 +29,9 @@ if (!(await up())) {
   const fakeGoogle = { GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret', GOOGLE_OAUTH_TEST_URL: 'http://localhost:3002', GOOGLE_REDIRECT_URL: '' };
   // The error log (errors.test.mjs): a page that fails on purpose, and alert emails written to tests/output/mail
   const errorTest = { ERROR_TEST_ROUTE: '1', MAIL_TEST_DIR: path.join(ROOT, 'tests', 'output', 'mail'), ALERT_EMAIL_TO: 'alerts@example.com' };
-  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ...fakeGoogle, ...errorTest }, stdio: ['ignore', 'pipe', 'pipe'] });
+  // Staff two-step login (lib/two-factor.js): many quick test logins may reuse one code instead of waiting 30 s
+  const twoStepTest = { TWO_STEP_TEST_REUSE: '1' };
+  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ...fakeGoogle, ...errorTest, ...twoStepTest }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.on('data', (d) => { serverLog += d; });
   server.stderr.on('data', (d) => { serverLog += d; });
   let ok = false;

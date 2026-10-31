@@ -274,4 +274,47 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check("staff email: a line break typed in the name can't reach the subject line", !/[\r\n]/.test(staff.subject) && staff.subject.includes('An Bcc: x@evil.example'), staff.subject);
 }
 
+// Staff two-step login codes (lib/two-factor.js)
+{
+  const tf = appRequire('./lib/two-factor.js');
+  const { canResetTwoStep } = appRequire('./lib/roles.js');
+  // RFC 6238 Appendix B (HMAC-SHA1, 8 digits, key "12345678901234567890")
+  const rfcKey = Buffer.from('12345678901234567890');
+  const rfc = [[59, '94287082'], [1111111109, '07081804'], [1111111111, '14050471'], [1234567890, '89005924'], [2000000000, '69279037'], [20000000000, '65353130']];
+  const got = rfc.map(([s]) => tf.codeFor(rfcKey, Math.floor(s / 30), { digits: 8 }));
+  check('TOTP: the 6 official RFC 6238 test values', rfc.every(([, want], i) => got[i] === want), got);
+  check('Base32: RFC 4648 example and round trip', tf.base32Encode(Buffer.from('foobar')) === 'MZXW6YTBOI' && tf.base32Decode('mzxw 6ytb oi').toString() === 'foobar');
+  const secret = tf.newSecret();
+  check('a new app key: 32 Base32 letters (160 bits), different each time', /^[A-Z2-7]{32}$/.test(secret) && secret !== tf.newSecret(), secret);
+  const now = Date.UTC(2026, 9, 31, 8, 0, 15);
+  const at = (ms) => tf.codeFor(tf.base32Decode(secret), tf.stepAt(ms));
+  const ok = tf.checkCode(secret, at(now), { now, allowReuse: false });
+  check('the current code is accepted, also typed with a space ("123 456")', ok.ok && tf.checkCode(secret, at(now).replace(/^(\d{3})/, '$1 '), { now, allowReuse: false }).ok);
+  check('a phone clock 30 s off still works; 90 s off does not', tf.checkCode(secret, at(now - 30000), { now, allowReuse: false }).ok && tf.checkCode(secret, at(now + 30000), { now, allowReuse: false }).ok
+    && !tf.checkCode(secret, at(now - 90000), { now, allowReuse: false }).ok);
+  const again = tf.checkCode(secret, at(now), { now, lastStep: ok.step, allowReuse: false });
+  check('a code already used is refused (and said so); an older one too', !again.ok && again.reused && !tf.checkCode(secret, at(now - 30000), { now, lastStep: ok.step, allowReuse: false }).ok);
+  check('the next code after a used one is accepted', tf.checkCode(secret, at(now + 30000), { now: now + 30000, lastStep: ok.step, allowReuse: false }).ok);
+  const wrong = at(now).replace(/^\d/, (d) => String((Number(d) + 1) % 10));
+  check('a wrong code is refused', !tf.checkCode(secret, wrong, { now, allowReuse: false }).ok || [at(now - 30000), at(now + 30000)].includes(wrong));
+  check('… and letters, 5 digits, empty', !tf.checkCode(secret, 'abcdef', { now }).ok && !tf.checkCode(secret, '12345', { now }).ok && !tf.checkCode(secret, '', { now }).ok);
+  check('code reuse is allowed only on a test server (TWO_STEP_TEST_REUSE=1), never with NODE_ENV=production',
+    tf.reuseAllowed({ TWO_STEP_TEST_REUSE: '1' }) && !tf.reuseAllowed({ TWO_STEP_TEST_REUSE: '1', NODE_ENV: 'production' }) && !tf.reuseAllowed({}));
+  tf.init('a'.repeat(40));
+  const sealed = tf.seal(secret);
+  check('the stored key is locked: not readable, opens back, a changed copy is refused', !sealed.includes(secret) && tf.open(sealed) === secret && tf.open(sealed.slice(0, -2) + 'xx') === null && tf.open('plain') === null);
+  tf.init('b'.repeat(40));
+  check('after SESSION_SECRET changes, the old key can\'t be opened (staff set up again)', tf.open(sealed) === null && !tf.isEnabled({ twoFactor: { secret: sealed, enabledAt: new Date() } }));
+  tf.init('a'.repeat(40));
+  const { codes, hashes } = tf.newBackupCodes();
+  check('10 backup codes like "abcd-2345", all different, stored only as hashes', codes.length === 10 && new Set(codes).size === 10 && codes.every((c) => /^[a-z2-9]{4}-[a-z2-9]{4}$/.test(c)) && hashes.every((h, i) => /^[0-9a-f]{64}$/.test(h) && !h.includes(codes[i])), codes);
+  check('a backup code is found with or without the dash, in capitals or with spaces; others are not', tf.findBackup(hashes, codes[4]) === 4 && tf.findBackup(hashes, codes[4].replace('-', '').toUpperCase()) === 4
+    && tf.findBackup(hashes, ` ${codes[4].replace('-', ' ')} `) === 4 && tf.findBackup(hashes, 'zzzz-zzzz') === -1 && tf.findBackup(hashes, '123456') === -1);
+  check('the QR address names MTG and the email, with the key', tf.otpauthUri('an@mtg.vn', secret) === `otpauth://totp/MTG%3Aan%40mtg.vn?secret=${secret}&issuer=MTG&algorithm=SHA1&digits=6&period=30`);
+  const withTwoStep = { ...admin, twoFactor: { enabledAt: new Date() } };
+  check('"Đặt lại 2 bước": an owner, for an admin with it on; never an owner, a customer, oneself or by an admin',
+    canResetTwoStep(owner, withTwoStep) && !canResetTwoStep(owner, admin) && !canResetTwoStep(owner, { ...owner2, twoFactor: { enabledAt: new Date() } })
+    && !canResetTwoStep(admin2, withTwoStep) && !canResetTwoStep({ ...admin, role: 'owner' }, withTwoStep) && !canResetTwoStep(owner, { ...cust, twoFactor: { enabledAt: new Date() } }));
+}
+
 process.exit(result() ? 1 : 0);

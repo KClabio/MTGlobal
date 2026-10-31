@@ -154,6 +154,29 @@
           </form>
         </div>
 
+        <%# Staff: "Đăng nhập 2 bước" (routes/auth.js, lib/two-factor.js); both buttons need a current code from the app %>
+        <% if (typeof twoStep !== 'undefined' && twoStep) { const tsState = typeof twoStepState !== 'undefined' && twoStepState ? twoStepState : {}; %>
+        <div class="form-card" data-two-step-card>
+          <h2 class="form-card-title"><%= t('twoStep.title') %></h2>
+          <p class="form-hint profile-two-step-status" data-two-step-status>
+            <%= t('twoStep.profileOn', { date: new Date(twoStep.since).toLocaleDateString(lang === 'en' ? 'en-GB' : 'vi-VN') }) %>
+            <%= t('twoStep.profileBackupLeft', { n: twoStep.backupLeft }) %>
+          </p>
+          <% if (tsState.error) { %><div class="form-alert error" role="alert" data-two-step-error><%= tsState.error %></div><% } %>
+          <form method="POST" action="/ho-so/2-buoc/ma-du-phong">
+            <div class="form-group">
+              <label for="profileTwoStepCode"><%= t('twoStep.profileCodeLabel') %></label>
+              <input class="form-control two-step-code" type="text" id="profileTwoStepCode" name="code" required inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" aria-describedby="profileTwoStepHint"<%- tsState.error ? ' aria-invalid="true"' : '' %>>
+              <p class="form-hint" id="profileTwoStepHint"><%= t('twoStep.profileCodeHint') %></p>
+            </div>
+            <div class="profile-two-step-actions">
+              <button type="submit" class="btn btn-ghost" data-two-step-new-codes><%= t('twoStep.profileNewCodes') %></button>
+              <button type="submit" class="btn btn-ghost" formaction="/ho-so/2-buoc/doi-dien-thoai" data-two-step-change><%= t('twoStep.profileChange') %></button>
+            </div>
+          </form>
+        </div>
+        <% } %>
+
         <%# "Dữ liệu của bạn" (Decree 13): a copy of everything stored, and deleting the account (routes/auth.js) %>
         <div class="form-card profile-data-card" data-privacy-card>
           <h2 class="form-card-title"><%= t('privacy.dataTitle') %></h2>

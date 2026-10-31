@@ -2,7 +2,7 @@
 // endpoint rules, public order), drag look, name search, equipment part chips, request delete, delete dialog, menu scroll.
 import { existsSync, writeFileSync } from 'node:fs';
 import mongoose from 'mongoose';
-import { suite, part, check, db, BASE, ROOT, appRequire, createUser, removeLater, restoreLater, stamp } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, appRequire, createUser, removeLater, restoreLater, stamp, passTwoStep, twoStepCode } from './lib/index.mjs';
 
 const { projectLevel } = appRequire('./lib/project-levels.js');
 const MARK = `ZZTEST-lists-${stamp}`;
@@ -55,6 +55,9 @@ await suite(async (b) => {
     }
     await users.updateMany({ email: { $in: [mail('owner'), mail('owner2')] } }, { $set: { role: 'owner' } });
     await users.updateMany({ email: { $in: [mail('admin1'), mail('admin2')] } }, { $set: { role: 'admin' } });
+    // Staff open Quản trị only after two-step login (lib/two-factor.js): set it up like a person would
+    const twoStep = {};
+    for (const n of ['owner', 'owner2', 'admin1', 'admin2']) twoStep[n] = await passTwoStep(c[n]);
     // Give cust1 a request and a fake local avatar to check what deletion keeps/removes
     await d.collection('quoterequests').insertOne({ name: `${MARK}-perm-request`, phone: '0912345678', email: '', schoolOrCompany: '', message: 'x', interestedIn: 'khac', status: 'moi', user: new mongoose.Types.ObjectId(id.cust1), createdAt: new Date(), updatedAt: new Date() });
     const avatarUrl = `/uploads/images/zztest-avatar-${stamp}.png`;
@@ -112,7 +115,9 @@ await suite(async (b) => {
     check('invalid id handled (redirect, no crash)', r.status === 302 && r.location === '/admin/nguoi-dung');
     const fresh = client();
     r = await fresh.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail('owner'), password: 'zz-secret1' }) });
-    check('owner login lands on Trang chủ (not the admin), like everyone', r.status === 303 && r.location === '/', r);
+    check('owner login: the two-step code page next', r.status === 303 && r.location === '/dang-nhap/xac-minh', r);
+    r = await fresh.req('/dang-nhap/xac-minh', { method: 'POST', body: new URLSearchParams({ code: twoStepCode(twoStep.owner.secret) }) });
+    check('… then Trang chủ (not the admin), like everyone', r.status === 303 && r.location === '/', r);
   });
 
   await part(b, 'notifications (green / red)', async () => {
@@ -149,6 +154,7 @@ await suite(async (b) => {
       await c.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: `ZZ ${n}`, email: mail(n), password: 'zz-secret1', confirmPassword: 'zz-secret1', agreePrivacy: '1' }) });
       await c.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: mail(n), password: 'zz-secret1' }) });
       await d.collection('users').updateOne({ email: mail(n) }, { $set: { role: n } });
+      await passTwoStep(c); // staff: two-step login before Quản trị
     }
     const id = async (col, q) => String((await d.collection(col).findOne(q))._id);
     const expectToast = (label, page, type, includes) => {

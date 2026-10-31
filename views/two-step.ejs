@@ -1,0 +1,45 @@
+<%- include('partials/header', { title: t('twoStep.title') + ' - MTG', noindex: true }) %>
+<%# Staff two-step login (routes/auth.js, lib/two-factor.js). mode: 'verify' (code from the app or a backup code),
+    'setup' (first time: QR code + key, one code to confirm) or 'change' ("Đổi điện thoại" from Hồ sơ). %>
+<section class="section">
+  <div class="container" style="max-width:520px;">
+    <h1 style="text-align:center;"><%= t(mode === 'verify' ? 'twoStep.title' : mode === 'change' ? 'twoStep.changeTitle' : 'twoStep.setupTitle') %></h1>
+    <div class="form-card two-step-card" data-two-step="<%= mode %>">
+      <% if (mode === 'verify') { %>
+        <p class="two-step-intro"><%= t('twoStep.verifyIntro') %></p>
+      <% } else { %>
+        <p class="two-step-intro"><%= t(mode === 'change' ? 'twoStep.changeIntro' : 'twoStep.setupIntro') %></p>
+        <ol class="two-step-steps">
+          <li><%= t('twoStep.step1') %></li>
+          <li>
+            <%= t('twoStep.step2') %>
+            <img class="two-step-qr" src="<%= qr %>" width="220" height="220" alt="<%= t('twoStep.qrAlt') %>" data-two-step-qr>
+            <span class="two-step-key-label"><%= t('twoStep.keyLabel') %></span>
+            <code class="two-step-key" data-two-step-key><%= key %></code>
+          </li>
+          <li><%= t('twoStep.step3') %></li>
+        </ol>
+      <% } %>
+      <% if (error) { %><div class="form-alert error" role="alert" data-two-step-error><%= error %></div><% } %>
+      <form method="POST" action="/dang-nhap/xac-minh">
+        <div class="form-group">
+          <label for="twoStepCode"><%= t('twoStep.codeLabel') %></label>
+          <input class="form-control two-step-code" type="text" id="twoStepCode" name="code" required autofocus
+            autocomplete="one-time-code" <% if (mode === 'verify') { %>maxlength="12" aria-describedby="twoStepBackupHint"<% } else { %>inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7"<% } %>
+            spellcheck="false" autocapitalize="off"<%- error ? ' aria-invalid="true"' : '' %>>
+          <% if (mode === 'verify') { %><p class="form-hint" id="twoStepBackupHint"><%= t('twoStep.backupHint') %></p><% } %>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block"><%= t(mode === 'verify' ? 'twoStep.verify' : 'twoStep.turnOn') %></button>
+      </form>
+      <% if (mode === 'change') { %>
+        <p class="auth-switch"><a href="/ho-so"><%= t('twoStep.backToProfile') %></a></p>
+      <% } else { %>
+        <form method="POST" action="/dang-xuat" class="two-step-cancel">
+          <button type="submit" class="btn-link"><%= t('twoStep.cancel') %></button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

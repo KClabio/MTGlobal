@@ -232,6 +232,24 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .auth-switch { text-align: center; margin-top: 16px; }
 .auth-switch a, .form-guest-login a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .form-hint { font-size: .8rem; color: var(--mtg-muted); margin-top: 4px; }
+/* Staff two-step login (views/two-step.ejs, two-step-codes.ejs, the Hồ sơ card) */
+.two-step-intro { margin: 0 0 16px; color: var(--mtg-ink); }
+.two-step-steps { margin: 0 0 18px; padding-left: 1.3em; display: grid; gap: 12px; }
+.two-step-qr { display: block; margin: 12px 0 10px; width: 220px; max-width: 100%; height: auto; padding: 8px; border-radius: var(--mtg-radius-sm); background: #fff; border: 1px solid var(--mtg-border); }
+.two-step-key-label { display: block; font-size: .85rem; color: var(--mtg-muted); }
+.two-step-key { display: inline-block; margin-top: 4px; padding: 6px 10px; border-radius: var(--mtg-radius-sm); background: var(--mtg-bg-alt); border: 1px solid var(--mtg-border); font-size: .95rem; letter-spacing: .06em; overflow-wrap: anywhere; user-select: all; }
+.two-step-code { font-size: 1.25rem; letter-spacing: .2em; text-align: center; font-variant-numeric: tabular-nums; }
+.two-step-cancel { margin-top: 16px; text-align: center; }
+.two-step-cancel button { background: none; border: 0; padding: 4px; color: var(--mtg-muted); font: inherit; font-size: .9rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.two-step-cancel button:hover { color: var(--mtg-ink); }
+.backup-codes { margin: 0 0 18px; padding: 14px 14px 14px 2.4em; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; border-radius: var(--mtg-radius-sm); background: var(--mtg-bg-alt); border: 1px solid var(--mtg-border); }
+.backup-codes code { font-size: 1rem; letter-spacing: .05em; }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.backup-actions .btn { flex: 1 1 140px; }
+.profile-two-step-status { margin: 0 0 14px; }
+.profile-two-step-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.profile-two-step-actions .btn { flex: 1 1 180px; }
+@media (max-width: 400px) { .backup-codes { grid-template-columns: 1fr; } }
 .checkbox-row { display: flex; align-items: center; gap: 8px; }
 .checkbox-row input { width: auto; }
 /* "Tôi đồng ý với Chính sách bảo mật" (request forms, sign-up) and the line under the Google button */
@@ -418,4 +436,8 @@ body.nav-open .chat-fab-wrap, body.nav-open a.chat-fab { display: none; } /* the
   .coming-soon-overlay { background: none; }
   .coming-soon-badge { background: #fff; border-color: var(--mtg-border); color: var(--mtg-ink); }
   .card-grid, .card-grid.cols-4 { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  /* Printed backup codes: just the list, large and black */
+  [data-backup-codes] .form-alert, .backup-actions, [data-backup-continue] { display: none !important; }
+  .backup-codes { background: none; border-color: #000; }
+  .backup-codes code { font-size: 1.15rem; color: #000; }
 }

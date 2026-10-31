@@ -1,5 +1,10 @@
 // A tiny browser-like HTTP client: keeps cookies, follows nothing by itself, times every request.
-import { BASE } from './infra.mjs';
+import { createRequire } from 'node:module';
+import { BASE, QA_TWO_STEP_SECRET } from './infra.mjs';
+
+const twoFactor = createRequire(import.meta.url)('../../../lib/two-factor.js');
+/** The made-up staff's two-step code right now (lib/two-factor.js) */
+export const twoStepCode = () => twoFactor.codeFor(twoFactor.base32Decode(QA_TWO_STEP_SECRET), twoFactor.stepAt());
 
 export class Client {
   constructor(base = BASE) { this.base = base; this.cookies = new Map(); }
@@ -27,8 +32,13 @@ export class Client {
   get(p, o) { return this.req(p, o); }
   post(p, body, o = {}) { return this.req(p, { ...o, method: 'POST', body }); }
   async login(email, password) {
-    const r = await this.post('/dang-nhap', { email, password });
+    let r = await this.post('/dang-nhap', { email, password });
     if (r.status !== 303) throw new Error(`login failed for ${email}: HTTP ${r.status}`);
+    // Staff: the two-step code page next (the made-up staff have the fixed key QA_TWO_STEP_SECRET)
+    if (r.location === '/dang-nhap/xac-minh') {
+      r = await this.post('/dang-nhap/xac-minh', { code: twoStepCode() });
+      if (r.status !== 303) throw new Error(`two-step code refused for ${email}: HTTP ${r.status}`);
+    }
     await this.get('/'); // uses up the one-time "Đăng nhập thành công" notice
     return r;
   }

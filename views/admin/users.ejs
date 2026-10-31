@@ -65,6 +65,11 @@
                   <button class="btn btn-ghost btn-sm" type="submit"><%= u.role === 'admin' ? t('admin.users.demote') : t('admin.users.promote') %></button>
                 </form>
               <% } %>
+              <% if (canResetTwoStep(user, u)) { %>
+                <form method="POST" action="/admin/nguoi-dung/<%= u._id %>/2-buoc/dat-lai" data-two-step-reset data-confirm-title="<%= t('admin.users.twoStepResetTitle') %>" data-confirm="<%= t('admin.users.twoStepResetConfirm', { name: u.name }) %>">
+                  <button class="btn btn-ghost btn-sm" type="submit"><%= t('admin.users.twoStepReset') %></button>
+                </form>
+              <% } %>
               <% if (canDeleteUser(user, u)) { %>
                 <form method="POST" action="/admin/nguoi-dung/<%= u._id %>/xoa" data-confirm="<%= t('admin.users.confirmDelete', { name: u.name, email: u.email }) %>">
                   <button class="btn btn-sm btn-danger-ghost" type="submit"><%- include('partials/icon', { name: 'trash', size: 15 }) %> <%= t('admin.common.delete') %></button>

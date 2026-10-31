@@ -7,6 +7,7 @@ import { spawn, execFileSync, execFile } from 'node:child_process';
 import { existsSync, mkdirSync, createWriteStream, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { MongoClient } from 'mongodb';
 
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -22,6 +23,20 @@ const DEV_DB = 'mtglobal_db';
 export const PORT = 3001;
 export const BASE = `http://localhost:${PORT}`;
 export const QA_PASSWORD = 'qa-Secret-2026';
+const QA_SESSION_SECRET = 'qa-session-secret';
+// The made-up owner and admin have two-step login on with this fixed app key (lib/two-factor.js), so the campaign
+// can type their codes (twoStepCode in http.mjs)
+export const QA_TWO_STEP_SECRET = 'KRUGKIDROVUWG2ZAMJZG653OEBTG66BA';
+
+async function ensureStaffTwoStep(db) {
+  const twoFactor = createRequire(import.meta.url)('../../../lib/two-factor.js');
+  twoFactor.init(QA_SESSION_SECRET); // the same key the QA site locks app keys with
+  const { QA_ACCOUNTS } = await import('./data.mjs');
+  await db.collection('users').updateMany(
+    { email: { $in: [QA_ACCOUNTS.owner, QA_ACCOUNTS.admin] }, 'twoFactor.enabledAt': { $exists: false } },
+    { $set: { twoFactor: { secret: twoFactor.seal(QA_TWO_STEP_SECRET), enabledAt: new Date(), backupCodes: [], lastStep: null } } },
+  );
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Process ids of the QA site and database, so a run that was killed can be cleaned up by the next one
 const PIDS = path.join(QA_DIR, 'pids.json');
@@ -76,9 +91,11 @@ export const infra = {
     server = spawn(process.execPath, args, {
       cwd: ROOT,
       env: {
-        ...process.env, PORT: String(PORT), MONGO_URI: `${QA_MONGO}/${QA_DB}`, SESSION_SECRET: 'qa-session-secret',
+        ...process.env, PORT: String(PORT), MONGO_URI: `${QA_MONGO}/${QA_DB}`, SESSION_SECRET: QA_SESSION_SECRET,
         GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret', GOOGLE_OAUTH_TEST_URL: 'http://localhost:3002', GOOGLE_REDIRECT_URL: '',
-        CLOUDINARY_CLOUD_NAME: '', CLOUDINARY_API_KEY: '', CLOUDINARY_API_SECRET: '', CLOUDINARY_URL: '', ...env,
+        CLOUDINARY_CLOUD_NAME: '', CLOUDINARY_API_KEY: '', CLOUDINARY_API_SECRET: '', CLOUDINARY_URL: '',
+        TWO_STEP_TEST_REUSE: '1', // the made-up staff log in often: one two-step code may be reused (lib/two-factor.js)
+        ...env,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -158,6 +175,7 @@ export const infra = {
       await makeRequests(this);
       await db.collection('qa_meta').insertOne({ _id: 'accounts', at: new Date() });
     }
+    await ensureStaffTwoStep(db);
   },
   async shutdown() {
     await this.stopServer();

@@ -3,7 +3,10 @@
 // and documents saved with restoreLater() are put back as they were.
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import { createRequire } from 'module';
 import { BASE } from './browser.mjs';
+
+const twoFactor = createRequire(import.meta.url)('../../lib/two-factor.js');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mtglobal_db';
 const STAMP = Date.now();
@@ -16,7 +19,59 @@ export async function db() {
   return mongoose.connection.db;
 }
 
-/** Registers a user through the site and returns { email, password, sid, id }. role: 'admin' | 'owner' | 'customer'. */
+/** The 6-digit app code for a two-step key right now (lib/two-factor.js) */
+export function twoStepCode(secret, at = Date.now()) {
+  return twoFactor.codeFor(twoFactor.base32Decode(secret), twoFactor.stepAt(at));
+}
+
+/**
+ * Takes a logged-in staff client through two-step login (lib/two-factor.js, routes/auth.js), like a person would: the
+ * code page (set up by opening Quản trị when nothing is pending), the QR key read off the setup page or `secret` for an
+ * account that has it, one code, then the backup codes page. c.req(path, { method, body }) → { status, location, text },
+ * keeping the session cookie. Returns { secret, backupCodes } (backupCodes: only right after a setup).
+ * The test server (TWO_STEP_TEST_REUSE=1) lets one code be used more than once, so quick logins don't wait 30 s.
+ */
+export async function passTwoStep(c, { secret = null } = {}) {
+  let page = await c.req('/dang-nhap/xac-minh');
+  if (page.status !== 200) {
+    const admin = await c.req('/admin');
+    if (admin.status === 200) return { secret, backupCodes: [] }; // already past it
+    page = await c.req('/dang-nhap/xac-minh');
+  }
+  const mode = (page.text.match(/data-two-step="(\w+)"/) || [])[1];
+  if (!mode) throw new Error(`two-step page not shown (HTTP ${page.status})`);
+  if (mode !== 'verify') secret = page.text.match(/data-two-step-key>([^<]+)</)[1].replace(/\s/g, '');
+  if (!secret) throw new Error('two-step: this account has a key the test does not know');
+  const sent = await c.req('/dang-nhap/xac-minh', { method: 'POST', body: new URLSearchParams({ code: twoStepCode(secret) }) });
+  if (sent.status !== 303) throw new Error(`two-step code refused (HTTP ${sent.status})`);
+  let backupCodes = [];
+  if (sent.location === '/dang-nhap/ma-du-phong') {
+    const codes = await c.req('/dang-nhap/ma-du-phong');
+    backupCodes = [...codes.text.matchAll(/<li><code>([a-z0-9-]+)<\/code><\/li>/g)].map((m) => m[1]);
+  }
+  await c.req('/'); // uses up the "Đăng nhập thành công" notice
+  return { secret, backupCodes };
+}
+
+/** A minimal cookie-keeping client for one session id (for passTwoStep) */
+export function sidClient(sid) {
+  const c = {
+    sid,
+    async req(path, { method = 'GET', body } = {}) {
+      const res = await fetch(BASE + path, { method, body, redirect: 'manual', headers: { cookie: `connect.sid=${c.sid}`, accept: 'text/html' } });
+      const set = res.headers.getSetCookie().find((x) => x.startsWith('connect.sid='));
+      if (set) c.sid = set.split(';')[0].slice('connect.sid='.length);
+      return { status: res.status, location: res.headers.get('location'), text: await res.text() };
+    },
+  };
+  return c;
+}
+
+/**
+ * Registers a user through the site and returns { email, password, sid, id }. role: 'admin' | 'owner' | 'customer'.
+ * Staff accounts are also taken through two-step login (setup), so sid opens Quản trị; they also get
+ * { twoStepSecret, backupCodes }.
+ */
 export async function createUser(tag, role = 'admin') {
   const email = `zztest-${tag}-${STAMP}@example.com`;
   const password = 'zz-secret1';
@@ -31,8 +86,21 @@ export async function createUser(tag, role = 'admin') {
   const d = await db();
   const user = await d.collection('users').findOne({ email });
   users.push(user._id);
-  if (role !== 'customer') await d.collection('users').updateOne({ _id: user._id }, { $set: { role } });
-  return { email, password, id: user._id, sid: cookie.split(';')[0].slice('connect.sid='.length) };
+  const sid = cookie.split(';')[0].slice('connect.sid='.length);
+  if (role === 'customer') return { email, password, id: user._id, sid };
+  await d.collection('users').updateOne({ _id: user._id }, { $set: { role } });
+  const c = sidClient(sid);
+  const { secret, backupCodes } = await passTwoStep(c);
+  return { email, password, id: user._id, sid: c.sid, twoStepSecret: secret, backupCodes };
+}
+
+/**
+ * Clears the per-address count of wrong passwords and codes for this computer (lib/login-throttle.js: 30 in 15 minutes
+ * lock an address). Tests make wrong attempts on purpose; left behind, a few runs in a row would lock every login
+ * from localhost, the owner's :3000 site included. Run at every file's cleanup, and after a test's wrong-attempt burst.
+ */
+export async function clearLocalLoginLimit() {
+  await (await db()).collection('loginthrottles').deleteMany({ _id: { $in: ['ip:::1', 'ip:127.0.0.1', 'ip:::ffff:127.0.0.1'] } });
 }
 
 /** Deletes the matching records at cleanup (e.g. removeLater('quoterequests', { name: /^ZZ / })). */
@@ -64,6 +132,9 @@ export async function cleanup() {
   }
   // wrong-password counts of this run's temp accounts (login limit, lib/login-throttle.js)
   await d.collection('loginthrottles').deleteMany({ _id: new RegExp(`^email:zztest-.*-${STAMP}@example\\.com$`) });
+  // wrong two-step codes of this run's temp accounts (code:<user id>)
+  await d.collection('loginthrottles').deleteMany({ _id: { $in: users.map((id) => `code:${id}`) } });
+  await clearLocalLoginLimit();
   await mongoose.disconnect();
 }
 

@@ -3,7 +3,7 @@
 // cancel / forged state / unverified email, "Xóa ảnh" keeping a Google photo away, an own photo kept, setting a first password.
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { suite, part, check, db, BASE, ROOT, createUser, stamp } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, createUser, stamp, passTwoStep } from './lib/index.mjs';
 import { startFakeGoogle, setNextProfile, cancelNext, FAKE_GOOGLE_PORT } from './lib/fake-google.mjs';
 
 const PUBLIC = path.join(ROOT, 'public');
@@ -132,8 +132,11 @@ await suite(async (b) => {
     const u = await users.findOne({ _id: admin.id });
     check('same email: the same account is used (no second account), now joined to Google', r.status === 303 && u.googleId === `g-${stamp}-join` && (await users.countDocuments({ email: admin.email })) === 1, u);
     check('… role (admin) and password kept; name and photo from Google', u.role === 'admin' && u.passwordHash === before.passwordHash && u.name === 'ZZ Joined Name' && u.avatar.endsWith('/photo/join=s256-c'), u);
+    check('… staff: Google is not enough, the two-step code page comes next', r.location === '/dang-nhap/xac-minh', r.location);
+    check('… and until the code, not logged in', !(await v.go('/')).text.includes('action="/dang-xuat"'));
     r = await visitor().go('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: admin.email, password: admin.password }) });
-    check('… the old password still logs in', r.status === 303);
+    check('… the old password still logs in (then the code page)', r.status === 303 && r.location === '/dang-nhap/xac-minh', r.location);
+    await passTwoStep({ req: v.go }, { secret: admin.twoStepSecret });
     r = await v.go('/');
     check('… and the admin still has "Quản trị" in the name menu', r.text.includes('href="/admin"'));
 

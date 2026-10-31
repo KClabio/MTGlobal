@@ -20,7 +20,7 @@ async function main() {
   await connectDB();
   const user = await User.findOneAndUpdate(
     { email: email.toLowerCase().trim() },
-    { role },
+    role === 'customer' ? { role, $unset: { twoFactor: 1 } } : { role }, // a customer has no two-step login
     { returnDocument: 'after' }
   );
 

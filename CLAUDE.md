@@ -14,7 +14,7 @@ The company website of Công ty TNHH Công nghệ Mễ Trì Global, in Vietnames
 | `server.js` | app setup, `app.locals` helpers, video guard, routes |
 | `routes/` | `index.js` (public pages), `auth.js` (login/register/profile), `account.js` (`/tai-khoan`: my requests), `admin.js` (`/admin/*`) |
 | `views/` | public pages; `views/partials/` (header, footer, cards, `solution-section.ejs`, …); `views/admin/` + `views/admin/partials/` |
-| `lib/` | logic: `solution-pages.js` (default Giải pháp pages), `dashboard.js`, `home-domains.js`, `project-levels.js`, `help-topics.js` (Hỗ trợ page groups + starter questions), `i18n.js`, `text.js`, `validators.js`, `db-guard.js` (503 "tạm gián đoạn" page while MongoDB is down), `error-log.js` (server errors → Admin → Nhật ký lỗi + alert email through `mailer.js`), `request-mail.js` (new/changed request → staff list in Cài đặt chung + sender's confirmation), `request-throttle.js` (guests: 5 requests an hour; 3 confirmations a day per address), `page-views.js` (own visit counter → Tổng quan "Lượt xem trang"), `chat-links.js` (Zalo / Messenger button), … |
+| `lib/` | logic: `solution-pages.js` (default Giải pháp pages), `dashboard.js`, `home-domains.js`, `project-levels.js`, `help-topics.js` (Hỗ trợ page groups + starter questions), `i18n.js`, `text.js`, `validators.js`, `db-guard.js` (503 "tạm gián đoạn" page while MongoDB is down), `error-log.js` (server errors → Admin → Nhật ký lỗi + alert email through `mailer.js`), `request-mail.js` (new/changed request → staff list in Cài đặt chung + sender's confirmation), `request-throttle.js` (guests: 5 requests an hour; 3 confirmations a day per address), `page-views.js` (own visit counter → Tổng quan "Lượt xem trang"), `two-factor.js` (staff two-step login: TOTP codes, locked keys, backup codes; pages in `routes/auth.js`, Quản trị gate in `middleware/auth.js`), `chat-links.js` (Zalo / Messenger button), … |
 | `models/` | mongoose models (Article, ErrorLog, HelpItem, LoginThrottle, PageView, Partner, Product, Project, QuoteRequest, Service, SiteSettings, SolutionPage, User) |
 | `locales/vi.json`, `locales/en.json` | every UI text, in both languages; add new keys to both |
 | `public/js/` | `main.js` (website), `admin.js` (admin), `theme.js` |
@@ -73,8 +73,10 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
   | `admin-lists` | permissions, notifications, drag order, list search, filter chips, request delete, delete dialog, admin menu scroll + ☰ slide-in menu (≤960px), users by role, user list owners first + "Tìm theo" search/sort |
   | `admin-editor` | admin sidebar, Giải pháp page editor, Cài đặt chung, Thông tin công ty, plain-text content |
   | `a11y` | axe-core on one page of each kind (VI + EN, logged out and in) and /admin: heading levels in order, card pictures with `alt=""`, clean lists, no controls inside the pie pictures, spoken names that start with the visible text, named columns on the admin lists; keyboard focus ring on form fields, search boxes, partner logos, videos |
+  | `two-factor` | staff two-step login: setup (QR, key, backup codes), password → code, backup codes, 5 wrong codes, customers untouched, Hồ sơ (new codes, change phone), "Đặt lại 2 bước", 390 px light/dark, printing the codes |
   | `errors` | error log: a failing page (`/__test/boom`, test server only) is saved once and counted, one alert email an hour (written to `tests/output/mail`), Admin → Nhật ký lỗi (badge, dashboard notice, Đã xem, Xoá), 403 for customers |
   | `print` | print layout (`b.printMedia()`), light + dark: no menu/buttons/footer links, black on white, Giải pháp pages whole (folds opened on `beforeprint`, every photo tab, full process trail) |
+- Staff accounts from `createUser(tag, 'admin' | 'owner')` have passed two-step login (they return `twoStepSecret`). A test that logs staff in again, or makes an account staff in the database, uses `passTwoStep(client, { secret })` and `twoStepCode(secret)`. The test server lets one code be reused (`TWO_STEP_TEST_REUSE=1`).
 - Settings changed in a test must be put back through an admin save (see `restoreSettingsNow` in `admin-editor.test.mjs`): the server caches site settings.
 - Tests use the dev database, but only with temporary data:
   - temp users `zztest-…@example.com` (`createUser`);
@@ -88,7 +90,7 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
     check('home has a hero', await b.ev(`!!document.querySelector('.home-hero')`));
   });
   ```
-- After a change, run the matching test file(s); run the full `npm test` before a release.
+- After a change, run the matching test file(s), and the full `npm test` before a release, once the owner has approved the test plan (see "Branches").
 - The owner's PC has "reduced motion" on, so check animations with `b.reducedMotion()` too.
 
 ## Real-world test campaign (`npm run qa`)
@@ -104,12 +106,32 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
 - `node tests/qa/build-report.mjs` turns the results into `tests/output/qa/report/index.html` (template `tests/qa/report.html`). Results and the report stay out of git (the repo is public; security findings).
 - Don't run `npm test` and `npm run qa` at the same time (both use :3001).
 
+## Branches: build, test, then merge
+- **Every change to the website** (new feature, update to a feature, fix) starts on its own branch from an up-to-date `main`: `git switch main`, `git pull`, `git switch -c <type>/<short-name>`. The type is `feature/` (new), `update/` (changing an existing feature) or `fix/`, e.g. `feature/zalo-button`. Notes-only edits (CLAUDE.md, memory) need no branch.
+- **On the branch:** code, and save steps as commits without asking: `git add <files>` (never `-A`; never `.env`, uploads, `source-assets/`, `tests/output/`). **Never push the branch** (the repo is public). The owner's :3000 server shows whatever branch is checked out.
+- **When the coding is done, plan the tests and ask first.** Before running any test, write a short plan in plain words and get the owner's permission (AskUserQuestion). For each test: what it checks, about how long it takes, what data it makes and removes. Pick from:
+  - the matching `npm test` files, and the full `npm test` before a merge;
+  - Postman MCP: requests to add to or run in the collection "MTGlobal: local checks";
+  - Playwright MCP: which pages, widths (390 px included), light/dark, VI/EN;
+  - unit tests (Node's built-in `node --test`) for plain logic in `lib/`, when the change has some;
+  - `npm run qa -- --only <n>` when a QA use case is affected;
+  - any other check that fits.
+
+  Run nothing until the owner says yes. Then use :3001 only, clean up the test data, and stop :3001 afterwards.
+- **Results:** a failing test is fixed on the branch, gets a line in "Lessons", and is run again (the permission given covers re-running the same tests). Report the numbers to the owner; a "flaky" result is the owner's call.
+- **Merge only after every test passes, and only when the owner asks for a commit or release:**
+  1. `git switch main`, `git pull`, `git merge --squash <branch>`. The branch's changes are now staged on `main` with no commit: `release.js` needs `main` level with `origin/main` and makes the one commit itself.
+  2. Check the staged files (`git diff --cached --name-only`) for anything private.
+  3. Follow "Commits and releases" below.
+  4. After the release succeeds, delete the branch: `git branch -D <branch>` (`-D`: after a squash, git doesn't see it as merged).
+- If the owner asks for a commit before the tests have passed, say so and offer the test plan first.
+
 ## Commits and releases
-- **Commit only when the owner asks.** Each commit is a version: the first was 1.0.0, and each later one adds 0.0.1 (one tag + GitHub Release per commit), unless the owner names a bigger version: then add `--version X.Y.Z` to the release command (1.1.0 = every security, critical and major fix from the pre-launch test).
+- **Commit to `main` only when the owner asks**, after the branch's tests pass (see "Branches"). Commits on a feature branch need no asking. Each commit to `main` is a version: the first was 1.0.0, and each later one adds 0.0.1 (one tag + GitHub Release per commit), unless the owner names a bigger version: then add `--version X.Y.Z` to the release command (1.1.0 = every security, critical and major fix from the pre-launch test).
 - Routine:
   1. Add a `## [Unreleased]` section at the top of `CHANGELOG.md` (under the intro and `---`). Use `### Added` / `### Changed` / `### Fixed` / `### Removed`, in plain words for business readers.
   2. Screenshots (from 1.0.10 on): for visible changes, copy 1–3 small JPGs from `tests/output/` to `docs/screenshots/<next version>/` and link each under the item it shows, by relative path (`![…](docs/screenshots/1.0.10/x.jpg)`). The script makes them work on the Release page and stops if one isn't staged. The repo is public: no admin pages with real customer data.
-  3. Stage the changed files with `git add <files>`, never `git add -A`.
+  3. After the squash merge, check the staged files; stage any extra file by name (`git add <files>`), never `git add -A`.
   4. Run `npm run release -- -m "<two plain sentences>" --session <Claude-Session url>`. Try `--dry-run` first.
 - The script dates the section, sets the version in `package.json`, and commits with this trailer:
   ```
@@ -143,4 +165,7 @@ When a mistake or error turns up (a failing test, a crash, something the owner s
 - **sharp:** in one chain `trim()` runs before `extract()`. Crop first, then trim in a second step.
 - **QA page lists:** the crawler picked up a font file as a "page" and the accessibility scan stopped. Page lists skip non-page files (`tests/qa/lib/pages.mjs` `SKIP`).
 - **Postman MCP:** form fields (`urlencoded`) inside folders are dropped when a collection is saved. Use raw bodies with a `Content-Type: application/x-www-form-urlencoded` header.
+- **QA report files aren't in git:** I made a branch to change `tests/qa/build-report.mjs` and `report.html`, but both are gitignored (they hold the findings). A report-only change needs no branch or commit: edit, rebuild, republish.
+- **Wrong attempts add up across runs:** three test runs in 15 minutes reached the 30-per-address login limit, which locked every login from this computer (the owner's :3000 too). Tests that make wrong attempts on purpose clear the local address count (`clearLocalLoginLimit`, also at every file's cleanup).
+- **One-time pages keep where to go next:** the backup-codes page forgot its "continue to" address together with the codes, so a reload landed on Trang chủ. When a page shows something only once, drop only that thing and keep the way onwards until it is used.
 - **"It doesn't show" may be missing data:** the chat button seemed broken, but its Zalo/Messenger boxes were empty in the admin. Check the saved settings before looking for a bug.

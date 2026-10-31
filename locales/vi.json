@@ -577,8 +577,7 @@
       "bodyEn": "Nội dung (Tiếng Anh)",
       "cover": "Ảnh bìa",
       "published": "Hiển thị công khai",
-      "errTitle": "Tiêu đề (Tiếng Việt) là bắt buộc."
-,
+      "errTitle": "Tiêu đề (Tiếng Việt) là bắt buộc.",
       "uploader": "Người đăng",
       "uploaderNone": "— Chưa có (ghi người lưu) —",
       "uploaderGone": "tài khoản đã xoá",
@@ -614,7 +613,10 @@
       "confirmDelete": "Xoá tài khoản \"{name}\" ({email})? Thao tác này không thể hoàn tác.",
       "viewPhoto": "Xem ảnh đại diện của {name}",
       "photoOf": "Ảnh đại diện của {name}",
-      "filterRole": "Lọc theo vai trò"
+      "filterRole": "Lọc theo vai trò",
+      "twoStepReset": "Đặt lại 2 bước",
+      "twoStepResetTitle": "Đặt lại đăng nhập 2 bước",
+      "twoStepResetConfirm": "Đặt lại đăng nhập 2 bước của {name}? Họ sẽ bị đăng xuất và phải quét mã QR mới ở lần đăng nhập sau. Chỉ làm khi họ mất điện thoại và mã dự phòng."
     },
     "settings": {
       "title": "Thông tin công ty",
@@ -676,7 +678,8 @@
       "userDeleted": "Đã xoá tài khoản {name}. Các yêu cầu tư vấn của họ vẫn được giữ lại.",
       "notFound": "Không tìm thấy mục này. Có thể nó đã bị xoá.",
       "failed": "Không thực hiện được thao tác. Vui lòng thử lại.",
-      "forbidden": "Bạn không có quyền thực hiện thao tác này."
+      "forbidden": "Bạn không có quyền thực hiện thao tác này.",
+      "twoStepReset": "Đã đặt lại đăng nhập 2 bước của {name}."
     },
     "search": {
       "clear": "Xóa tìm kiếm",
@@ -1016,6 +1019,41 @@
     "googleFailed": "Đăng nhập bằng Google không thành công, hãy thử lại.",
     "googleUnverified": "Email của tài khoản Google này chưa được Google xác minh, nên không dùng để đăng nhập được.",
     "googleOtherAccount": "Email này đã được liên kết với một tài khoản Google khác."
+  },
+  "twoStep": {
+    "title": "Đăng nhập 2 bước",
+    "verifyIntro": "Mở ứng dụng xác thực trên điện thoại và nhập mã 6 số đang hiện cho MTG.",
+    "codeLabel": "Mã xác minh",
+    "backupHint": "Không có điện thoại bên cạnh? Nhập một mã dự phòng (dạng abcd-2345); mỗi mã chỉ dùng được một lần.",
+    "verify": "Xác minh",
+    "cancel": "Hủy và đăng xuất",
+    "setupTitle": "Bật đăng nhập 2 bước",
+    "setupIntro": "Tài khoản nhân viên xem được thông tin của mọi khách hàng, nên đăng nhập cần thêm một bước: mã 6 số từ điện thoại của bạn. Chỉ cần thiết lập một lần.",
+    "changeTitle": "Đổi điện thoại",
+    "changeIntro": "Quét mã QR này bằng ứng dụng trên điện thoại mới. Điện thoại cũ vẫn dùng được cho đến khi bạn xác nhận mã từ điện thoại mới.",
+    "step1": "Cài một ứng dụng xác thực miễn phí trên điện thoại: Google Authenticator hoặc Microsoft Authenticator.",
+    "step2": "Trong ứng dụng, chọn thêm tài khoản (dấu +) rồi quét mã QR này.",
+    "qrAlt": "Mã QR để thêm tài khoản MTG vào ứng dụng xác thực",
+    "keyLabel": "Không quét được? Chọn nhập khoá thủ công và gõ khoá này:",
+    "step3": "Nhập mã 6 số ứng dụng hiện cho MTG.",
+    "turnOn": "Xác nhận",
+    "backToProfile": "← Quay lại Hồ sơ",
+    "errWrong": "Mã không đúng. Hãy nhập mã đang hiện trong ứng dụng (mã đổi sau mỗi 30 giây) và kiểm tra giờ trên điện thoại.",
+    "errReused": "Mã này vừa được dùng. Hãy chờ ứng dụng hiện mã mới rồi nhập lại.",
+    "expired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    "codesTitle": "Mã dự phòng của bạn",
+    "codesDone": "Đăng nhập 2 bước đã sẵn sàng.",
+    "codesIntro": "Khi không có điện thoại bên cạnh, bạn có thể đăng nhập bằng một trong các mã dưới đây; mỗi mã dùng được một lần. Hãy tải xuống hoặc in ngay và cất ở nơi an toàn: các mã chỉ hiện một lần.",
+    "codesDownload": "Tải xuống",
+    "codesPrint": "In",
+    "codesContinue": "Tôi đã lưu, tiếp tục",
+    "codesFileHead": "Mã dự phòng đăng nhập 2 bước - MTG",
+    "profileOn": "Đang bật từ {date}.",
+    "profileBackupLeft": "Còn {n} mã dự phòng.",
+    "profileCodeLabel": "Mã 6 số trong ứng dụng",
+    "profileCodeHint": "Nhập mã đang hiện trong ứng dụng để xác nhận. \"Tạo mã dự phòng mới\" làm các mã cũ hết hiệu lực.",
+    "profileNewCodes": "Tạo mã dự phòng mới",
+    "profileChange": "Đổi điện thoại"
   },
   "requests": {
     "edit": "Sửa",

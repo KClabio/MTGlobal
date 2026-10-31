@@ -37,6 +37,8 @@ if (sessionSecret.error) {
   process.exit(1);
 }
 if (sessionSecret.warning) console.warn(sessionSecret.warning);
+// Staff two-step login keys are stored locked with a key taken from the same secret (lib/two-factor.js)
+require('./lib/two-factor').init(sessionSecret.secret);
 
 if (process.env.NODE_ENV === 'production') {
   if (!process.env.MONGO_URI) {

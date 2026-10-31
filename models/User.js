@@ -15,6 +15,17 @@ const userSchema = new mongoose.Schema({
   bio: { type: String, default: '', trim: true, maxlength: 500 },
   // When the person agreed to the Chính sách bảo mật: the sign-up tick, or continuing with Google for a new account
   privacyAcceptedAt: { type: Date, default: null },
+  // Two-step login, staff only (lib/two-factor.js): the app key locked with SESSION_SECRET, the backup codes as hashes,
+  // and the 30-second step of the last code used (a code is never accepted twice). Never in "Tải dữ liệu của tôi".
+  twoFactor: {
+    type: new mongoose.Schema({
+      secret: { type: String, required: true },
+      enabledAt: { type: Date, required: true },
+      backupCodes: { type: [String], default: [] },
+      lastStep: { type: Number, default: null },
+    }, { _id: false }),
+    default: undefined,
+  },
 }, { timestamps: true });
 
 userSchema.index({ createdAt: -1 }); // Admin → Người dùng, newest first

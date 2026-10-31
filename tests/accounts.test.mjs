@@ -4,7 +4,7 @@ import { existsSync, readdirSync, unlinkSync, writeFileSync, mkdtempSync, rmSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { suite, part, check, db, BASE, ROOT, createUser, removeLater, stamp } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, createUser, removeLater, stamp, twoStepCode } from './lib/index.mjs';
 
 const PUBLIC = path.join(ROOT, 'public');
 
@@ -490,6 +490,10 @@ await suite(async (b) => {
     // This time on a phone, with "reduced motion" on (as on the owner's PC)
     await b.viewport(390, 800); await b.reducedMotion(true);
     l = b.waitLoad(); await ev(`document.querySelector('form[action="/dang-nhap"]').requestSubmit()`); await l; await sleep(300);
+    // Staff: the two-step code page first (lib/two-factor.js), the code typed from the "app"
+    check('an admin is asked for the two-step code first', await ev(`location.pathname === '/dang-nhap/xac-minh' && document.querySelector('[data-two-step]').dataset.twoStep === 'verify' && document.activeElement.id === 'twoStepCode'`));
+    await typeIn('twoStepCode', twoStepCode(admin.twoStepSecret));
+    l = b.waitLoad(); await ev(`document.querySelector('form[action="/dang-nhap/xac-minh"]').requestSubmit()`); await l; await sleep(300);
     check('an admin logging in also lands on Trang chủ, with "Quản trị" in their name menu', await ev(`location.pathname === '/' && !!document.querySelector('.user-menu a[href="/admin"]')`));
     tt = await toast();
     check('the admin gets the notice too', tt && /Đăng nhập thành công/.test(tt.text), tt);

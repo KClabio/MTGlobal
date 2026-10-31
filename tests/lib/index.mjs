@@ -7,7 +7,7 @@ import { cleanup } from './fixtures.mjs';
 
 export { BASE, sleep, launch } from './browser.mjs';
 export { check } from './check.mjs';
-export { db, createUser, removeLater, restoreLater, stamp } from './fixtures.mjs';
+export { db, createUser, removeLater, restoreLater, stamp, passTwoStep, twoStepCode, sidClient, clearLocalLoginLimit } from './fixtures.mjs';
 
 /** The project folder, and require() for the app's own modules: appRequire('./lib/banners.js'). */
 export const ROOT = fileURLToPath(new URL('../../', import.meta.url));

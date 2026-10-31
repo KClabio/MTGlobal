@@ -1,7 +1,7 @@
 // Simulated visitors ("virtual users"): each one follows a real path through the site, waits between pages like a
 // person reading, loads each page's CSS/JS/pictures once (then the browser cache has them), and every request is
 // timed. Used by the load, stress, spike and endurance scenarios.
-import { Client } from './http.mjs';
+import { Client, twoStepCode } from './http.mjs';
 import { QA_ACCOUNTS, CUSTOMERS } from './data.mjs';
 import { QA_PASSWORD } from './infra.mjs';
 
@@ -83,7 +83,9 @@ export async function runUsers({ users, seconds, rampSec = 10, think = [2000, 60
         if (Date.now() >= end || shouldStop()) break;
         if (step === 'LOGIN') {
           const email = flow.login === 'admin' ? QA_ACCOUNTS.admin : QA_ACCOUNTS.customer(1 + Math.floor(Math.random() * CUSTOMERS));
-          await timed(c, 'page', '/dang-nhap', { method: 'POST', body: { email, password: QA_PASSWORD } });
+          const r = await timed(c, 'page', '/dang-nhap', { method: 'POST', body: { email, password: QA_PASSWORD } });
+          // Staff: the two-step code page (lib/two-factor.js), typed like a person would
+          if (r && r.location === '/dang-nhap/xac-minh') await timed(c, 'page', '/dang-nhap/xac-minh', { method: 'POST', body: { code: twoStepCode() } });
           continue;
         }
         if (step === 'SEND') {

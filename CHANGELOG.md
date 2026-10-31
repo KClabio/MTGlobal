@@ -6,7 +6,18 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.0] - 2026-10-30
+## [1.2.1] - 2026-10-31
+
+### Security
+- **Two-step login for owners and admins:** after the password (or "Đăng nhập bằng Google"), staff now also type a 6-digit code from an authenticator app on their phone (Google Authenticator or Microsoft Authenticator). The first time, the site shows a QR code to scan, then 10 one-time backup codes to download or print for days without the phone. Staff already logged in are asked for it the next time they open Quản trị. Customers see no change.
+
+  ![Setting up two-step login on a phone (test account)](docs/screenshots/1.2.1/two-step-setup.jpg)
+  ![The backup codes, shown once (test account)](docs/screenshots/1.2.1/two-step-codes.jpg)
+- **Hồ sơ → "Đăng nhập 2 bước"** (staff): make new backup codes, or move to a new phone; both ask for a current code first.
+- **"Đặt lại 2 bước"** in Admin → Người dùng: an owner can reset an admin who lost their phone and backup codes. The admin is logged out and scans a new QR code at the next login. Taking away the admin role also removes it.
+- Five wrong codes in a row pause that account's code step for 15 minutes, and a code that was just used can't be used again.
+
+## [1.2.0] - 2026-10-30 · `1585e6e`
 
 ### Added
 - **Requests without an account:** Liên hệ, the robot pages and the Dịch vụ pages now take a request from anyone, with just a name, a phone number or email and a message. A short line above the form offers to log in instead, which fills the form in and brings the visitor back to it. Without an account one internet address can send 5 requests an hour, and requests filled in by robots are quietly dropped.

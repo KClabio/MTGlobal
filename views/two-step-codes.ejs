@@ -1,0 +1,37 @@
+<%- include('partials/header', { title: t('twoStep.codesTitle') + ' - MTG', noindex: true }) %>
+<%# The 10 new backup codes, shown once (routes/auth.js /dang-nhap/ma-du-phong): download, print, then continue %>
+<section class="section">
+  <div class="container" style="max-width:520px;">
+    <h1 style="text-align:center;"><%= t('twoStep.codesTitle') %></h1>
+    <div class="form-card two-step-card" data-backup-codes>
+      <div class="form-alert success"><%= t('twoStep.codesDone') %></div>
+      <p class="two-step-intro"><%= t('twoStep.codesIntro') %></p>
+      <ol class="backup-codes" data-backup-list>
+        <% codes.forEach(function (c) { %><li><code><%= c %></code></li><% }) %>
+      </ol>
+      <div class="backup-actions">
+        <button type="button" class="btn btn-ghost" data-backup-download><%- include('admin/partials/icon', { name: 'download', size: 16 }) %> <%= t('twoStep.codesDownload') %></button>
+        <button type="button" class="btn btn-ghost" data-backup-print><%= t('twoStep.codesPrint') %></button>
+      </div>
+      <a class="btn btn-primary btn-block" href="<%= /^\/(?!\/)/.test(next) ? next : '/' %>" data-backup-continue><%= t('twoStep.codesContinue') %></a>
+    </div>
+  </div>
+</section>
+<script nonce="<%= cspNonce %>">
+(function () {
+  var codes = <%- JSON.stringify(codes).replace(/</g, '\\u003c') %>;
+  var head = <%- JSON.stringify(t('twoStep.codesFileHead') + ' (' + (user ? user.email : '') + ')').replace(/</g, '\\u003c') %>;
+  document.querySelector('[data-backup-download]').addEventListener('click', function () {
+    var text = head + '\r\n\r\n' + codes.map(function (c, i) { return (i + 1) + '. ' + c; }).join('\r\n') + '\r\n';
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    a.download = 'mtg-ma-du-phong.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
+  document.querySelector('[data-backup-print]').addEventListener('click', function () { window.print(); });
+})();
+</script>
+
+<%- include('partials/footer') %>

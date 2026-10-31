@@ -577,8 +577,7 @@
       "bodyEn": "Content (English)",
       "cover": "Cover image",
       "published": "Publicly visible",
-      "errTitle": "The title (Vietnamese) is required."
-,
+      "errTitle": "The title (Vietnamese) is required.",
       "uploader": "Uploader",
       "uploaderNone": "— None (credits whoever saves) —",
       "uploaderGone": "account deleted",
@@ -614,7 +613,10 @@
       "confirmDelete": "Delete the account \"{name}\" ({email})? This cannot be undone.",
       "viewPhoto": "View {name}'s profile photo",
       "photoOf": "{name}'s profile photo",
-      "filterRole": "Filter by role"
+      "filterRole": "Filter by role",
+      "twoStepReset": "Reset two-step",
+      "twoStepResetTitle": "Reset two-step login",
+      "twoStepResetConfirm": "Reset {name}'s two-step login? They will be logged out and must scan a new QR code at their next login. Only do this when they have lost their phone and backup codes."
     },
     "settings": {
       "title": "Company info",
@@ -676,7 +678,8 @@
       "userDeleted": "The account of {name} was deleted. Their consultation requests have been kept.",
       "notFound": "This item could not be found. It may have been deleted.",
       "failed": "The action could not be completed. Please try again.",
-      "forbidden": "You don't have permission to do this."
+      "forbidden": "You don't have permission to do this.",
+      "twoStepReset": "{name}'s two-step login has been reset."
     },
     "search": {
       "clear": "Clear search",
@@ -1016,6 +1019,41 @@
     "googleFailed": "Logging in with Google didn't work. Please try again.",
     "googleUnverified": "Google hasn't verified the email of this Google account, so it can't be used to log in.",
     "googleOtherAccount": "This email is already linked to another Google account."
+  },
+  "twoStep": {
+    "title": "Two-step login",
+    "verifyIntro": "Open the authenticator app on your phone and enter the 6-digit code it shows for MTG.",
+    "codeLabel": "Verification code",
+    "backupHint": "No phone at hand? Enter a backup code (like abcd-2345); each code works only once.",
+    "verify": "Verify",
+    "cancel": "Cancel and log out",
+    "setupTitle": "Turn on two-step login",
+    "setupIntro": "Staff accounts can see every customer's details, so logging in takes one more step: a 6-digit code from your phone. You only set this up once.",
+    "changeTitle": "Change phone",
+    "changeIntro": "Scan this QR code with the app on your new phone. Your old phone keeps working until you confirm a code from the new one.",
+    "step1": "Install a free authenticator app on your phone: Google Authenticator or Microsoft Authenticator.",
+    "step2": "In the app, add an account (the + button) and scan this QR code.",
+    "qrAlt": "QR code to add your MTG account to an authenticator app",
+    "keyLabel": "Can't scan it? Choose to enter a key by hand and type this key:",
+    "step3": "Enter the 6-digit code the app shows for MTG.",
+    "turnOn": "Confirm",
+    "backToProfile": "← Back to Profile",
+    "errWrong": "That code is not right. Enter the code the app shows now (it changes every 30 seconds) and check the time on your phone.",
+    "errReused": "That code was just used. Wait for the app to show a new code, then enter it.",
+    "expired": "Your login has expired. Please log in again.",
+    "codesTitle": "Your backup codes",
+    "codesDone": "Two-step login is ready.",
+    "codesIntro": "When your phone isn't at hand, you can log in with one of the codes below; each works once. Download or print them now and keep them somewhere safe: they are shown only once.",
+    "codesDownload": "Download",
+    "codesPrint": "Print",
+    "codesContinue": "I've saved them, continue",
+    "codesFileHead": "Two-step login backup codes - MTG",
+    "profileOn": "On since {date}.",
+    "profileBackupLeft": "{n} backup codes left.",
+    "profileCodeLabel": "6-digit code from the app",
+    "profileCodeHint": "Enter the code the app shows now to confirm. \"New backup codes\" makes the old ones stop working.",
+    "profileNewCodes": "New backup codes",
+    "profileChange": "Change phone"
   },
   "requests": {
     "edit": "Edit",
