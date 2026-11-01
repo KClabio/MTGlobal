@@ -3,7 +3,8 @@
 <section class="section" style="text-align:center; padding:120px 0;">
   <div class="container">
     <h1>403</h1>
-    <p><%= lang === 'en' ? "You don't have permission to view this page." : 'Bạn không có quyền truy cập trang này.' %></p>
+    <%# message: a reason given by the route (a form sent from another website: lib/same-origin.js) %>
+    <p><%= typeof message !== 'undefined' && message ? message : (lang === 'en' ? "You don't have permission to view this page." : 'Bạn không có quyền truy cập trang này.') %></p>
     <a class="btn btn-primary" href="/"><%= t('nav.home') %></a>
   </div>
 </section>

@@ -199,7 +199,9 @@ await suite(async (b) => {
     r = await adminC.act(`/admin/yeu-cau/${reqDoc.insertedId}/trang-thai`, new URLSearchParams({ status: 'hoan_tat' }), '/admin/yeu-cau');
     expectToast('request status changed -> green, names the status', r.landed, 'success', '“Hoàn tất”');
     check('... and returns to the referring admin page', r.location === '/admin/yeu-cau', r.location);
-    const evil = await fetch(BASE + `/admin/yeu-cau/${reqDoc.insertedId}/trang-thai`, { method: 'POST', body: new URLSearchParams({ status: 'moi' }), redirect: 'manual', headers: { cookie: adminC.cookie(), referer: 'https://evil.example/phish' } });
+    // This site's Origin with an outside Referer (a post from another site is refused before: security.test.mjs):
+    // the way back still never leaves the admin
+    const evil = await fetch(BASE + `/admin/yeu-cau/${reqDoc.insertedId}/trang-thai`, { method: 'POST', body: new URLSearchParams({ status: 'moi' }), redirect: 'manual', headers: { cookie: adminC.cookie(), origin: BASE, referer: 'https://evil.example/phish' } });
     check('an outside Referer is ignored (no open redirect)', evil.headers.get('location') === '/admin/yeu-cau', evil.headers.get('location'));
     const cust = client();
     await cust.req('/dang-ky', { method: 'POST', body: new URLSearchParams({ name: 'ZZ cust', email: mail('cust'), password: 'zz-secret1', confirmPassword: 'zz-secret1', agreePrivacy: '1' }) });

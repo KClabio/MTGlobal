@@ -57,8 +57,8 @@ export async function passTwoStep(c, { secret = null } = {}) {
 export function sidClient(sid) {
   const c = {
     sid,
-    async req(path, { method = 'GET', body } = {}) {
-      const res = await fetch(BASE + path, { method, body, redirect: 'manual', headers: { cookie: `connect.sid=${c.sid}`, accept: 'text/html' } });
+    async req(path, { method = 'GET', body, headers = {} } = {}) {
+      const res = await fetch(BASE + path, { method, body, redirect: 'manual', headers: { cookie: `connect.sid=${c.sid}`, accept: 'text/html', ...headers } });
       const set = res.headers.getSetCookie().find((x) => x.startsWith('connect.sid='));
       if (set) c.sid = set.split(';')[0].slice('connect.sid='.length);
       return { status: res.status, location: res.headers.get('location'), text: await res.text() };

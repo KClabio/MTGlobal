@@ -155,6 +155,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Form posts from another website are refused before anything is read or saved (lib/same-origin.js)
+app.use(require('./lib/same-origin').sameOriginPosts);
+
 // Form and JSON bodies are read last, once the visitor's language and the site settings are known: a body too big
 // to read then gets a clear page in the right language (error handler below), not the general error page
 app.use(express.urlencoded({ extended: true }));

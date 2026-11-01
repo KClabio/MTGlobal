@@ -192,7 +192,8 @@
   "errors": {
     "tooLargeTitle": "Nội dung gửi quá dài",
     "tooLargeText": "Thông tin bạn gửi vượt quá giới hạn của website. Hãy rút gọn nội dung (tối đa 3.000 ký tự) rồi gửi lại.",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "crossSite": "Biểu mẫu này được gửi từ một trang web khác nên không được chấp nhận. Nếu bạn muốn gửi thông tin cho MTG, hãy mở trang trên website của chúng tôi rồi gửi lại."
   },
   "privacy": {
     "title": "Chính sách bảo mật",

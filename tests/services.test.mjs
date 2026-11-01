@@ -393,7 +393,8 @@ await suite(async (b) => {
     check('200,000 characters: 413 with "Nội dung gửi quá dài", not the general error page',
       huge.status === 413 && /<h1>Nội dung gửi quá dài<\/h1>/.test(huge.html) && !/Đã có lỗi xảy ra/.test(huge.html) && !(await col.findOne({ name: `${MARK}-huge` })), huge.status);
     check('… with "← Quay lại" to the form it came from (the browser steps back, keeping the typed text)', /<a class="btn btn-primary" href="\/lien-he" data-history-back>← Quay lại<\/a>/.test(huge.html));
-    const outside = await post('/lien-he', { message: 'e'.repeat(200000) }, { referer: 'https://example.com/x' });
+    // This site's Origin with an outside Referer (a post from another site is refused earlier: security.test.mjs)
+    const outside = await post('/lien-he', { message: 'e'.repeat(200000) }, { origin: BASE, referer: 'https://example.com/x' });
     check('… never back to another website', /href="\/" data-history-back/.test(outside.html));
     const en = await fetch(BASE + '/lien-he', { method: 'POST', body: new URLSearchParams({ message: 'e'.repeat(200000) }), headers: asRequester('en') });
     check('… in English on the English site', en.status === 413 && /<h1>What you sent is too long<\/h1>/.test(await en.text()));

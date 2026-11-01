@@ -192,7 +192,8 @@
   "errors": {
     "tooLargeTitle": "What you sent is too long",
     "tooLargeText": "What you sent is more than the website accepts. Please shorten your message (at most 3,000 characters) and send it again.",
-    "back": "Go back"
+    "back": "Go back",
+    "crossSite": "This form was sent from another website, so it can't be accepted. If you want to send something to MTG, open the page on our website and send it again."
   },
   "privacy": {
     "title": "Privacy Policy",

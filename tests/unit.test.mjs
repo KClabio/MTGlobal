@@ -382,4 +382,15 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('minifying fails: the original file is sent instead (express.static)', fallback.next === true);
 }
 
+// Form posts from another website (lib/same-origin.js)
+{
+  const { crossSiteReason } = appRequire('./lib/same-origin.js');
+  const req = (method, headers, host = 'mtg.vn') => ({ method, protocol: 'http', get: (n) => ({ host, ...headers })[n.toLowerCase()] });
+  check('GET from anywhere is fine (links from other sites)', crossSiteReason(req('GET', { origin: 'https://evil.example' })) === '');
+  check('POST with this site\'s Origin: fine, also https behind a proxy that reports http', crossSiteReason(req('POST', { origin: 'http://mtg.vn' })) === '' && crossSiteReason(req('POST', { origin: 'https://mtg.vn' })) === '');
+  check('POST from another site, a look-alike host or Origin "null": refused', !!crossSiteReason(req('POST', { origin: 'https://evil.example' })) && !!crossSiteReason(req('POST', { origin: 'https://mtg.vn.evil.example' })) && !!crossSiteReason(req('POST', { origin: 'null' })));
+  check('no Origin: the Referer decides; neither: fine (not a browser on a hostile page)', !!crossSiteReason(req('POST', { referer: 'https://evil.example/x' })) && crossSiteReason(req('POST', { referer: 'https://mtg.vn/lien-he' })) === '' && crossSiteReason(req('POST', {})) === '');
+  check('SITE_URL counts as this site (the request came in on another host name)', crossSiteReason(req('POST', { origin: 'https://www.mtg.vn' }, 'internal:3000'), 'https://www.mtg.vn') === '' && !!crossSiteReason(req('POST', { origin: 'https://www.mtg.vn' }, 'internal:3000')));
+}
+
 process.exit(result() ? 1 : 0);

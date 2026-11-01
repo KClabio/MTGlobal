@@ -6,7 +6,12 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.5] - 2026-11-01
+## [1.2.6] - 2026-11-01
+
+### Security
+- Every form on the website (requests, profile, log out, all admin saves) now only accepts what is sent from the website itself. A form sent from another website gets a short explanation instead. Visitors using the site normally see no change.
+
+## [1.2.5] - 2026-11-01 · `2430157`
 
 ### Fixed
 - One automatic check of the admin overview's line chart sometimes failed although the chart was working correctly (it measured the gaps between the dots instead of the drawing speed). It now checks the speed, and still fails if the chart stops slowing down as designed. Nothing changes on the website.
