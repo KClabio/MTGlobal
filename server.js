@@ -95,6 +95,7 @@ app.locals.pageMeta = require('./lib/seo').pageMeta; // description, canonical a
 app.use(require('compression')({ threshold: 1024 }));
 app.use(require('./lib/images').createImages());
 app.use(assets.bundleRoute);
+app.use(assets.scriptRoute); // main.js, admin.js, theme.js minified on the live server
 app.use(express.static(path.join(__dirname, 'public'), { setHeaders: assets.staticHeaders }));
 // Drag-and-drop library for the admin lists, served from node_modules (no CDN)
 app.get('/vendor/sortable.min.js', (req, res) => {

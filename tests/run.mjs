@@ -31,7 +31,9 @@ if (!(await up())) {
   const errorTest = { ERROR_TEST_ROUTE: '1', MAIL_TEST_DIR: path.join(ROOT, 'tests', 'output', 'mail'), ALERT_EMAIL_TO: 'alerts@example.com' };
   // Staff two-step login (lib/two-factor.js): many quick test logins may reuse one code instead of waiting 30 s
   const twoStepTest = { TWO_STEP_TEST_REUSE: '1' };
-  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ...fakeGoogle, ...errorTest, ...twoStepTest }, stdio: ['ignore', 'pipe', 'pipe'] });
+  // The scripts are sent minified, as on the live server (lib/assets.js), so every test checks the minified code
+  const minified = { ASSETS_MINIFY: '1' };
+  server = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT), ...fakeGoogle, ...errorTest, ...twoStepTest, ...minified }, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.on('data', (d) => { serverLog += d; });
   server.stderr.on('data', (d) => { serverLog += d; });
   let ok = false;

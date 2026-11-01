@@ -15,6 +15,7 @@ const HelpItem = require('../models/HelpItem');
 const { requireAdmin } = require('../middleware/auth');
 const { uploadMedia, uploadServiceMedia, uploadPageMedia, uploadSingleImage, uploadSettingsImages, fileUrl, fileUrls, wrapUpload, removeLocalUpload, removeUpload, removeLocalMedia, PAGE_MEDIA_PREFIX } = require('../middleware/upload');
 const { clearSiteSettingsCache } = require('../lib/settings');
+const { clearMemo } = require('../lib/memo-cache');
 const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
 const { isNonEmpty, isValidEmail } = require('../lib/validators');
 const { STAFF_EMAILS_MAX } = require('../lib/request-mail');
@@ -39,6 +40,12 @@ const { cleanZalo, cleanMessenger } = require('../lib/chat-links');
 
 router.use(requireAdmin);
 router.use(loadAdminLanguage);
+// Any admin save (add, edit, reorder, delete) empties the memory of Trang chủ's data (lib/memo-cache.js), once the
+// change is done, so it shows on the website at once
+router.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') res.on('finish', clearMemo);
+  next();
+});
 
 // One-time notifications shown after a redirect: green for success, red for errors (see admin/partials/foot.ejs)
 function flash(req, type, text) {

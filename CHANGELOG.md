@@ -6,7 +6,13 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.1] - 2026-10-31
+## [1.2.2] - 2026-11-01
+
+### Changed
+- **Trang chủ answers faster when many people visit at once:** on the live server, the home page keeps its projects, robots, partners and services in memory for one minute instead of reading them from the database on every view. Any save in the admin shows on the website at once. The time can be changed with `HOME_CACHE_SECONDS` (see `.env.example`).
+- **Smaller scripts:** the website's and the admin's scripts are now sent minified, about half their size. A first visit downloads about 12 KB less on the website and 10 KB less in the admin. If minifying ever fails, the original script is sent, so pages keep working.
+
+## [1.2.1] - 2026-10-31 · `a930a53`
 
 ### Security
 - **Two-step login for owners and admins:** after the password (or "Đăng nhập bằng Google"), staff now also type a 6-digit code from an authenticator app on their phone (Google Authenticator or Microsoft Authenticator). The first time, the site shows a QR code to scan, then 10 one-time backup codes to download or print for days without the phone. Staff already logged in are asked for it the next time they open Quản trị. Customers see no change.

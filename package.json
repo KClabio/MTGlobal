@@ -1,6 +1,6 @@
 {
   "name": "mtglobal-website",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "MTG - Smart Solutions for Life. Corporate website for Cong ty TNHH Cong nghe Me Tri Global.",
   "main": "server.js",
   "engines": {
@@ -46,7 +46,8 @@
     "nodemailer": "^10.3.1",
     "qrcode": "1.5.4",
     "sharp": "^0.35.5",
-    "sortablejs": "^1.15.6"
+    "sortablejs": "^1.15.6",
+    "terser": "^5.51.2"
   },
   "devDependencies": {
     "adm-zip": "^0.6.1",

@@ -317,4 +317,63 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
     && !canResetTwoStep(admin2, withTwoStep) && !canResetTwoStep({ ...admin, role: 'owner' }, withTwoStep) && !canResetTwoStep(owner, { ...cust, twoFactor: { enabledAt: new Date() } }));
 }
 
+// Trang chủ's data kept in memory (lib/memo-cache.js)
+{
+  const { memo, clearMemo, homeCacheSeconds } = appRequire('./lib/memo-cache.js');
+  check('memory time: 60 s on the live server, off elsewhere, HOME_CACHE_SECONDS wins',
+    homeCacheSeconds({ NODE_ENV: 'production' }) === 60 && homeCacheSeconds({}) === 0 && homeCacheSeconds({ NODE_ENV: 'production', HOME_CACHE_SECONDS: '0' }) === 0
+    && homeCacheSeconds({ HOME_CACHE_SECONDS: '30' }) === 30 && homeCacheSeconds({ HOME_CACHE_SECONDS: 'abc' }) === 0);
+  let reads = 0;
+  const load = () => { reads += 1; return new Promise((r) => setTimeout(() => r(reads), 20)); };
+  clearMemo();
+  const [a, b] = await Promise.all([memo('u1', 60, load), memo('u1', 60, load)]);
+  check('two visits at the same moment share one read', reads === 1 && a === 1 && b === 1, { reads, a, b });
+  check('a fresh value is reused', (await memo('u1', 60, load)) === 1 && reads === 1);
+  clearMemo();
+  check('after clearMemo the next visit reads again', (await memo('u1', 60, load)) === 2 && reads === 2);
+  await memo('u2', 0.05, load);
+  await new Promise((r) => setTimeout(r, 80));
+  check('an expired value is read again', (await memo('u2', 0.05, load)) === 4 && reads === 4, reads);
+  check('0 seconds: every visit reads', (await memo('u3', 0, load)) === 5 && (await memo('u3', 0, load)) === 6);
+  let fail = true;
+  const flaky = async () => { if (fail) { fail = false; throw new Error('db down'); } return 'ok'; };
+  const first = await memo('u4', 60, flaky).catch((e) => e.message);
+  check('a failed read is not kept: the next visit tries again', first === 'db down' && (await memo('u4', 60, flaky)) === 'ok');
+  clearMemo();
+}
+
+// Minified scripts (lib/assets.js)
+{
+  const fs = await import('node:fs');
+  const vm = await import('node:vm');
+  const { createAssets, minifyJs, JS_FILES } = appRequire('./lib/assets.js');
+  for (const url of JS_FILES) {
+    const src = fs.readFileSync(new URL(`../public${url}`, import.meta.url), 'utf8');
+    const min = await minifyJs(src);
+    let parses = true;
+    try { new vm.Script(min); } catch { parses = false; }
+    check(`${url}: minified, still valid JavaScript, at most 60% of the size`, parses && min.length <= src.length * 0.6, { from: src.length, to: min.length });
+  }
+  // A route call with fake req/res: what it sends, or whether it hands over to express.static (next)
+  const call = (route, url, query = {}) => new Promise((resolve) => {
+    const res = { headers: {}, type() { return this; }, set(k, v) { this.headers[k] = v; return this; }, status() { return this; },
+      end() { resolve({ sent: '' }); }, send(body) { resolve({ sent: body, headers: this.headers }); } };
+    route({ path: url, query, fresh: false }, res, () => resolve({ next: true }));
+  });
+  const on = createAssets({ production: false, minifyScripts: true });
+  const sent = await call(on.scriptRoute, '/js/main.js');
+  check('minifying on: main.js is sent minified, browsers re-check it on a test computer', !!sent.sent && sent.sent.length < 60000 && sent.headers['Cache-Control'] === 'no-cache', sent.headers);
+  check('minifying on: other files go on to express.static', (await call(on.scriptRoute, '/js/nope.js')).next && (await call(on.scriptRoute, '/css/site.css')).next);
+  const off = createAssets({ production: false, minifyScripts: false });
+  check('minifying off: main.js is sent as written', (await call(off.scriptRoute, '/js/main.js')).next);
+  const live = createAssets({ production: true });
+  const hash = live.asset('/js/main.js').split('v=')[1];
+  check('live server: minified by default, kept a year with its fingerprint', (await call(live.scriptRoute, '/js/main.js', { v: hash })).headers['Cache-Control'].includes('31536000'));
+  const broken = createAssets({ production: false, minifyScripts: true, minifier: async () => { throw new Error('test'); } });
+  const origError = console.error; console.error = () => {};
+  const fallback = await call(broken.scriptRoute, '/js/theme.js');
+  console.error = origError;
+  check('minifying fails: the original file is sent instead (express.static)', fallback.next === true);
+}
+
 process.exit(result() ? 1 : 0);

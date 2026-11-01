@@ -17,6 +17,7 @@ const { policyText } = require('../lib/privacy-policy');
 const { getHelpItems, groupHelpItems } = require('../lib/help-topics');
 const requestThrottle = require('../lib/request-throttle');
 const requestMail = require('../lib/request-mail');
+const { memo, homeCacheSeconds } = require('../lib/memo-cache');
 
 const ROBOT_CATEGORIES = [
   'robot-leo-cau-thang',
@@ -25,20 +26,25 @@ const ROBOT_CATEGORIES = [
   'robot-gia-dinh',
 ];
 
+// Every partner, in the admin's order (Trang chủ and Về MTG); kept in memory like the rest of Trang chủ's data
+const allPartners = () => memo('partners', homeCacheSeconds(), () => Partner.find().sort({ order: 1, _id: 1 }).lean());
+
 router.get('/', async (req, res) => {
-  const [featuredProjects, robots, partners, services] = await Promise.all([
+  // The same for every visitor, so kept in memory for a minute on the live server (lib/memo-cache.js); the
+  // language, settings and logged-in header are still built for each visit
+  const [featuredProjects, robots, partners, services] = await memo('home', homeCacheSeconds(), () => Promise.all([
     Project.find().sort({ featured: -1, order: 1, createdAt: -1 }).limit(3).lean(),
     Product.find({ category: { $in: ROBOT_CATEGORIES } }).sort({ order: 1, _id: 1 }).lean(),
-    Partner.find().sort({ order: 1, _id: 1 }).lean(),
+    allPartners(),
     Service.find().sort({ order: 1, _id: 1 }).lean(),
-  ]);
+  ]));
   const { settings, lang, t } = res.locals;
   const domains = buildHomeDomains({ settings, lang, t, services });
   res.render('index', { featuredProjects, robots, partners, domains });
 });
 
 router.get('/ve-mtg', async (req, res) => {
-  const partners = await Partner.find().sort({ order: 1, _id: 1 }).lean();
+  const partners = await allPartners();
   res.render('about', { partners });
 });
 
