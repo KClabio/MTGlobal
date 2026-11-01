@@ -6,7 +6,12 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.11] - 2026-11-01
+## [1.2.12] - 2026-11-01
+
+### Fixed
+- On a phone, tabbing through an admin list (for example Đối tác) could leave a "Xoá" button hidden under the round "view on website" button at the bottom right. The page now scrolls the focused button clear of it, with room after the last row.
+
+## [1.2.11] - 2026-11-01 · `041522b`
 
 ### Changed
 - **Liên hệ:** the "Nhắn qua Zalo" and "Nhắn qua Messenger" buttons now sit below the request form, each with its Zalo or Messenger logo. The phone and email stay above the form.

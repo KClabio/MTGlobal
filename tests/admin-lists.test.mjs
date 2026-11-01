@@ -378,6 +378,23 @@ await suite(async (b) => {
       return out;
     })()`);
     check('admin menu at 560 px high: every item can be focused without hiding under the VI / EN switch', hiddenItems.length === 0, hiddenItems);
+    // On a phone, tabbing through a list page: no control ends up under the round "view on website" button (2.4.11)
+    // Real Tab presses on a 390 × 844 phone (Tab scrolls a control just into view at the bottom edge, where the button
+    // sits; this is how the QA scan found a "Xoá" under it)
+    await b.viewport(390, 844);
+    await nav('/admin/doi-tac');
+    const underFab = [];
+    for (let i = 0; i < 80; i++) {
+      await b.key('Tab', 'Tab', 9);
+      await sleep(150);
+      const c = await ev(`(() => { const el = document.activeElement; if (!el || el === document.body || el.closest('.view-fab')) return null; const r = el.getBoundingClientRect();
+        if (!r.width || !r.height || r.bottom < 0 || r.top > innerHeight) return null;
+        const top = document.elementFromPoint(Math.min(Math.max(r.left + r.width / 2, 0), innerWidth - 1), Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1));
+        return top && top.closest('.view-fab') ? (el.textContent || el.getAttribute('aria-label') || el.tagName).trim().slice(0, 30) : null; })()`);
+      if (c) underFab.push(c);
+    }
+    check('390 px, Admin → Đối tác: no focused control hides under the "view on website" button', underFab.length === 0, underFab);
+    await b.viewport(1280, 1000);
     await b.viewport(1280, 1000);
     await purge();
     // Logo previews (EN admin)

@@ -599,6 +599,10 @@ tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg
 .view-fab { position: fixed; right: 24px; bottom: 24px; z-index: 150; display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--mtg-blue-solid); color: #fff; box-shadow: var(--mtg-shadow-lg); text-decoration: none; transition: transform .15s ease, background .15s ease; }
 .view-fab:hover { background: var(--mtg-blue-dark); transform: translateY(-2px); color: #fff; }
 .view-fab:focus-visible { outline: 3px solid var(--mtg-blue); outline-offset: 3px; }
+/* Pages with this button: a control reached with Tab scrolls clear of it (WCAG 2.2, 2.4.11), and the page ends with room
+   under its last row, so the last "Sửa" / "Xoá" can be scrolled above the button on a phone */
+html:has(.view-fab) { scroll-padding-bottom: 104px; }
+body:has(.view-fab) .admin-main { padding-bottom: 104px; }
 .view-fab-label { position: absolute; right: calc(100% + 12px); top: 50%; transform: translate(8px, -50%); max-width: 320px; padding: 7px 12px; border-radius: 999px; background: var(--mtg-heading); color: var(--mtg-surface); font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: var(--mtg-shadow); opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease; }
 .view-fab:hover .view-fab-label, .view-fab:focus-visible .view-fab-label { opacity: 1; transform: translate(0, -50%); }
 .view-fab.is-disabled { background: var(--mtg-border); color: var(--mtg-muted); box-shadow: var(--mtg-shadow); cursor: not-allowed; }

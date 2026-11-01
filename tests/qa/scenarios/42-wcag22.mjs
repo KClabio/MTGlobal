@@ -115,7 +115,7 @@ export const scenarios = [
             await page.goto(BASE + '/admin/san-pham', { waitUntil: 'load' });
             results.dragging = await page.evaluate(() => {
               const rows = [...document.querySelectorAll('[data-sortable] tr')];
-              const tapOnly = rows.filter((r) => r.querySelector('[data-move], [data-order-up], [data-order-down], button[aria-label*="Lên"], button[aria-label*="Xuống"]')).length;
+              const tapOnly = rows.filter((r) => r.querySelector('[data-move-row], [data-move], [data-order-up], [data-order-down], button[aria-label*="lên" i], button[aria-label*="xuống" i]')).length;
               return { rows: rows.length, withTapButtons: tapOnly };
             });
           }
