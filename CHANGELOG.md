@@ -6,7 +6,12 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.8] - 2026-11-01
+## [1.2.9] - 2026-11-01
+
+### Added
+- **Company card and page paths for Google:** Trang chủ now tells search engines the company's name, logo, address, phone, email and Zalo / Facebook links (from Admin → Thông tin công ty), and every other page its place on the site ("Trang chủ › Giải pháp › Dự án tham khảo › …"). Google can then show a company card and the page path in its results. After launch, Google's Rich Results Test shows what it reads.
+
+## [1.2.8] - 2026-11-01 · `167378b`
 
 ### Fixed
 - Four small HTML mistakes found by the official W3C checker are corrected: the zoomable photos on the Giải pháp pages, the password "eye" button, the photo box in Admin → Người dùng, and a heading level in Thông tin công ty. Nothing looks different; screen readers and older browsers get cleaner pages.

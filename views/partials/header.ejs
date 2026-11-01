@@ -39,6 +39,10 @@
   <meta property="og:locale" content="<%= meta.locale %>">
   <meta property="og:locale:alternate" content="<%= meta.altLocale %>">
   <meta name="twitter:card" content="summary_large_image">
+  <%# For Google (lib/structured-data.js): the company on Trang chủ, the breadcrumbs on other pages %>
+  <% structuredData({ base: siteBase, path: pagePath, lang, t, settings: hdSettings || {}, pageTitle, noindex: hdNoindex }).forEach(function (block) { %>
+  <script type="application/ld+json" nonce="<%= cspNonce %>"><%- jsonForScript(block) %></script>
+  <% }) %>
   <% } %>
   <%# The font comes from this site (public/fonts); the regular Vietnamese/Latin weights load first %>
   <link rel="preload" href="/fonts/be-vietnam-pro-400-vietnamese.woff2" as="font" type="font/woff2" crossorigin>

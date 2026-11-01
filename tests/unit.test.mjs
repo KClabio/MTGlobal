@@ -393,4 +393,28 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('SITE_URL counts as this site (the request came in on another host name)', crossSiteReason(req('POST', { origin: 'https://www.mtg.vn' }, 'internal:3000'), 'https://www.mtg.vn') === '' && !!crossSiteReason(req('POST', { origin: 'https://www.mtg.vn' }, 'internal:3000')));
 }
 
+// Structured data for Google (lib/structured-data.js)
+{
+  const { structuredData, jsonForScript } = appRequire('./lib/structured-data.js');
+  const vi = appRequire('./locales/vi.json');
+  const t = (k) => k.split('.').reduce((o, x) => (o ? o[x] : undefined), vi) || k;
+  const base = 'https://mtg.vn';
+  const settings = { logo: '/uploads/logo.png', contactInfo: { address: 'Số 1, Mễ Trì, Hà Nội', phone: '0901 234 567', email: 'info@mtg.vn', zalo: '0901234567', messenger: 'mtg.vn' } };
+  const [org] = structuredData({ base, path: '/', lang: 'vi', t, settings, pageTitle: 'MTG - Smart Solutions for Life' });
+  check('Trang chủ: an Organization with name, legal name, address link, logo, phone, email, address and chat links',
+    org['@type'] === 'Organization' && org.legalName === 'Công ty TNHH Công nghệ Mễ Trì Global' && org.url === 'https://mtg.vn/' && org.logo === 'https://mtg.vn/uploads/logo.png'
+    && org.telephone === '0901 234 567' && org.email === 'info@mtg.vn' && org.address.streetAddress === 'Số 1, Mễ Trì, Hà Nội' && org.address.addressCountry === 'VN'
+    && org.sameAs.includes('https://zalo.me/0901234567') && org.sameAs.includes('https://www.facebook.com/mtg.vn'), org);
+  const bare = structuredData({ base, path: '/', lang: 'vi', t, settings: {}, pageTitle: '' })[0];
+  check('… empty company fields are left out, and the MTG logo is used when none is uploaded', !('telephone' in bare) && !('address' in bare) && !('sameAs' in bare) && bare.logo === 'https://mtg.vn/images/mtg-logo-transparent.png', bare);
+  const [crumbs] = structuredData({ base, path: '/giai-phap/du-an/abc', lang: 'vi', t, settings, pageTitle: 'Lab STEM THCS Cầu Giấy - MTG' });
+  const names = crumbs.itemListElement.map((x) => x.name);
+  check('a project page: Trang chủ › Giải pháp › Dự án tham khảo › the project (without " - MTG")', crumbs['@type'] === 'BreadcrumbList' && JSON.stringify(names) === JSON.stringify(['Trang chủ', 'Giải pháp', 'Dự án tham khảo', 'Lab STEM THCS Cầu Giấy'])
+    && crumbs.itemListElement[2].item === 'https://mtg.vn/giai-phap/du-an' && crumbs.itemListElement.every((x, i) => x.position === i + 1), names);
+  const [en] = structuredData({ base, path: '/tin-tuc/x', lang: 'en', t: (k) => k, settings, pageTitle: 'News item - MTG' });
+  check('English pages link the English addresses (?lang=en)', en.itemListElement.every((x) => x.item.endsWith('?lang=en')), en.itemListElement.map((x) => x.item));
+  check('noindex pages (account, errors) get no structured data', structuredData({ base, path: '/ho-so', lang: 'vi', t, settings, pageTitle: 'Hồ sơ - MTG', noindex: true }).length === 0);
+  check('JSON-LD can\'t end its <script> early ("</script>" in a company name)', !jsonForScript({ name: '</script><script>alert(1)</script>' }).includes('</script>'));
+}
+
 process.exit(result() ? 1 : 0);

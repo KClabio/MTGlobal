@@ -92,6 +92,29 @@ await suite(async (b) => {
     }
   });
 
+  await part(b, 'structured data for Google: company card and breadcrumbs (lib/structured-data.js)', async () => {
+    const ld = async (path, cookie = 'lang=vi') => {
+      const html = await (await fetch(BASE + path, { headers: { cookie } })).text();
+      return [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+    };
+    const d = await db();
+    const settings = await d.collection('sitesettings').findOne({});
+    const [org, ...rest] = await ld('/');
+    check('Trang chủ: one Organization block, valid JSON, named MTG with the legal name and a logo address', rest.length === 0 && org && org['@type'] === 'Organization' && org.legalName === 'Công ty TNHH Công nghệ Mễ Trì Global' && /^https?:\/\/.+\.(png|jpe?g|webp|svg)/i.test(org.logo || ''), org);
+    const phone = settings && settings.contactInfo && settings.contactInfo.phone;
+    check('… with the phone from Thông tin công ty (when filled in)', !phone || org.telephone === phone, { phone, got: org.telephone });
+    const [crumbs] = await ld('/giai-phap/stem-lab');
+    check('/giai-phap/stem-lab: breadcrumbs Trang chủ › Giải pháp › the page', crumbs && crumbs['@type'] === 'BreadcrumbList' && crumbs.itemListElement[0].name === 'Trang chủ' && crumbs.itemListElement[1].name === 'Giải pháp' && crumbs.itemListElement.length === 3, crumbs && crumbs.itemListElement.map((x) => x.name));
+    const project = await d.collection('projects').findOne({});
+    if (project) {
+      const [pc] = await ld(`/giai-phap/du-an/${project._id}`);
+      check('a project page: Trang chủ › Giải pháp › Dự án tham khảo › the project', pc && pc.itemListElement.map((x) => x.name).slice(0, 3).join(' › ') === 'Trang chủ › Giải pháp › Dự án tham khảo' && pc.itemListElement.length === 4, pc && pc.itemListElement.map((x) => x.name));
+    }
+    const [enCrumbs] = await ld('/giai-phap/stem-lab', 'lang=en');
+    check('English: the names in English and the ?lang=en addresses', enCrumbs && enCrumbs.itemListElement[0].name === 'Home' && enCrumbs.itemListElement.every((x) => x.item.endsWith('lang=en')), enCrumbs && enCrumbs.itemListElement);
+    check('login and missing pages carry none (they ask search engines to skip them)', (await ld('/dang-nhap')).length === 0 && (await ld('/khong-co-trang-nay')).length === 0);
+  });
+
   await part(b, 'Chính sách bảo mật page (lib/privacy-policy.js)', async () => {
     const page = async (lang) => { const r = await fetch(BASE + '/chinh-sach-bao-mat', { headers: { cookie: `lang=${lang}` } }); return { status: r.status, text: await r.text() }; };
     const body = (html) => (html.match(/data-privacy-text>([\s\S]*?)<\/div>\s*<\/div>\s*<\/section>/) || [])[1] || '';
