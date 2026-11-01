@@ -6,7 +6,12 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.7] - 2026-11-01
+## [1.2.8] - 2026-11-01
+
+### Fixed
+- Four small HTML mistakes found by the official W3C checker are corrected: the zoomable photos on the Giải pháp pages, the password "eye" button, the photo box in Admin → Người dùng, and a heading level in Thông tin công ty. Nothing looks different; screen readers and older browsers get cleaner pages.
+
+## [1.2.7] - 2026-11-01 · `54f333d`
 
 ### Changed
 - **Reordering in the admin without dragging:** every list that can be dragged into order (Sản phẩm, Dự án, Đối tác, Tin tức, Dịch vụ, Hỗ trợ), the cards in the service editor and the photos of a product, project or service now also have small ↑ ↓ (or ← →) buttons, so the order can be changed with a tap on a phone or tablet, or with the keyboard. The service editor's cards had no keyboard way before.

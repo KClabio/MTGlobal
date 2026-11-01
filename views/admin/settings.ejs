@@ -26,7 +26,7 @@
       </div>
 
       <%# Chính sách bảo mật: the box shows the admin's own text, else the default draft (lib/privacy-policy.js) %>
-      <h3 id="chinh-sach-bao-mat"><%= t('admin.settings.privacyTitle') %></h3>
+      <h2 class="admin-subhead" id="chinh-sach-bao-mat"><%= t('admin.settings.privacyTitle') %></h2>
       <p class="form-hint" data-privacy-draft-note><%= t('admin.settings.privacyDraft') %> <a href="/chinh-sach-bao-mat" target="_blank" rel="noopener"><%= t('admin.viewPage.item', { name: t('privacy.title') }) %> ↗</a></p>
       <% if (!contact.email) { %><p class="form-hint" data-privacy-no-email>⚠ <%= t('admin.settings.privacyNoEmail') %></p><% } %>
       <div class="form-group">
@@ -42,7 +42,7 @@
     </div>
 
     <aside>
-      <h3><%= t('admin.settings.contactTitle') %></h3>
+      <h2 class="admin-subhead"><%= t('admin.settings.contactTitle') %></h2>
       <div class="form-group">
         <label for="address"><%= t('admin.settings.address') %></label>
         <input class="form-control" id="address" name="address" value="<%= contact.address || '' %>">

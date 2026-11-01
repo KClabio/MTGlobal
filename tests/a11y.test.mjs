@@ -55,6 +55,22 @@ await suite(async (b) => {
       }
     }
     await b.setCookie('adminLang', 'vi');
+    // The four W3C checker errors of QA use case 40 stay fixed
+    await b.nav('/admin/nguoi-dung', 300);
+    check('W3C: the avatar dialog picture has an address (an empty src is invalid)', await b.ev(`!!document.querySelector('[data-avatar-img]').getAttribute('src')`));
+    await b.nav('/admin/thong-tin-cong-ty', 300);
+    check('W3C: Thông tin công ty goes h1 → h2 (no level skipped)', await b.ev(`(() => { const hs = [...document.querySelectorAll('main h1, main h2, main h3, main h4, .admin-main h1, .admin-main h2, .admin-main h3')].map((h) => +h.tagName[1]); return hs.length > 1 && hs.every((n, i) => i === 0 || n <= hs[i - 1] + 1); })()`));
+  });
+
+  await part(b, 'W3C fixes on public pages (QA use case 40)', async () => {
+    await b.login('none');
+    await b.nav('/giai-phap/stem-lab', 400);
+    const inButtons = await b.ev(`[...document.querySelectorAll('button')].filter((x) => x.querySelector('div, p, figure, section, ul')).length`);
+    check('STEM Lab: no block element (div…) inside a button; the zoomable photos still open from their button', inButtons === 0 && await b.ev(`document.querySelectorAll('.media-zoom .media-frame').length > 0 && getComputedStyle(document.querySelector('.media-zoom .media-frame')).display === 'block'`), inButtons);
+    await b.nav('/dang-nhap', 300);
+    check('login page: no hidden attribute on an <svg> (the password eye switches by CSS)', await b.ev(`document.querySelectorAll('svg[hidden]').length === 0`));
+    const eye = await b.ev(`(() => { const btn = document.querySelector('[data-password-toggle]'); const shows = (s) => getComputedStyle(btn.querySelector(s)).display !== 'none'; const before = [shows('.icon-eye'), shows('.icon-eye-off')]; btn.click(); const after = [shows('.icon-eye'), shows('.icon-eye-off')]; btn.click(); return { before, after }; })()`);
+    check('… the open eye shows first, the crossed-out eye after a click', JSON.stringify(eye) === JSON.stringify({ before: [true, false], after: [false, true] }), eye);
   });
 
   await part(b, 'keyboard focus is visible (form fields, search boxes, partner logos, videos)', async () => {

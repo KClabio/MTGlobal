@@ -679,9 +679,7 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
     var label = btn.getAttribute(shown ? 'data-label-hide' : 'data-label-show');
     btn.setAttribute('aria-label', label);
     btn.setAttribute('title', label);
-    // (SVG elements have no .hidden property: switch the attribute itself)
-    btn.querySelector('.icon-eye').toggleAttribute('hidden', shown);
-    btn.querySelector('.icon-eye-off').toggleAttribute('hidden', !shown);
+    // (which eye shows follows aria-pressed in components.css)
   }
   function hideAll(scope) {
     scope.querySelectorAll('[data-password-toggle]').forEach(function (btn) { setShown(btn, false); });

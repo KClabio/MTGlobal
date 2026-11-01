@@ -1,6 +1,9 @@
 /* Admin area only (views/admin/**, public/js/admin.js): sidebar, lists (drag order, search, filter chips), notifications,
    settings, page editor, delete dialog, dashboard charts, service editor and the "view on website" button. */
 
+/* A section heading under the page's h1 that keeps the smaller h3 look (heading levels in order: h1 → h2) */
+.admin-subhead { font-size: 1.17em; }
+
 /* ---- Tables (admin) ---- */
 .admin-wrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: calc(100vh - 0px); } /* minmax: a wide table scrolls in its own box instead of stretching the page */
 /* Light sidebar so the logo keeps its original colours (incl. the navy tagline) on a transparent background */

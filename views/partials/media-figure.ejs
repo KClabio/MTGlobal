@@ -18,7 +18,8 @@
           aria-label="<%= t('solutionPage.viewFull') %><%= mfCaption || mfAlt ? ': ' + (mfCaption || mfAlt) : '' %>" data-back-label="<%= t('common.back') %>"
           data-loading="<%= t('solutionPage.imageLoading') %>" data-failed="<%= t('solutionPage.imageFailed') %>" data-open="<%= t('solutionPage.openImage') %>">
   <% } %>
-  <div class="media-frame" style="aspect-ratio:<%= mfRatio %>;">
+  <%# Inside the zoom button only inline elements are allowed: the frame is then a span, shown as a block (components.css) %>
+  <<%= mfZoom ? 'span' : 'div' %> class="media-frame" style="aspect-ratio:<%= mfRatio %>;">
     <% if (mfIsVideo) { %>
       <%# Watch only: play/pause, time bar, volume, fullscreen; no download, speed, picture-in-picture or casting (see public/js/main.js) %>
       <video controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture disableRemotePlayback preload="metadata" playsinline<% if (typeof poster !== 'undefined' && poster) { %> poster="<%= poster %>"<% } %>>
@@ -30,7 +31,7 @@
     <% if (mfZoom) { %>
       <span class="media-zoom-badge" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span>
     <% } %>
-  </div>
+  </<%= mfZoom ? 'span' : 'div' %>>
   <% if (mfZoom) { %></button><% } %>
   <% if (mfCaption) { %><figcaption><%= mfCaption %></figcaption><% } %>
 </figure>
