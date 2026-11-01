@@ -6,7 +6,12 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.9] - 2026-11-01
+## [1.2.10] - 2026-11-01
+
+### Added
+- **A second round of pre-launch checks with the official tools:** the OWASP ZAP security scanner, OWASP ASVS checks, the W3C HTML and CSS checkers (run on this computer, nothing sent out), the WCAG 2.2 accessibility rules that need a real browser, and a page-by-page search-engine check. They run in the test campaign (`npm run qa`) against its own copy of the site; the fixes they led to are in 1.2.6–1.2.9. Nothing changes on the website.
+
+## [1.2.9] - 2026-11-01 · `98e3054`
 
 ### Added
 - **Company card and page paths for Google:** Trang chủ now tells search engines the company's name, logo, address, phone, email and Zalo / Facebook links (from Admin → Thông tin công ty), and every other page its place on the site ("Trang chủ › Giải pháp › Dự án tham khảo › …"). Google can then show a company card and the page path in its results. After launch, Google's Rich Results Test shows what it reads.

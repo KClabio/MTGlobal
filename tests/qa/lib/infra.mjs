@@ -95,6 +95,9 @@ export const infra = {
         GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret', GOOGLE_OAUTH_TEST_URL: 'http://localhost:3002', GOOGLE_REDIRECT_URL: '',
         CLOUDINARY_CLOUD_NAME: '', CLOUDINARY_API_KEY: '', CLOUDINARY_API_SECRET: '', CLOUDINARY_URL: '',
         TWO_STEP_TEST_REUSE: '1', // the made-up staff log in often: one two-step code may be reused (lib/two-factor.js)
+        // Emails (new requests, error alerts) are written to a folder, never sent, even if .env has an SMTP account:
+        // the scans post hundreds of made-up requests
+        MAIL_TEST_DIR: path.join(QA_DIR, 'mail'), ALERT_EMAIL_TO: 'qa-alerts@example.com',
         ...env,
       },
       stdio: ['ignore', 'pipe', 'pipe'],

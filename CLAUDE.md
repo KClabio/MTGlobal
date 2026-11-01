@@ -106,6 +106,7 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
 - Progress is saved in `tests/output/qa/progress.json` after every step: `--status`, `--resume`, `--only 26,29`, `--restart 29`, `--pause` (or Ctrl+C). `QA_FAST=1` shortens the long runs (for testing the checkpoints).
 - `node tests/qa/build-report.mjs` turns the results into `tests/output/qa/report/index.html` (template `tests/qa/report.html`). Results and the report stay out of git (the repo is public; security findings).
 - Don't run `npm test` and `npm run qa` at the same time (both use :3001).
+- Use cases 38–43 use the official tools: 38 OWASP ZAP (the Windows app, headless; `winget install ZAP.ZAP`), 39 OWASP ASVS probes, 40–41 the W3C HTML/CSS checker (`vnu-jar`, a devDependency), 42 WCAG 2.2 checks in Playwright, 43 SEO + structured data. 38 and 40–41 need Java (`winget install EclipseAdoptium.Temurin.17.JRE`); if `java` isn't found in an older shell, put `C:\Program Files\Eclipse Adoptium\jre-…\bin` on the PATH. The QA copy writes its emails to `tests/output/qa/mail`, never sends them.
 
 ## Branches: build, test, then merge
 - **Every change to the website** (new feature, update to a feature, fix) starts on its own branch from an up-to-date `main`: `git switch main`, `git pull`, `git switch -c <type>/<short-name>`. The type is `feature/` (new), `update/` (changing an existing feature) or `fix/`, e.g. `feature/zalo-button`. Notes-only edits (CLAUDE.md, memory) need no branch.
