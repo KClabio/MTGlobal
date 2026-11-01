@@ -6,7 +6,12 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.4] - 2026-11-01
+## [1.2.5] - 2026-11-01
+
+### Fixed
+- One automatic check of the admin overview's line chart sometimes failed although the chart was working correctly (it measured the gaps between the dots instead of the drawing speed). It now checks the speed, and still fails if the chart stops slowing down as designed. Nothing changes on the website.
+
+## [1.2.4] - 2026-11-01 · `53a8261`
 
 ### Fixed
 - Switching between Vietnamese and English and then clicking a link before the fade was over sometimes left an error in the browser's console ("Transition was aborted"). The fade is now ended the proper way, so nothing is reported. Visitors see the same fades as before.

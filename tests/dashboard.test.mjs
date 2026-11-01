@@ -323,7 +323,12 @@ await suite(async (b) => {
     })()`);
     check('line: more than half drawn after the first quarter of its time (fast start)', lineCheck.quarter > 0.5, lineCheck);
     check('line: each dot pops exactly when the line reaches it (±0.02 of the length)', lineCheck.rows.every((r) => Math.abs(r.drawn - r.frac) <= 0.02), lineCheck.rows);
-    check('line: the gaps between dots get longer toward the latest month (slowing down)', lineCheck.rows.slice(2).every((r, k) => (r.at - lineCheck.rows[k + 1].at) >= (lineCheck.rows[k + 1].at - lineCheck.rows[k].at) - 5 || r.frac - lineCheck.rows[k + 1].frac > lineCheck.rows[k + 1].frac - lineCheck.rows[k].frac + 0.05), lineCheck.rows);
+    // Slowing down = the drawing speed (share of the line per millisecond between two dots) drops toward the latest
+    // month. The dots are not evenly spaced along the line (each run's random data shapes it), so the time gaps
+    // alone can shrink while the speed still drops; 8% slack covers the whole-millisecond rounding of short gaps.
+    const speeds = lineCheck.rows.slice(1).map((r, k) => { const dt = r.at - lineCheck.rows[k].at; return dt > 0 ? (r.frac - lineCheck.rows[k].frac) / dt : null; }).filter((s) => s !== null);
+    check('line: it draws more and more slowly toward the latest month (slowing down)', speeds.length >= 2 && speeds.slice(1).every((s, k) => s <= speeds[k] * 1.08)
+      && speeds[speeds.length - 1] < speeds[0] * 0.8, { speeds: speeds.map((s) => +s.toFixed(5)), rows: lineCheck.rows }); // …and clearly slower at the end than at the start (a steady speed would fail)
   });
 
   await part(b, 'highlights follow the mouse only', async () => {
