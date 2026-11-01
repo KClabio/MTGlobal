@@ -434,7 +434,9 @@ a.chat-fab { position: fixed; z-index: 50; right: max(18px, env(safe-area-inset-
 .chat-fab--messenger, .chat-fab--messenger:hover { background: linear-gradient(45deg, #00b2ff, #a033ff 60%, #ff5c87); }
 @keyframes chat-menu-in { from { opacity: 0; transform: translateY(8px) scale(.96); } }
 body.nav-open .chat-fab-wrap, body.nav-open a.chat-fab { display: none; } /* the phone menu drawer covers the page */
-.contact-chat { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+/* Liên hệ: the Zalo / Messenger buttons under the request form, each with its brand logo before the text */
+.contact-chat { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 0; }
+.contact-chat .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
 
 /* ---- Printing: no request form, notices, chat button or picture buttons; cards two to a row ---- */
 @media print {

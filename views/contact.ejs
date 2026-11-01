@@ -13,14 +13,16 @@
       <div style="text-align:center; margin-bottom:32px;">
         <% if (settings.contactInfo.phone) { %><p><%= t('common.phone') %>: <%= settings.contactInfo.phone %></p><% } %>
         <% if (settings.contactInfo.email) { %><p><%= t('common.email') %>: <%= settings.contactInfo.email %></p><% } %>
-        <% if (ctChat.length) { %>
-          <p class="contact-chat" data-contact-chat>
-            <% ctChat.forEach(function (l) { %><a class="btn btn-ghost btn-sm" href="<%= l.url %>" target="_blank" rel="noopener"><%= t('chat.' + l.kind) %><span class="sr-only"> <%= t('chat.newTab') %></span></a><% }) %>
-          </p>
-        <% } %>
       </div>
     <% } %>
     <%- include('partials/quote-form', { sent, error, errors, values, prefillInterestedIn }) %>
+    <%# Below the form: "Nhắn qua Zalo" / "Nhắn qua Messenger" with each brand's logo (partials/chat-logo.ejs; the logo is
+        hidden from screen readers, the link says the name). Only the ones filled in, in Admin → Thông tin công ty. %>
+    <% if (ctChat.length) { %>
+      <p class="contact-chat" data-contact-chat>
+        <% ctChat.forEach(function (l) { %><a class="btn btn-ghost btn-sm" href="<%= l.url %>" target="_blank" rel="noopener" data-contact-chat-link="<%= l.kind %>"><%- include('partials/chat-logo', { kind: l.kind, size: 20, id: 'contact-chat-messenger' }) %><span><%= t('chat.' + l.kind) %></span><span class="sr-only"> <%= t('chat.newTab') %></span></a><% }) %>
+      </p>
+    <% } %>
   </div>
 </section>
 

@@ -6,7 +6,14 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.10] - 2026-11-01
+## [1.2.11] - 2026-11-01
+
+### Changed
+- **Liên hệ:** the "Nhắn qua Zalo" and "Nhắn qua Messenger" buttons now sit below the request form, each with its Zalo or Messenger logo. The phone and email stay above the form.
+
+  ![Liên hệ on a phone: the Zalo and Messenger buttons with their logos under the form](docs/screenshots/1.2.11/contact-chat.jpg)
+
+## [1.2.10] - 2026-11-01 · `aba2038`
 
 ### Added
 - **A second round of pre-launch checks with the official tools:** the OWASP ZAP security scanner, OWASP ASVS checks, the W3C HTML and CSS checkers (run on this computer, nothing sent out), the WCAG 2.2 accessibility rules that need a real browser, and a page-by-page search-engine check. They run in the test campaign (`npm run qa`) against its own copy of the site; the fixes they led to are in 1.2.6–1.2.9. Nothing changes on the website.

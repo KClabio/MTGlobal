@@ -19,6 +19,7 @@ await suite(async (b) => {
     await part(b, 'Thông tin công ty → Zalo and Messenger', async () => {
       let r = await saveContact('', '');
       check('both empty → no chat button, nothing in the footer', r.status === 302 && !(await html('/')).includes('data-chat-fab') && !(await html('/')).includes('data-footer-chat'));
+      check('… and no Zalo / Messenger buttons on Liên hệ', !(await html('/lien-he')).includes('data-contact-chat'));
       r = await saveContact('0912 345 678', 'https://www.facebook.com/mtg.vn/');
       const saved = (await d.collection('sitesettings').findOne({})).contactInfo;
       check('saved cleaned: Zalo "0912345678", Messenger "mtg.vn"', saved.zalo === '0912345678' && saved.messenger === 'mtg.vn', saved);
@@ -93,8 +94,39 @@ await suite(async (b) => {
       await b.printMedia(false);
     });
 
+    await part(b, 'Liên hệ: the buttons under the form, each with its logo', async () => {
+      await b.viewport(1280, 900);
+      await b.nav('/lien-he', 300);
+      const lay = await ev(`(() => {
+        const chat = document.querySelector('[data-contact-chat]'), form = document.querySelector('[data-quote-form]');
+        const after = !!(chat && form && (form.compareDocumentPosition(chat) & Node.DOCUMENT_POSITION_FOLLOWING));
+        const btn = (k) => { const a = document.querySelector('[data-contact-chat-link="' + k + '"]'); if (!a) return null; const s = a.querySelector('svg.chat-logo--' + k + '[aria-hidden="true"]'); const r = s && s.getBoundingClientRect(), ar = a.getBoundingClientRect();
+          return { logo: !!s, w: r && Math.round(r.width), text: a.textContent.replace(/\\s+/g, ' ').trim(), h: Math.round(ar.height), logoFirst: a.firstElementChild === s, gradient: k === 'messenger' ? !!a.querySelector('linearGradient#contact-chat-messenger') : true }; };
+        return { after, zalo: btn('zalo'), messenger: btn('messenger') };
+      })()`);
+      check('the Zalo / Messenger buttons come after the request form', lay.after, lay);
+      check('"Nhắn qua Zalo" starts with the Zalo logo (20 px), "Nhắn qua Messenger" with the Messenger logo (its own gradient)',
+        lay.zalo && lay.zalo.logo && lay.zalo.logoFirst && lay.zalo.w === 20 && lay.messenger && lay.messenger.logo && lay.messenger.logoFirst && lay.messenger.w === 20 && lay.messenger.gradient, lay);
+      check('… the spoken names stay "Nhắn qua Zalo (mở trong thẻ mới)" (the logo is hidden from screen readers), and each button is at least 24 px high',
+        lay.zalo.text === 'Nhắn qua Zalo (mở trong thẻ mới)' && lay.messenger.text === 'Nhắn qua Messenger (mở trong thẻ mới)' && lay.zalo.h >= 24 && lay.messenger.h >= 24, lay);
+      check('… the phone and email lines stay above the form (only the chat buttons moved)', await ev(`(() => { const form = document.querySelector('[data-quote-form]'); const chat = document.querySelector('[data-contact-chat]'); return !chat.contains(form) && !document.querySelector('.container > div [data-contact-chat]'); })()`));
+      for (const theme of ['light', 'dark']) {
+        await b.setCookie('theme', theme);
+        await b.viewport(390, 844);
+        await b.nav('/lien-he', 300);
+        await ev(`document.querySelector('[data-contact-chat]').scrollIntoView({ block: 'center' })`);
+        const fit = await ev(`({ page: document.documentElement.scrollWidth, right: Math.max(...[...document.querySelectorAll('[data-contact-chat] a')].map((a) => a.getBoundingClientRect().right)) })`);
+        check(`[${theme}] 390 px: the buttons fit the screen`, fit.page <= 390 && fit.right <= 390, fit);
+        await b.shot(`contact-chat-390-${theme}`);
+      }
+      await b.setCookie('theme', 'light');
+      await b.viewport(1280, 900);
+    });
+
     await part(b, 'one link: the button opens it', async () => {
       await saveContact('', 'mtg.vn');
+      const contactOne = await html('/lien-he');
+      check('Liên hệ with only Messenger set: one button, with the Messenger logo', !contactOne.includes('data-contact-chat-link="zalo"') && /data-contact-chat-link="messenger"><svg class="chat-logo chat-logo--messenger/.test(contactOne));
       await b.nav('/', 300);
       const one = await ev(`(() => { const f = document.querySelector('[data-chat-fab]'); return { tag: f.tagName, href: f.getAttribute('href'), target: f.target, name: f.getAttribute('aria-label'), menu: !!document.querySelector('[data-chat-menu]'),
         logo: !!f.querySelector('svg.chat-logo--messenger[aria-hidden="true"] path[fill="#fff"]'), bg: getComputedStyle(f).backgroundImage }; })()`);
