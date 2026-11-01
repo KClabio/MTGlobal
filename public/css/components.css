@@ -242,6 +242,10 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .two-step-cancel { margin-top: 16px; text-align: center; }
 .two-step-cancel button { background: none; border: 0; padding: 4px; color: var(--mtg-muted); font: inherit; font-size: .9rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .two-step-cancel button:hover { color: var(--mtg-ink); }
+/* "Không nhập được mã?" under the code box (the .faq-item fold of pages.css) */
+.two-step-help { margin-top: 18px; }
+.two-step-help summary { padding-top: 12px; padding-bottom: 12px; font-size: .95rem; }
+.two-step-help ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; font-size: .92rem; }
 .backup-codes { margin: 0 0 18px; padding: 14px 14px 14px 2.4em; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; border-radius: var(--mtg-radius-sm); background: var(--mtg-bg-alt); border: 1px solid var(--mtg-border); }
 .backup-codes code { font-size: 1rem; letter-spacing: .05em; }
 .backup-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }

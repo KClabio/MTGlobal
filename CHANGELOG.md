@@ -6,7 +6,13 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.2] - 2026-11-01
+## [1.2.3] - 2026-11-01
+
+### Changed
+- **Two-step login says when a clock is wrong:** when a staff member types the code from their authenticator app but the website's computer and the phone show different times, the code is still refused, but the page now says the clocks differ by about how many seconds and what to do ("Đặt giờ tự động" on the phone, or fix the server's clock). Before, it only said "Mã không đúng". Each case is also written in Admin → Nhật ký lỗi, so a wrong server clock is noticed. It still counts as a wrong attempt.
+- **"Không nhập được mã?" on the two-step code page:** a short guide under the code box, which opens by itself after two refused codes (or at once when the clocks differ or after too many tries). It covers: the code shown now, the phone's automatic time, the right MTG entry in the app (old ones from an earlier setup give wrong codes), a backup code, and who can help when the phone and the backup codes are lost: an admin asks an owner for "Đặt lại 2 bước", and an owner asks the website's technical person.
+
+## [1.2.2] - 2026-11-01 · `fcb216f`
 
 ### Changed
 - **Trang chủ answers faster when many people visit at once:** on the live server, the home page keeps its projects, robots, partners and services in memory for one minute instead of reading them from the database on every view. Any save in the admin shows on the website at once. The time can be changed with `HOME_CACHE_SECONDS` (see `.env.example`).

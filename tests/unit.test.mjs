@@ -292,6 +292,12 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('the current code is accepted, also typed with a space ("123 456")', ok.ok && tf.checkCode(secret, at(now).replace(/^(\d{3})/, '$1 '), { now, allowReuse: false }).ok);
   check('a phone clock 30 s off still works; 90 s off does not', tf.checkCode(secret, at(now - 30000), { now, allowReuse: false }).ok && tf.checkCode(secret, at(now + 30000), { now, allowReuse: false }).ok
     && !tf.checkCode(secret, at(now - 90000), { now, allowReuse: false }).ok);
+  const behind = tf.checkCode(secret, at(now - 90000), { now, allowReuse: false });
+  const ahead = tf.checkCode(secret, at(now + 90000), { now, allowReuse: false });
+  check('a code from 90 s earlier or later: refused, and the gap is told (phone behind −90, ahead +90)', !behind.ok && behind.offBy === -90 && !ahead.ok && ahead.offBy === 90, { behind, ahead });
+  const far = tf.checkCode(secret, at(now + 11 * 60000), { now, allowReuse: false });
+  check('a code from more than 10 minutes away: just wrong (no clock hint)', !far.ok && far.offBy === undefined || [-1, 0, 1].some((d) => at(now + d * 30000) === at(now + 11 * 60000)), far);
+  check('the 10-minute hint never accepts a code', [2, 5, 20].every((n) => !tf.checkCode(secret, at(now + n * 30000), { now, allowReuse: true }).ok));
   const again = tf.checkCode(secret, at(now), { now, lastStep: ok.step, allowReuse: false });
   check('a code already used is refused (and said so); an older one too', !again.ok && again.reused && !tf.checkCode(secret, at(now - 30000), { now, lastStep: ok.step, allowReuse: false }).ok);
   check('the next code after a used one is accepted', tf.checkCode(secret, at(now + 30000), { now: now + 30000, lastStep: ok.step, allowReuse: false }).ok);

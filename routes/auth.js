@@ -126,8 +126,8 @@ async function pendingStep(req) {
 
 const isSetup = (p, user) => !!p.change || !twoFactor.isEnabled(user);
 
-async function renderTwoStep(req, res, { p, user }, { status = 200, error = null } = {}) {
-  const view = { mode: p.change ? 'change' : isSetup(p, user) ? 'setup' : 'verify', error, email: user.email };
+async function renderTwoStep(req, res, { p, user }, { status = 200, error = null, helpOpen = false } = {}) {
+  const view = { mode: p.change ? 'change' : isSetup(p, user) ? 'setup' : 'verify', error, email: user.email, role: user.role, helpOpen };
   if (view.mode !== 'verify') {
     if (!twoFactor.open(p.newSecret)) {
       p.newSecret = twoFactor.seal(twoFactor.newSecret()); // one key per setup visit: a reload shows the same QR code
@@ -151,13 +151,28 @@ function finishTwoStep(req, res, userId, target, extra = {}) {
 }
 
 /**
+ * The message for a refused app code. A code from a nearby time (r.offBy) means the server's or the phone's clock is
+ * wrong: the page says so, and it goes to Nhật ký lỗi (the server's clock may need fixing)
+ */
+function codeRefusedText(req, res, r) {
+  const t = res.locals.t;
+  if (r.reused) return t('twoStep.errReused');
+  if (!r.offBy) return t('twoStep.errWrong');
+  const seconds = Math.abs(r.offBy);
+  errorLog.record(new Error(`Two-step code refused: the server and phone clocks differ by about ${seconds} s (phone ${r.offBy > 0 ? 'ahead' : 'behind'})`),
+    { req, where: 'Two-step login', status: 400 });
+  return t('twoStep.errClock', { seconds });
+}
+
+/**
  * Checks a typed code for an account with two-step set up: a 6-digit app code (never one already used), or, when
- * allowed, one backup code (used up). Counts wrong codes (5 → 15 minutes' wait). → { ok } or { status, error }
+ * allowed, one backup code (used up). Counts wrong codes (5 → 15 minutes' wait).
+ * → { ok } or { status, error, openHelp } (openHelp: the clocks differ or too many tries: the code page opens its guide)
  */
 async function checkStaffCode(req, res, user, code, { allowBackup }) {
   const t = res.locals.t;
   const wait = await throttle.checkCode(String(user._id), req.ip);
-  if (wait) return { status: 429, error: t('auth.errTooMany', { minutes: wait }) };
+  if (wait) return { status: 429, error: t('auth.errTooMany', { minutes: wait }), openHelp: true };
   const tf = user.twoFactor;
   if (allowBackup) {
     const i = twoFactor.findBackup(tf.backupCodes, code);
@@ -171,12 +186,19 @@ async function checkStaffCode(req, res, user, code, { allowBackup }) {
   const r = twoFactor.checkCode(twoFactor.open(tf.secret), code, { lastStep: tf.lastStep });
   if (!r.ok) {
     await throttle.failCode(String(user._id), req.ip);
-    return { status: 400, error: t(r.reused ? 'twoStep.errReused' : 'twoStep.errWrong') };
+    return { status: 400, error: codeRefusedText(req, res, r), openHelp: !!r.offBy };
   }
   tf.lastStep = r.step;
   await user.save();
   await throttle.succeedCode(String(user._id));
   return { ok: true };
+}
+
+/** The code page again after a refused code: from the 2nd refusal of this login on, its "Không nhập được mã?" guide is open */
+function refused(req, res, pending, { status, error, openHelp }) {
+  const p = pending.p;
+  p.misses = (p.misses || 0) + 1; // kept with the half-finished login in the session, gone with it
+  return renderTwoStep(req, res, pending, { status, error, helpOpen: openHelp || p.misses >= 2 });
 }
 
 const expired = (req, res) => {
@@ -198,18 +220,18 @@ router.post('/dang-nhap/xac-minh', async (req, res) => {
 
   if (!isSetup(p, user)) {
     const r = await checkStaffCode(req, res, user, code, { allowBackup: true });
-    if (!r.ok) return renderTwoStep(req, res, pending, { status: r.status, error: r.error });
+    if (!r.ok) return refused(req, res, pending, r);
     return finishTwoStep(req, res, user._id, p.back || '/');
   }
 
   // Setup (or a new phone): one correct code from the new key turns it on; new backup codes replace any old ones
   const wait = await throttle.checkCode(String(user._id), req.ip);
-  if (wait) return renderTwoStep(req, res, pending, { status: 429, error: res.locals.t('auth.errTooMany', { minutes: wait }) });
+  if (wait) return refused(req, res, pending, { status: 429, error: res.locals.t('auth.errTooMany', { minutes: wait }), openHelp: true });
   const secret = twoFactor.open(p.newSecret);
   const r = secret ? twoFactor.checkCode(secret, code) : { ok: false };
   if (!r.ok) {
     await throttle.failCode(String(user._id), req.ip);
-    return renderTwoStep(req, res, pending, { status: 400, error: res.locals.t('twoStep.errWrong') });
+    return refused(req, res, pending, { status: 400, error: codeRefusedText(req, res, r), openHelp: !!r.offBy });
   }
   const { codes, hashes } = twoFactor.newBackupCodes();
   user.twoFactor = { secret: p.newSecret, enabledAt: new Date(), backupCodes: hashes, lastStep: r.step };

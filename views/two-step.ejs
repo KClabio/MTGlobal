@@ -31,6 +31,25 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block"><%= t(mode === 'verify' ? 'twoStep.verify' : 'twoStep.turnOn') %></button>
       </form>
+      <%# What to do when a code keeps being refused: open from the 2nd refused code, or at once when the clocks differ
+          or after too many tries (helpOpen, routes/auth.js). The last step depends on who can help: an owner resets an
+          admin (Admin → Người dùng → "Đặt lại 2 bước"); an owner is reset on the server by the technical person. %>
+      <details class="faq-item two-step-help" data-two-step-help<%- helpOpen ? ' open' : '' %>>
+        <summary><%= t('twoStep.helpTitle') %></summary>
+        <div class="prose-text">
+          <ol>
+            <li><%= t('twoStep.helpNow') %></li>
+            <li><%= t('twoStep.helpTime') %></li>
+            <li><%= t('twoStep.helpEntry') %></li>
+            <% if (mode === 'verify') { %>
+              <li><%= t('twoStep.helpBackup') %></li>
+              <li data-two-step-help-reset><%= t(role === 'owner' ? 'twoStep.helpResetOwner' : 'twoStep.helpResetAdmin') %></li>
+            <% } else { %>
+              <li><%= t('twoStep.helpScan') %></li>
+            <% } %>
+          </ol>
+        </div>
+      </details>
       <% if (mode === 'change') { %>
         <p class="auth-switch"><a href="/ho-so"><%= t('twoStep.backToProfile') %></a></p>
       <% } else { %>
