@@ -598,6 +598,33 @@ await suite(async (b) => {
       await ev('history.back()'); await sleep(900);
       l = b.waitLoad(); await ev(`document.querySelector('a[href="/"]').click()`); await l; await sleep(400);
       check('after the browser\'s Back, a normal link does not fade', (await ev(`window.__faded`)) === false);
+
+      // Clicking a link while the language fade is still running (a fast visitor, or a busy computer): the fade
+      // is dropped quietly, with no error in the browser's console (it used to report "Transition was aborted …
+      // ViewTransition opt-in disabled" now and then)
+      const errorsBefore = b.jsErrors.length;
+      const fadeErrors = [];
+      const noteErrors = (label, from) => { for (const e of b.jsErrors.slice(from)) fadeErrors.push(`${label}: ${e}`); };
+      for (let round = 0; round < 8; round++) {
+        const wait = [0, 30, 60, 100, 150, 200, 0, 50][round];
+        await b.nav('/?lang=vi', 250);
+        const from = b.jsErrors.length;
+        l = b.waitLoad(); await ev(`document.querySelector('.lang-switch a[href*="lang=en"]').click()`); await l;
+        await sleep(wait);
+        l = b.waitLoad(); await ev(`document.querySelector('a[href="/san-pham"]').click()`); await l; await sleep(120);
+        noteErrors(`language, link after ${wait} ms`, from);
+      }
+      // The same with the theme switch: a link clicked during its 0.35 s fade
+      for (let round = 0; round < 4; round++) {
+        const wait = [0, 40, 120, 250][round];
+        await b.nav('/', 250);
+        const from = b.jsErrors.length;
+        await toggle(); await sleep(wait);
+        l = b.waitLoad(); await ev(`document.querySelector('a[href="/san-pham"]').click()`); await l; await sleep(120);
+        noteErrors(`theme, link after ${wait} ms`, from);
+      }
+      check('a link clicked during the language or theme fade (12 tries): no error in the console', fadeErrors.length === 0, fadeErrors);
+      b.jsErrors.splice(errorsBefore); // reported once here, not again by the file's "no JavaScript errors" check
     } finally {
       await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
     }

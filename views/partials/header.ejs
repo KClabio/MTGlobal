@@ -47,7 +47,12 @@
   <link rel="stylesheet" href="<%= asset('/css/site.css') %>">
   <link rel="icon" href="/images/icon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="/images/icon-180.png">
-  <script nonce="<%= cspNonce %>">document.documentElement.classList.add('js');</script>
+  <%# A link clicked while the VI / EN fade was still running: the browser drops the fade and reports it as a failed
+      promise, on the page being left and on the next one. Nothing is wrong for the visitor, so it is kept out of the
+      console. This must listen from the <head>: a normal page can be shown (pagereveal) before main.js has loaded. %>
+  <script nonce="<%= cspNonce %>">document.documentElement.classList.add('js');
+    (function () { var quiet = function (e) { var vt = e.viewTransition; if (vt) [vt.ready, vt.finished, vt.updateCallbackDone].forEach(function (p) { if (p) p.catch(function () {}); }); };
+      addEventListener('pagereveal', quiet); addEventListener('pageswap', quiet); })();</script>
   <% if (langFade) { %>
     <%# Opened from the VI / EN switch: the old page fades into this one (both pages must ask for it, main.js does it on the old one).
         The page is shown only once its scripts have run (#page-end), so the reading position is already restored. %>

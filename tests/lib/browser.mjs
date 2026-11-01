@@ -53,7 +53,13 @@ export async function launch({ width = 1280, height = 900, cookies = { theme: 'l
     const m = JSON.parse(e.data);
     if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); return; }
     if (!m.method) return;
-    if (m.method === 'Runtime.exceptionThrown') jsErrors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
+    if (m.method === 'Runtime.exceptionThrown') {
+      // The message, and where it happened (page and script line), so a failure points at its cause
+      const x = m.params.exceptionDetails;
+      const frame = x.stackTrace && x.stackTrace.callFrames && x.stackTrace.callFrames[0];
+      const where = frame ? `${frame.url}:${frame.lineNumber + 1}` : x.url ? `${x.url}:${(x.lineNumber || 0) + 1}` : '';
+      jsErrors.push((x.exception?.description || x.text) + (where ? ` @ ${where}` : ''));
+    }
     for (const h of handlers) if (h.method === m.method) h.fn(m.params);
     for (let i = waiters.length - 1; i >= 0; i--) if (waiters[i].method === m.method) { waiters[i].resolve(m.params); waiters.splice(i, 1); }
   });

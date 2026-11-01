@@ -6,7 +6,12 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.3] - 2026-11-01
+## [1.2.4] - 2026-11-01
+
+### Fixed
+- Switching between Vietnamese and English and then clicking a link before the fade was over sometimes left an error in the browser's console ("Transition was aborted"). The fade is now ended the proper way, so nothing is reported. Visitors see the same fades as before.
+
+## [1.2.3] - 2026-11-01 · `d17a307`
 
 ### Changed
 - **Two-step login says when a clock is wrong:** when a staff member types the code from their authenticator app but the website's computer and the phone show different times, the code is still refused, but the page now says the clocks differ by about how many seconds and what to do ("Đặt giờ tự động" on the phone, or fix the server's clock). Before, it only said "Mã không đúng". Each case is also written in Admin → Nhật ký lỗi, so a wrong server clock is noticed. It still counts as a wrong attempt.

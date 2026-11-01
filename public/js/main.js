@@ -1515,6 +1515,14 @@ document.addEventListener('contextmenu', function (e) {
     fade.textContent = '@view-transition { navigation: auto; }';
     document.head.appendChild(fade);
     document.documentElement.classList.add('lang-fading');
+    langLeaving = true;
+  });
+  // Leaving by any other link while this page still asks for a fade (the VI / EN fade into it was still running): the
+  // browser's own way to say "no fade this time". (Pulling the fade request away instead, mid-fade, made the browser
+  // report "Transition was aborted … opt-in disabled".) The <head> listener of partials/header.ejs catches the rest.
+  var langLeaving = false;
+  window.addEventListener('pageswap', function (e) {
+    if (e.viewTransition && !langLeaving) e.viewTransition.skipTransition();
   });
   // Coming back to this page with the browser's Back: it must not fade into the next link
   window.addEventListener('pageshow', function (e) {
@@ -1522,32 +1530,33 @@ document.addEventListener('contextmenu', function (e) {
     document.querySelectorAll('style[data-lang-fade]').forEach(function (s) { s.remove(); });
     document.documentElement.classList.remove('lang-fading');
   });
-  // A link clicked while the fade was still running: the browser drops the fade on the next page (that page didn't
-  // ask for one) and reports it as a failed promise. Nothing is wrong for the visitor, so keep it out of the console.
-  // (The page being left gets the same report, so both ends listen.)
-  var quiet = function (e) {
-    var vt = e.viewTransition;
-    if (vt) [vt.ready, vt.finished, vt.updateCallbackDone].forEach(function (p) { if (p) p.catch(function () {}); });
-  };
-  window.addEventListener('pagereveal', quiet);
-  window.addEventListener('pageswap', quiet);
+  // (A fade dropped because a link was clicked during it is kept out of the console by partials/header.ejs, which
+  // listens from the <head>: this script can load after the page is shown.)
   // The new page: once faded in, the header goes back to normal and the page stops asking for a fade
   // (so its own links are plain page loads again)
   if (document.documentElement.classList.contains('lang-fading')) {
+    var incoming = null; // the fade into this page, while it runs
+    var leaving = false; // another link was clicked: the request stays until the page is left (pageswap skips the fade)
     var settle = function () {
+      incoming = null;
       document.documentElement.classList.remove('lang-fading');
-      document.querySelectorAll('style[data-lang-fade]').forEach(function (s) { s.remove(); });
+      if (!leaving) document.querySelectorAll('style[data-lang-fade]').forEach(function (s) { s.remove(); });
     };
     window.addEventListener('pagereveal', function (e) {
       if (!e.viewTransition) return settle();
-      e.viewTransition.ready.catch(function () { /* skipped: nothing to fade */ });
-      e.viewTransition.finished.then(settle, settle);
+      incoming = e.viewTransition;
+      incoming.ready.catch(function () { /* skipped: nothing to fade */ });
+      incoming.finished.then(settle, settle);
     });
-    setTimeout(settle, 1500); // browsers without page fades
-    // Another link clicked before the fade is over: that page is a plain load, not a fade the next page never asked for
+    // Browsers without page fades; and a fade that never ends is cut short
+    setTimeout(function () { if (incoming) incoming.skipTransition(); else settle(); }, 1500);
+    // Another link clicked before the fade is over: the fade into this page ends at once, and the next page is a
+    // plain load (pageswap above), not a fade it never asked for
     document.addEventListener('click', function (e) {
       var link = e.target.closest && e.target.closest('a[href]');
-      if (link && !link.closest('.lang-switch')) settle();
+      if (!link || link.closest('.lang-switch')) return;
+      leaving = true;
+      if (incoming) incoming.skipTransition(); else settle();
     }, true);
   }
 

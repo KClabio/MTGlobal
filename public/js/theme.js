@@ -38,6 +38,9 @@
       var done = function () { root.classList.remove('theme-switching'); };
       var vt = document.startViewTransition(function () { apply(next); });
       vt.finished.then(done, done);
+      // Left for another page during the fade: the browser stops it and rejects these; nothing to report
+      vt.ready.catch(function () {});
+      vt.updateCallbackDone.catch(function () {});
       return;
     }
     root.classList.add('theme-fading');
