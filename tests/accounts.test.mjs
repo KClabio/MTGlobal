@@ -295,6 +295,21 @@ await suite(async (b) => {
     await b.login(accounts.owner.sid);
     await b.nav('/ho-so', 600);
     await b.shot('role-owner-light');
+    // WCAG 2.2 (2.4.11): tabbing through Hồ sơ at 1280 px, every focused control is the thing painted on top at its
+    // centre (not hidden under the sticky header or the sticky profile box)
+    await b.login(accounts.customer.sid);
+    await b.nav('/ho-so', 400);
+    const covered = [];
+    for (let i = 0; i < 45; i++) {
+      await b.key('Tab', 'Tab', 9);
+      await sleep(60);
+      const c = await b.ev(`(() => { const el = document.activeElement; if (!el || el === document.body) return null; const r = el.getBoundingClientRect();
+        if (!r.width || !r.height || r.bottom < 0 || r.top > innerHeight) return null;
+        const top = document.elementFromPoint(Math.min(r.left + r.width / 2, innerWidth - 1), Math.min(Math.max(r.top + r.height / 2, 0), innerHeight - 1));
+        return top && (el === top || el.contains(top) || top.contains(el)) ? null : { what: (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30), on: top ? String(top.className || top.tagName).slice(0, 30) : '' }; })()`);
+      if (c) covered.push(c);
+    }
+    check('Hồ sơ at 1280 px: no focused control is hidden under the header or the profile box', covered.length === 0, covered);
   });
 
   await part(b, 'oversized photo refused in the browser', async () => {

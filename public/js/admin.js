@@ -567,19 +567,49 @@
         onEnd: function (e) { document.body.classList.remove('is-sorting'); if (e.oldIndex !== e.newIndex) changed(); },
       }, opts.handle ? { handle: opts.handle } : {}));
     }
+    // One place earlier / later: the arrow keys on a focused photo, or its ← → buttons (a tap alone, WCAG 2.2 2.5.7)
+    function movePhoto(photo, earlier, keepFocus) {
+      if (!list.classList.contains('can-sort') || !photo || photo.parentNode !== list) return;
+      var sibling = earlier ? photo.previousElementSibling : photo.nextElementSibling;
+      if (!sibling || !sibling.matches(PHOTO)) return;
+      if (earlier) list.insertBefore(photo, sibling);
+      else list.insertBefore(sibling, photo);
+      keepFocus.focus();
+      changed();
+    }
     list.addEventListener('keydown', function (e) {
       var keys = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 };
-      if (!(e.key in keys) || !list.classList.contains('can-sort') || !e.target.matches('.media-thumb, .page-media-thumb')) return;
-      var photo = e.target.closest(PHOTO);
-      if (!photo || photo.parentNode !== list) return;
+      if (!(e.key in keys) || !e.target.matches('.media-thumb, .page-media-thumb')) return;
       e.preventDefault();
-      var sibling = keys[e.key] < 0 ? photo.previousElementSibling : photo.nextElementSibling;
-      if (!sibling || !sibling.matches(PHOTO)) return;
-      if (keys[e.key] < 0) list.insertBefore(photo, sibling);
-      else list.insertBefore(sibling, photo);
-      e.target.focus();
-      changed();
+      movePhoto(e.target.closest(PHOTO), keys[e.key] < 0, e.target);
     });
+    list.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-move-photo]');
+      if (!btn) return;
+      e.preventDefault();
+      movePhoto(btn.closest(PHOTO), btn.getAttribute('data-move-photo') === 'earlier', btn);
+    });
+    // Each photo gets its ← → buttons (also photos added later, e.g. the page editor's new uploads)
+    function addMoveButtons() {
+      Array.prototype.forEach.call(list.children, function (photo) {
+        if (!photo.matches(PHOTO) || photo.querySelector('.photo-move')) return;
+        var bar = document.createElement('span');
+        bar.className = 'photo-move';
+        [['earlier', '←', I18N.photoEarlier], ['later', '→', I18N.photoLater]].forEach(function (b) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'move-btn';
+          btn.setAttribute('data-move-photo', b[0]);
+          btn.setAttribute('aria-label', b[2] || b[1]);
+          btn.title = b[2] || '';
+          btn.textContent = b[1];
+          bar.appendChild(btn);
+        });
+        photo.appendChild(bar);
+      });
+    }
+    addMoveButtons();
+    new MutationObserver(addMoveButtons).observe(list, { childList: true });
     syncPhotoSort(list);
   }
   document.querySelectorAll('[data-photo-sort]').forEach(function (list) { makePhotoSortable(list); });
@@ -608,7 +638,17 @@
     var observer = new MutationObserver(refresh);
     form.querySelectorAll('[data-row-list]').forEach(function (list) { observer.observe(list, { childList: true }); });
 
-    // Cards reorder by drag; the order is saved with the form
+    // Cards reorder by drag, or by the ↑ / ↓ buttons in their head (a tap or the keyboard); the order is saved with the form
+    form.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-move-card]');
+      if (!btn) return;
+      var card = btn.closest('[data-row]');
+      var up = btn.getAttribute('data-move-card') === 'up';
+      var sibling = up ? card.previousElementSibling : card.nextElementSibling;
+      if (!sibling || !sibling.matches('[data-row]')) return;
+      card.parentNode.insertBefore(up ? card : sibling, up ? sibling : card);
+      btn.focus();
+    });
     if (window.Sortable) {
       form.querySelectorAll('[data-row-list]').forEach(function (list) {
         window.Sortable.create(list, { handle: '.row-drag', animation: 150, forceFallback: true, fallbackOnBody: true, ghostClass: 'sortable-ghost' });
@@ -1090,20 +1130,27 @@
       });
     }
 
-    // Keyboard alternative: focus a handle, then ↑ / ↓ moves the row
+    // Without dragging: ↑ / ↓ keys on a focused handle, or the ↑ / ↓ buttons beside it (a tap alone: touch screens,
+    // WCAG 2.2 2.5.7). The row moves one place and the order is saved like a drag.
+    function moveRow(row, up, keepFocus) {
+      if (tbody.classList.contains('is-filtered')) return; // reordering is paused while a search hides rows
+      var sibling = up ? row.previousElementSibling : row.nextElementSibling;
+      if (!sibling) return;
+      var previous = rowIds(tbody);
+      if (up) tbody.insertBefore(row, sibling);
+      else tbody.insertBefore(sibling, row);
+      keepFocus.focus();
+      saveOrder(tbody, previous);
+    }
     tbody.addEventListener('keydown', function (e) {
       var handle = e.target.closest('.drag-handle');
       if (!handle || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-      if (tbody.classList.contains('is-filtered')) return; // reordering is paused while a search hides rows
       e.preventDefault();
-      var row = handle.closest('tr');
-      var sibling = e.key === 'ArrowUp' ? row.previousElementSibling : row.nextElementSibling;
-      if (!sibling) return;
-      var previous = rowIds(tbody);
-      if (e.key === 'ArrowUp') tbody.insertBefore(row, sibling);
-      else tbody.insertBefore(sibling, row);
-      handle.focus();
-      saveOrder(tbody, previous);
+      moveRow(handle.closest('tr'), e.key === 'ArrowUp', handle);
+    });
+    tbody.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-move-row]');
+      if (btn) moveRow(btn.closest('tr'), btn.getAttribute('data-move-row') === 'up', btn);
     });
   });
 

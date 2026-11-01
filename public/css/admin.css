@@ -13,7 +13,23 @@
 .admin-lang a.active { background: var(--mtg-blue-solid); border-color: var(--mtg-blue-solid); color: #fff; }
 
 /* Drag-and-drop ordering */
-.drag-cell { width: 44px; padding-left: 8px !important; padding-right: 0 !important; }
+.drag-cell { width: 70px; padding-left: 8px !important; padding-right: 0 !important; }
+/* The handle and the ↑ / ↓ buttons that move a row (or a service card, or a photo) by a tap alone (WCAG 2.2, 2.5.7) */
+.drag-tools { display: flex; align-items: center; gap: 2px; }
+.move-btns { display: inline-flex; flex-direction: column; gap: 2px; }
+.move-btns-row { flex-direction: row; }
+.move-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 0; border: 1px solid var(--mtg-border); border-radius: 6px; background: var(--mtg-surface); color: var(--mtg-muted); font: inherit; font-size: .8rem; line-height: 1; cursor: pointer; }
+.move-btn:hover { color: var(--mtg-heading); border-color: var(--mtg-blue); }
+.move-btn:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 1px; }
+tbody.is-filtered .move-btn { opacity: .35; cursor: not-allowed; }
+/* Photos: the ← → pair in the top-left corner, only while the list can be reordered (2 photos or more) */
+.photo-move { position: absolute; top: 3px; left: 3px; display: flex; gap: 3px; z-index: 1; }
+.photo-move .move-btn { background: rgba(0, 0, 0, .6); border-color: transparent; color: #fff; }
+.photo-move .move-btn:hover { background: rgba(0, 0, 0, .8); color: #fff; }
+:not(.can-sort) > * > .photo-move { display: none; }
+.can-sort > [data-media] { position: relative; }
+/* Tabbing through the admin menu: a focused item scrolls clear of the language switch pinned at the bottom (WCAG 2.2, 2.4.11) */
+.admin-sidebar { scroll-padding-bottom: 76px; }
 .drag-handle { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; border-radius: 6px; background: transparent; color: var(--mtg-muted); cursor: grab; touch-action: none; }
 .drag-handle:hover { background: var(--mtg-bg-alt); color: var(--mtg-heading); }
 .drag-handle:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 1px; }

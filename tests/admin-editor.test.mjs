@@ -693,6 +693,31 @@ await suite(async (b) => {
     }
   });
 
+  await part(b, 'service editor: cards move with ↑ / ↓ buttons (no dragging)', async () => {
+    const service = await d.collection('services').findOne({ slug: 'tu-van-du-hoc' });
+    await b.login(admin.sid);
+    await b.nav(`/admin/dich-vu/${service._id}/sua`, 400);
+    // The first card list on the page; two cards are added if it has fewer (nothing is saved)
+    const listSel = '[data-row-list]';
+    // Its tab is opened first (the editor shows one tab at a time)
+    await ev(`document.getElementById('tab-' + document.querySelector('${listSel}').getAttribute('data-row-list')).click()`);
+    await sleep(200);
+    const count = () => ev(`document.querySelector('${listSel}').querySelectorAll(':scope > [data-row]').length`);
+    for (let i = await count(); i < 2; i++) await ev(`document.querySelector('[data-add-row][data-target="' + document.querySelector('${listSel}').id + '"]').click()`);
+    await ev(`(() => { const rows = document.querySelector('${listSel}').querySelectorAll(':scope > [data-row]'); rows[0].dataset.zz = 'first'; rows[1].dataset.zz = 'second'; })()`);
+    await ev(`document.querySelector('${listSel}').querySelectorAll(':scope > [data-row]')[0].scrollIntoView({ block: 'center' })`);
+    const marks = () => ev(`[...document.querySelector('${listSel}').querySelectorAll(':scope > [data-row]')].slice(0, 2).map((r) => r.dataset.zz)`);
+    const size = await ev(`(() => { const r = document.querySelector('${listSel} [data-move-card="down"]').getBoundingClientRect(); return { w: r.width, h: r.height }; })()`);
+    check('each card has ↑ / ↓ buttons of at least 24 × 24 px', size.w >= 24 && size.h >= 24, size);
+    await b.clickAt(`${listSel} > [data-row]:first-child [data-move-card="down"]`);
+    await sleep(150);
+    check('a tap on ↓ moves the card down, and the numbers follow (1, 2)', JSON.stringify(await marks()) === '["second","first"]'
+      && await ev(`[...document.querySelector('${listSel}').querySelectorAll(':scope > [data-row] [data-row-num]')].slice(0, 2).map((n) => n.textContent).join() === '1,2'`), await marks());
+    await b.clickAt(`${listSel} > [data-row]:nth-child(2) [data-move-card="up"]`);
+    await sleep(150);
+    check('… ↑ moves it back, and the focus stays on the button (keyboard users too)', JSON.stringify(await marks()) === '["first","second"]' && await ev(`document.activeElement && document.activeElement.matches('[data-move-card="up"]')`), await marks());
+  });
+
   await part(b, 'photos reorder by dragging the photo itself; news shows its uploader', async () => {
     const cookie = `connect.sid=${admin.sid}`;
     const W = '/assets/giai-phap/workshop/';
@@ -736,6 +761,13 @@ await suite(async (b) => {
       await b.key('ArrowRight', 'ArrowRight', 39);
       check('→ on a focused photo moves it one place on, and it keeps the focus', same(await order(), [C, B2, A])
         && await ev(`document.activeElement === document.querySelector('${list} > .media-thumb:nth-child(3)')`), await order());
+      // A tap alone (WCAG 2.2 2.5.7): each photo has ← → buttons, named and at least 24 × 24 px
+      const btn = await ev(`(() => { const b = document.querySelector('${list} > .media-thumb:nth-child(3) [data-move-photo="earlier"]'); const r = b.getBoundingClientRect(); return { w: r.width, h: r.height, label: b.getAttribute('aria-label'), all: document.querySelectorAll('${list} > .media-thumb .photo-move').length }; })()`);
+      check('every photo has ← → buttons, named, at least 24 × 24 px', btn.all === 3 && btn.w >= 24 && btn.h >= 24 && btn.label === 'Đưa ảnh lên trước', btn);
+      await b.clickAt(`${list} > .media-thumb:nth-child(3) [data-move-photo="earlier"]`);
+      check('a tap on ← moves the photo one place earlier', same(await order(), [C, A, B2]), await order());
+      await b.clickAt(`${list} > .media-thumb:nth-child(2) [data-move-photo="later"]`);
+      check('… and → moves it back (no drag started by the tap)', same(await order(), [C, B2, A]) && await ev(`!document.body.classList.contains('is-sorting')`), await order());
       // Clicking the "Xoá" tick doesn't start a drag
       await b.clickAt(`${list} > .media-thumb:nth-child(2) label`);
       check('clicking "Xoá" ticks it and moves nothing', await ev(`document.querySelector('${list} > .media-thumb:nth-child(2) input[type="checkbox"]').checked`) && same(await order(), [C, B2, A]));

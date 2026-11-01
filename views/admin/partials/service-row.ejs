@@ -8,6 +8,11 @@
 <div class="row-card" data-row>
   <div class="row-card-head">
     <button type="button" class="drag-handle row-drag" aria-label="<%= L('dragRow') %>" title="<%= L('dragRow') %>"><%- include('icon', { name: 'grip', size: 18 }) %></button>
+    <%# Without dragging (touch screens, keyboard): move the card by a tap; the order is saved with the form %>
+    <span class="move-btns move-btns-row">
+      <button type="button" class="move-btn" data-move-card="up" aria-label="<%= L('rowUp') %>" title="<%= L('rowUp') %>"><%- include('icon', { name: 'arrow-up', size: 14 }) %></button>
+      <button type="button" class="move-btn" data-move-card="down" aria-label="<%= L('rowDown') %>" title="<%= L('rowDown') %>"><%- include('icon', { name: 'arrow-down', size: 14 }) %></button>
+    </span>
     <span class="row-card-title"><%= L(rowTitle) %> <span data-row-num></span></span>
     <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
   </div>

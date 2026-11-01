@@ -346,6 +346,39 @@ await suite(async (b) => {
     await nav('/admin/du-an');
     const kbAfter = await domIds();
     check('keyboard ↓ on a handle moves the row down and saves', kbAfter[0] === kbBefore[1] && kbAfter[1] === kbBefore[0]);
+    // A tap alone (no dragging, WCAG 2.2 2.5.7): the ↓ button of row 1, then the ↑ button of the row now 2nd
+    const tap = async (rowIndex, dir) => {
+      const p = await ev(`(() => { const r = document.querySelectorAll('tbody[data-sortable] tr[data-id]')[${rowIndex}].querySelector('[data-move-row="${dir}"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height }; })()`);
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: p.x, y: p.y });
+      await mouse('mousePressed', p.x, p.y); await mouse('mouseReleased', p.x, p.y);
+      await sleep(600);
+      return p;
+    };
+    const tapBefore = await domIds();
+    const size = await tap(0, 'down');
+    check('the ↑ / ↓ buttons are at least 24 × 24 px (WCAG 2.2 target size)', size.w >= 24 && size.h >= 24, size);
+    await nav('/admin/du-an');
+    const tapped = await domIds();
+    check('a tap on ↓ moves the row down and saves it (no dragging needed)', tapped[0] === tapBefore[1] && tapped[1] === tapBefore[0], { tapBefore: tapBefore.slice(0, 2), tapped: tapped.slice(0, 2) });
+    await tap(1, 'up');
+    await nav('/admin/du-an');
+    check('… and ↑ moves it back', JSON.stringify((await domIds()).slice(0, 2)) === JSON.stringify(tapBefore.slice(0, 2)));
+    check('the buttons are named for screen readers ("Chuyển lên: …" / "Chuyển xuống: …")', await ev(`(() => { const r = document.querySelector('tbody[data-sortable] tr[data-id]'); return /^Chuyển lên: /.test(r.querySelector('[data-move-row="up"]').getAttribute('aria-label')) && /^Chuyển xuống: /.test(r.querySelector('[data-move-row="down"]').getAttribute('aria-label')); })()`));
+    // Tabbing down the admin menu on a short screen: the focused item is never hidden under the language switch (2.4.11)
+    await b.viewport(1280, 560);
+    await nav('/admin');
+    const hiddenItems = await ev(`(() => {
+      const out = [];
+      for (const a of document.querySelectorAll('.admin-nav a')) {
+        a.focus();
+        const r = a.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        if (!top || !(a === top || a.contains(top))) out.push(a.textContent.trim());
+      }
+      return out;
+    })()`);
+    check('admin menu at 560 px high: every item can be focused without hiding under the VI / EN switch', hiddenItems.length === 0, hiddenItems);
+    await b.viewport(1280, 1000);
     await purge();
     // Logo previews (EN admin)
     await b.setCookie('adminLang', 'en');

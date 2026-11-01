@@ -6,7 +6,17 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.6] - 2026-11-01
+## [1.2.7] - 2026-11-01
+
+### Changed
+- **Reordering in the admin without dragging:** every list that can be dragged into order (Sản phẩm, Dự án, Đối tác, Tin tức, Dịch vụ, Hỗ trợ), the cards in the service editor and the photos of a product, project or service now also have small ↑ ↓ (or ← →) buttons, so the order can be changed with a tap on a phone or tablet, or with the keyboard. The service editor's cards had no keyboard way before.
+
+  ![Admin → Dự án tham khảo with the ↑ ↓ buttons beside each row's drag handle](docs/screenshots/1.2.7/admin-move-buttons.jpg)
+
+### Fixed
+- Tabbing down the admin menu on a short screen, the last items ("Đối tác đồng hành", "Hỗ trợ") were hidden under the VI / EN switch at the bottom; the menu now scrolls them into view.
+
+## [1.2.6] - 2026-11-01 · `519eea8`
 
 ### Security
 - Every form on the website (requests, profile, log out, all admin saves) now only accepts what is sent from the website itself. A form sent from another website gets a short explanation instead. Visitors using the site normally see no change.
