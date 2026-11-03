@@ -1,6 +1,6 @@
 // Reference projects (school levels, school search, admin level chips/column/search, level picker in the form)
 // and news search (public: title + text; admin: title), EN news cards.
-import { suite, part, check, db, createUser, restoreLater } from './lib/index.mjs';
+import { suite, part, check, db, createUser, restoreLater, tempArticle, stamp } from './lib/index.mjs';
 
 await suite(async (b) => {
   const { send, ev, sleep, nav } = b;
@@ -59,9 +59,9 @@ await suite(async (b) => {
   });
 
   await part(b, 'news search', async () => {
+    const art = await tempArticle('projnews');
     await nav('/tin-tuc', 300);
-    const art = await d.collection('articles').findOne({ published: true });
-    const firstWord = art.titleVi.split(' ')[3] || art.titleVi.split(' ')[0];
+    const firstWord = String(stamp); // in the temporary article's title only
     await type('[data-card-search] input', firstWord.toLowerCase());
     const n1 = await ev(`({ vis: [...document.querySelectorAll('[data-search-item]')].filter((c) => !c.hidden).length, count: document.querySelector('.card-search-count').textContent })`);
     check(`public news: search "${firstWord.toLowerCase()}" finds the article`, n1.vis === 1 && n1.count === 'Tìm thấy 1 bài viết', n1);

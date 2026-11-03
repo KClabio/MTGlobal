@@ -159,6 +159,7 @@ When a mistake or error turns up (a failing test, a crash, something the owner s
 
 ### Lessons
 - **Phone width with real data:** a new admin panel passed its test but was 421 px wide on a 390 px phone, because the test only had short page addresses. Test new panels and pages at 390 px with long, realistic data.
+- **Tests make their own records:** several test files needed one sample news article in the dev database, and some would have skipped their checks without a sound (`if (article)`, `if (before.length < 2)`) once it was deleted. Create what a test needs (`tempArticle`, `removeLater`), and search the tests for a record before deleting it.
 - **Test data left behind:** a run on 28 October left 8 `ZZTEST-forms-…` requests in the dev database. Every record a test makes must be covered by `removeLater` or `restoreLater`. After a run, check that no `ZZ` data is left.
 - **Admin forms keep what they don't send:** a test's settings restore posted Thông tin công ty without the new Zalo/Messenger boxes and would have wiped them. When a form gains a field, its save keeps the stored value when the field isn't posted.
 - **Compare saved objects with defaults:** a test comparing a whole saved object broke when the model gained a field. Compare with the new defaults filled in, or compare only the fields that matter.

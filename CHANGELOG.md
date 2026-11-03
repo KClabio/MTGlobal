@@ -6,7 +6,13 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.12] - 2026-11-01
+## [1.2.13] - 2026-11-03
+
+### Fixed
+- **Page titles in Google:** a very long name, such as a long equipment name, is now shortened in the browser tab and in search results, so Google shows the title whole. The page heading and the Facebook / Zalo link preview keep the full name.
+- **Page descriptions in Google:** a page whose own text is very short (under 50 characters) now uses its banner line or the site's general description, so search results and link previews always show a useful sentence.
+
+## [1.2.12] - 2026-11-01 · `e57180b`
 
 ### Fixed
 - On a phone, tabbing through an admin list (for example Đối tác) could leave a "Xoá" button hidden under the round "view on website" button at the bottom right. The page now scrolls the focused button clear of it, with room after the last row.

@@ -5,7 +5,7 @@
 // Also: keyboard focus shows a ring on form fields, search boxes, partner logos and videos (pre-launch finding #10).
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { suite, part, check, db, createUser, ROOT } from './lib/index.mjs';
+import { suite, part, check, db, createUser, tempArticle, ROOT } from './lib/index.mjs';
 
 const AXE = readFileSync(path.join(ROOT, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
 const RULES = ['heading-order', 'image-redundant-alt', 'list', 'listitem', 'nested-interactive', 'aria-prohibited-attr', 'label-content-name-mismatch', 'empty-table-header'];
@@ -34,7 +34,7 @@ await suite(async (b) => {
       '/', '/san-pham', '/san-pham/robot-leo-cau-thang', '/san-pham/robot-cat-co',
       '/giai-phap', '/giai-phap/stem-lab', '/giai-phap/thiet-bi', '/giai-phap/workshop', '/giai-phap/dao-tao', '/giai-phap/du-an', '/giai-phap/tap-huan',
       `/giai-phap/thiet-bi/${await one('products', { category: 'stem-equipment' })}`, `/giai-phap/du-an/${await one('projects')}`,
-      '/dich-vu', '/dich-vu/tu-van-du-hoc', '/dich-vu/phan-phoi-san-pham', '/tin-tuc', `/tin-tuc/${await one('articles')}`,
+      '/dich-vu', '/dich-vu/tu-van-du-hoc', '/dich-vu/phan-phoi-san-pham', '/tin-tuc', `/tin-tuc/${(await tempArticle('a11y'))._id}`,
       '/ve-mtg', '/lien-he', '/ho-tro', '/dang-nhap', '/dang-ky',
     ]);
   });

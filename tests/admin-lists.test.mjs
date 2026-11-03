@@ -2,7 +2,7 @@
 // endpoint rules, public order), drag look, name search, equipment part chips, request delete, delete dialog, menu scroll.
 import { existsSync, writeFileSync } from 'node:fs';
 import mongoose from 'mongoose';
-import { suite, part, check, db, BASE, ROOT, appRequire, createUser, removeLater, restoreLater, stamp, passTwoStep, twoStepCode } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, appRequire, createUser, removeLater, restoreLater, tempArticle, stamp, passTwoStep, twoStepCode } from './lib/index.mjs';
 
 const { projectLevel } = appRequire('./lib/project-levels.js');
 const MARK = `ZZTEST-lists-${stamp}`;
@@ -14,6 +14,9 @@ await suite(async (b) => {
   const d = await db();
   // Every list's order is put back afterwards; test records are removed
   for (const c of ['projects', 'products', 'partners', 'articles', 'services']) await restoreLater(c, {});
+  // The news list may be empty: the drag order and delete dialog checks need two rows
+  await tempArticle('lists-1');
+  await tempArticle('lists-2');
   await restoreLater('sitesettings', {});
   removeLater('projects', { titleVi: { $regex: '^' + MARK } });
   removeLater('articles', { titleVi: { $regex: '^' + MARK } });

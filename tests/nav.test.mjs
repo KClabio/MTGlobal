@@ -1,6 +1,6 @@
 // Header menus (hover-only dropdowns, clickable group titles, keyboard, account menu, phone drawer)
 // and the light/dark switches (guest header, account menu, admin), shared preference, admin toasts, dark-mode contrast.
-import { suite, part, check, createUser, restoreLater, db, BASE } from './lib/index.mjs';
+import { suite, part, check, createUser, removeLater, restoreLater, tempArticle, stamp, db, BASE } from './lib/index.mjs';
 
 await suite(async (b) => {
   const { send, ev, sleep } = b;
@@ -84,8 +84,22 @@ await suite(async (b) => {
     }
     const img = await fetch(home.ogImage, { headers: { accept: 'image/*' } });
     check('the preview picture opens as a JPEG for Facebook / Zalo (no WebP asked)', img.status === 200 && /image\/(jpeg|png)/.test(img.headers.get('content-type')), [img.status, img.headers.get('content-type'), home.ogImage]);
-    const article = await d.collection('articles').findOne({ published: true });
-    if (article) check('a news article: og:type article', (await head(`/tin-tuc/${article._id}`)).ogType === 'article');
+    const article = await tempArticle('nav');
+    const articleHead = await head(`/tin-tuc/${article._id}`);
+    check('a news article: og:type article, its own text as the description', articleHead.ogType === 'article' && articleHead.description === article.bodyVi, articleHead.description);
+    // Findings of use case 43: a text too short to describe the page, a name too long for Google
+    const shortText = await tempArticle('nav-short', { bodyVi: 'Nội dung ngắn', bodyEn: 'Short text' });
+    for (const lang of ['vi', 'en']) {
+      const m = await head(`/tin-tuc/${shortText._id}`, lang);
+      check(`a news article with a very short text (${lang}): the description is not that text, 50–161 characters`, m.description.length >= 50 && m.description.length <= 161 && !/Nội dung ngắn|Short text/.test(m.description), m.description);
+    }
+    const longName = `ZZ nav ${stamp} thiết bị có tên rất dài dành cho phòng học hiện đại (điện, chiếu sáng, thông gió)`;
+    const { insertedId: longId } = await (await db()).collection('products').insertOne({ nameVi: longName, nameEn: longName, category: 'stem-equipment', subcategory: 'ZZ', images: [], videos: [], specs: [], createdAt: new Date(), updatedAt: new Date() });
+    removeLater('products', { _id: longId });
+    const longPage = await (await fetch(`${BASE}/giai-phap/thiet-bi/${longId}`)).text();
+    const longTitle = (longPage.match(/<title>([^<]*)<\/title>/) || [])[1] || '';
+    check('a long name: the <title> is at most 65 characters', longTitle.length > 0 && longTitle.length <= 65 && longPage.includes(`<title>${longTitle}</title>`), longTitle);
+    check('a long name: the page heading and the preview title keep the full name', longPage.includes(`<h1>${longName}</h1>`) && longPage.includes(`<meta property="og:title" content="${longName} - MTG">`), longTitle);
     for (const path of ['/dang-nhap', '/dang-ky', '/khong-co-trang-nay']) {
       const m = await head(path);
       check(`${path}: noindex, no description or preview tags`, m.noindex && !m.description && !m.ogTitle, m.h.slice(0, 300));

@@ -92,6 +92,7 @@ app.locals.asset = assets.asset; // '/js/main.js' -> '/js/main.js?v=<fingerprint
 app.locals.picture = require('./lib/picture').picture; // <img> with srcset (views)
 app.locals.resized = require('./lib/picture').resized; // one picture address at a width (banners, thumbnails)
 app.locals.pageMeta = require('./lib/seo').pageMeta; // description, canonical and link-preview tags (partials/header.ejs)
+app.locals.searchTitle = require('./lib/seo').searchTitle; // the <title> tag: a long name shortened for Google
 app.locals.structuredData = require('./lib/structured-data').structuredData; // company card + breadcrumbs for Google (header.ejs)
 app.locals.jsonForScript = require('./lib/structured-data').jsonForScript;
 app.use(require('compression')({ threshold: 1024 }));

@@ -166,8 +166,8 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
 {
   const { pageMeta, DESCRIPTION_MAX } = appRequire('./lib/seo.js');
   const base = 'https://mtg.vn';
-  const vi = pageMeta({ base, path: '/giai-phap/du-an', lang: 'vi', description: '<p>Phòng Lab <b>STEM</b></p>\n- cho mọi cấp học', image: '/uploads/images/a.jpg' });
-  check('preview: description is plain text on one line', vi.description === 'Phòng Lab STEM cho mọi cấp học', vi.description);
+  const vi = pageMeta({ base, path: '/giai-phap/du-an', lang: 'vi', description: '<p>Phòng Lab <b>STEM</b> trọn gói</p>\n- cho trường học ở mọi cấp, từ THCS đến đại học', image: '/uploads/images/a.jpg' });
+  check('preview: description is plain text on one line', vi.description === 'Phòng Lab STEM trọn gói cho trường học ở mọi cấp, từ THCS đến đại học', vi.description);
   check('preview: Vietnamese page → its own address, both languages as alternates, vi_VN', vi.url === 'https://mtg.vn/giai-phap/du-an' && vi.alternates.en === 'https://mtg.vn/giai-phap/du-an?lang=en' && vi.locale === 'vi_VN' && vi.altLocale === 'en_US');
   const en = pageMeta({ base, path: '/giai-phap/du-an', lang: 'en' });
   check('preview: English page → the ?lang=en address, en_US', en.url === 'https://mtg.vn/giai-phap/du-an?lang=en' && en.locale === 'en_US');
@@ -178,6 +178,35 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('preview: no text → the site description; a picture a preview can\'t show (SVG) → the default picture', none.description === 'Mô tả chung' && none.image === 'https://mtg.vn/images/og-default.jpg?w=1200', none);
   const cloud = pageMeta({ base, path: '/', image: 'https://res.cloudinary.com/demo/image/upload/v1/x.jpg', type: 'article' });
   check('preview: Cloudinary picture stays absolute (resized by Cloudinary); news articles are "article"', cloud.image.startsWith('https://res.cloudinary.com/demo/image/upload/') && cloud.image.includes('w_1200') && cloud.type === 'article', cloud.image);
+
+  // Use case 43: descriptions under 50 characters, titles over 65
+  const line = 'Một dòng giới thiệu của trang, đủ dài để làm mô tả trên Google.';
+  const fall = 'Mô tả chung của cả website';
+  const pick = (description) => pageMeta({ base, path: '/', description, fallbackDescription: fall }).description;
+  check('description: a short own text gives way to the banner line', pick(['Noi dung tin tuc', line]) === line, pick(['Noi dung tin tuc', line]));
+  check('description: own text first when it is long enough', pick([line + ' Riêng.', 'Dòng khác của banner đủ dài để có thể làm một mô tả.']) === line + ' Riêng.');
+  check('description: both too short → the site description, whatever its length', pick(['Ngắn', 'Cũng ngắn']) === fall);
+  check('description: nothing given → the site description', pick(undefined) === fall && pick([false, '']) === fall);
+  check('description: exactly 50 characters is enough, 49 is not', pick('x'.repeat(50)) === 'x'.repeat(50) && pick('x'.repeat(49)) === fall);
+
+  const { searchTitle, TITLE_MAX } = appRequire('./lib/seo.js');
+  const titleCases = [
+    ['a short title stays as it is', 'Thiết bị - MTG', 'Thiết bị - MTG'],
+    ['exactly 65 characters stays', `${'x'.repeat(59)} - MTG`, `${'x'.repeat(59)} - MTG`],
+    ['too long: the final (…) goes, " - MTG" stays', 'Hệ thống kỹ thuật phòng học (điện, chiếu sáng, thông gió, điều hòa) - MTG', 'Hệ thống kỹ thuật phòng học - MTG'],
+    ['still too long: " - MTG" goes too', 'VEX CTE Workcell – Robot công nghiệp cho giáo dục nghề nghiệp (từ 14 tuổi) - MTG', 'VEX CTE Workcell – Robot công nghiệp cho giáo dục nghề nghiệp'],
+    ['English, fits exactly once the (…) is gone', 'VEX CTE Workcell – Industrial robotics for career education (ages 14+) - MTG', 'VEX CTE Workcell – Industrial robotics for career education - MTG'],
+    ['a (…) in the middle stays', `Robot (mới) ${'x'.repeat(36)} cho trường học - MTG`, `Robot (mới) ${'x'.repeat(36)} cho trường học`],
+    ['nothing given', undefined, ''],
+  ];
+  for (const [name, input, want] of titleCases) {
+    const got = searchTitle(input);
+    check(`title: ${name}`, got === want && got.length <= TITLE_MAX, got);
+  }
+  const cutTitle = searchTitle(`${'Robot thông minh '.repeat(8).trim()} - MTG`);
+  check('title: no (…) and far too long → cut at a word, "…", " - MTG" kept', cutTitle.length <= TITLE_MAX && cutTitle.endsWith('… - MTG') && /(Robot|thông|minh)… - MTG$/.test(cutTitle), cutTitle);
+  const onlyBrackets = searchTitle(`(${'x'.repeat(70)})`);
+  check('title: a name that is all brackets is still cut, never left empty', onlyBrackets.length > 0 && onlyBrackets.length <= TITLE_MAX, onlyBrackets);
 }
 
 // Requests are deleted 24 months after their last change (lib/retention.js); a stand-in replaces the database call

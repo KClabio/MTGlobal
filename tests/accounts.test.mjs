@@ -4,7 +4,7 @@ import { existsSync, readdirSync, unlinkSync, writeFileSync, mkdtempSync, rmSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { suite, part, check, db, BASE, ROOT, createUser, removeLater, stamp, twoStepCode } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, createUser, removeLater, tempArticle, stamp, twoStepCode } from './lib/index.mjs';
 
 const PUBLIC = path.join(ROOT, 'public');
 
@@ -138,13 +138,14 @@ await suite(async (b) => {
       r = await req('/ve-mtg', { lang: 'vi' });
       check('About VI shows Vietnamese profile', has(r.text, 'MTG hoạt động trên 3 lĩnh vực') && !has(r.text, 'MTG works across'));
       // News: the list shows the title in the page's language; the article page keeps the original title
+      const art = await tempArticle('accounts');
       r = await req('/tin-tuc', { lang: 'en' });
-      check('News list EN shows the English title', has(r.text, 'MTG launches 3rd-gen stair-climbing robot'));
-      const articlePath = (r.text.match(/href="(\/tin-tuc\/[a-f0-9]+)"/) || [])[1];
+      check('News list EN shows the English title', has(r.text, art.titleEn));
+      const articlePath = `/tin-tuc/${art._id}`;
       r = await req(articlePath, { lang: 'en' });
-      check('Article EN: original title + English body', has(r.text, '<h1>MTG ra mat Robot leo cau thang the he 3</h1>') && has(r.text, 'Article body') && has(r.text, '<title>MTG ra mat Robot'));
+      check('Article EN: original title + English body', has(r.text, `<h1>${art.titleVi}</h1>`) && has(r.text, art.bodyEn) && has(r.text, `<title>${art.titleVi}`));
       r = await req(articlePath, { lang: 'vi' });
-      check('Article VI: original title + Vietnamese body', has(r.text, '<h1>MTG ra mat Robot leo cau thang the he 3</h1>') && has(r.text, 'Noi dung tin tuc'));
+      check('Article VI: original title + Vietnamese body', has(r.text, `<h1>${art.titleVi}</h1>`) && has(r.text, art.bodyVi));
 
       r = await req('/dang-ky', { method: 'POST', body: form({ name: 'Test Người Dùng', email: EMAIL, password: 'oldpass1', confirmPassword: 'oldpass1', agreePrivacy: '1' }) });
       check('register test account (then the login page, not logged in yet)', r.status === 303 && r.location === '/dang-nhap', r.status);

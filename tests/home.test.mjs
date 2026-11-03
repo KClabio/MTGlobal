@@ -1,6 +1,6 @@
 // Home page "Lĩnh vực hoạt động" slider (layout, texts, wheel, smooth slides, drag/throw, arrows, "← Về trang chủ")
 // and the "← Quay lại" back link on detail pages.
-import { suite, part, check, db, BASE, appRequire } from './lib/index.mjs';
+import { suite, part, check, db, BASE, appRequire, tempArticle } from './lib/index.mjs';
 
 const { bannerFor } = appRequire('./lib/banners.js');
 const { buildHomeDomains } = appRequire('./lib/home-domains.js');
@@ -296,6 +296,7 @@ await suite(async (b) => {
     eq('the list keeps VI', s.lang, 'vi');
 
     // Flow 4: news list -> article -> Back
+    await tempArticle('home');
     await navigate(`${BASE}/tin-tuc`);
     await clickAndWait('a.card[href^="/tin-tuc/"]');
     s = await state();

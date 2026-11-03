@@ -106,6 +106,23 @@ export async function clearLocalLoginLimit() {
 /** Deletes the matching records at cleanup (e.g. removeLater('quoterequests', { name: /^ZZ / })). */
 export function removeLater(collection, filter) { removals.push([collection, filter]); }
 
+/**
+ * A published news article for this test, first in the list and removed at cleanup. Tests make their own article and
+ * never count on the site's real ones: the news list may be empty, and its articles change.
+ */
+export async function tempArticle(tag, fields = {}) {
+  const now = new Date();
+  const doc = {
+    titleVi: `ZZ ${tag} ${STAMP} tin thử`, titleEn: `ZZ ${tag} ${STAMP} test news`,
+    bodyVi: 'ZZ nội dung bài viết thử, đủ dài để trở thành mô tả của trang trên Google.',
+    bodyEn: 'ZZ the text of a test article, long enough to become the page description on Google.',
+    coverImage: null, published: true, order: -1, createdAt: now, updatedAt: now, ...fields,
+  };
+  const { insertedId } = await (await db()).collection('articles').insertOne(doc);
+  removeLater('articles', { _id: insertedId });
+  return { ...doc, _id: insertedId };
+}
+
 /** Saves the matching documents now and writes them back at cleanup. */
 export async function restoreLater(collection, filter) {
   const docs = await (await db()).collection(collection).find(filter).toArray();

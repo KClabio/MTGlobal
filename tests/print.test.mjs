@@ -1,6 +1,6 @@
 // Printing (pre-launch finding #12): the page laid out for paper, in light and dark. No menu, buttons, theme switch or
 // footer links; black text on white; a Giải pháp page prints whole (folds opened, every photo tab, the full process trail).
-import { suite, part, check, db } from './lib/index.mjs';
+import { suite, part, check, db, tempArticle } from './lib/index.mjs';
 
 await suite(async (b) => {
   const { ev, nav, shot } = b;
@@ -8,7 +8,7 @@ await suite(async (b) => {
   await part(b, 'print layout', async () => {
     const d = await db();
     const one = async (col) => (await d.collection(col).findOne({}, { sort: { order: 1, _id: 1 } }))._id;
-    const pages = ['/giai-phap/stem-lab', `/giai-phap/du-an/${await one('projects')}`, `/tin-tuc/${await one('articles')}`, '/ve-mtg', '/'];
+    const pages = ['/giai-phap/stem-lab', `/giai-phap/du-an/${await one('projects')}`, `/tin-tuc/${(await tempArticle('print'))._id}`, '/ve-mtg', '/'];
     const seen = (sel) => `[...document.querySelectorAll(${JSON.stringify(sel)})].some((e) => { const cs = getComputedStyle(e), r = e.getBoundingClientRect(); return cs.display !== 'none' && cs.visibility !== 'hidden' && r.height > 0; })`;
 
     for (const theme of ['light', 'dark']) {
