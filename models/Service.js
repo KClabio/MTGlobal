@@ -59,7 +59,9 @@ const serviceSchema = new mongoose.Schema({
   testimonials: [testimonialSchema],
   questions: [questionSchema],
   order: { type: Number, default: 0 },
-}, { timestamps: true });
+  // Each save replaces its lists whole, so a version number has nothing to protect: two saves at the same moment both
+  // go through, the later one winning, instead of one failing with an error.
+}, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Service', serviceSchema);
 module.exports.QUESTION_TYPES = QUESTION_TYPES;

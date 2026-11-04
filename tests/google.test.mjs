@@ -3,7 +3,7 @@
 // cancel / forged state / unverified email, "Xóa ảnh" keeping a Google photo away, an own photo kept, setting a first password.
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { suite, part, check, db, BASE, ROOT, createUser, stamp, passTwoStep } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, createUser, stamp, passTwoStep, sidClient } from './lib/index.mjs';
 import { startFakeGoogle, setNextProfile, cancelNext, FAKE_GOOGLE_PORT } from './lib/fake-google.mjs';
 
 const PUBLIC = path.join(ROOT, 'public');
@@ -131,11 +131,11 @@ await suite(async (b) => {
     let r = await v.google();
     const u = await users.findOne({ _id: admin.id });
     check('same email: the same account is used (no second account), now joined to Google', r.status === 303 && u.googleId === `g-${stamp}-join` && (await users.countDocuments({ email: admin.email })) === 1, u);
-    check('… role (admin) and password kept; name and photo from Google', u.role === 'admin' && u.passwordHash === before.passwordHash && u.name === 'ZZ Joined Name' && u.avatar.endsWith('/photo/join=s256-c'), u);
+    check('… role (admin) kept, old password removed; name and photo from Google', before.passwordHash && u.role === 'admin' && u.passwordHash === null && u.name === 'ZZ Joined Name' && u.avatar.endsWith('/photo/join=s256-c'), u);
     check('… staff: Google is not enough, the two-step code page comes next', r.location === '/dang-nhap/xac-minh', r.location);
     check('… and until the code, not logged in', !(await v.go('/')).text.includes('action="/dang-xuat"'));
     r = await visitor().go('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: admin.email, password: admin.password }) });
-    check('… the old password still logs in (then the code page)', r.status === 303 && r.location === '/dang-nhap/xac-minh', r.location);
+    check('… the old password no longer logs in', r.status === 400, r.status);
     await passTwoStep({ req: v.go }, { secret: admin.twoStepSecret });
     r = await v.go('/');
     check('… and the admin still has "Quản trị" in the name menu', r.text.includes('href="/admin"'));
@@ -144,6 +144,42 @@ await suite(async (b) => {
     setNextProfile({ sub: `g-${stamp}-other`, email: admin.email, name: 'ZZ Intruder' });
     r = await visitor().google();
     check('another Google account with an already joined email: refused with a message', r.status === 400 && r.text.includes('đã được liên kết với một tài khoản Google khác') && (await users.findOne({ _id: admin.id })).name === 'ZZ Joined Name');
+  });
+
+  await part(b, 'someone else signed up first with this email', async () => {
+    const early = await createUser('google-first', 'customer');
+    const earlySession = sidClient(early.sid);
+    check('the early sign-up is logged in', (await earlySession.req('/ho-so')).status === 200);
+    setNextProfile({ sub: `g-${stamp}-first`, email: early.email, name: 'ZZ Real Owner', picture: PHOTO('first') });
+    const owner = visitor();
+    let r = await owner.google();
+    check('Google joins the account', r.status === 303 && (await users.findOne({ _id: early.id })).googleId === `g-${stamp}-first`, r.status);
+    check('… the session of the early sign-up has ended', (await earlySession.req('/ho-so')).status === 302);
+    r = await visitor().go('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: early.email, password: early.password }) });
+    check('… the password chosen at sign-up no longer logs in', r.status === 400, r.status);
+    r = await owner.go('/');
+    check('… the owner is logged in and told once what happened', r.text.includes('action="/dang-xuat"') && r.text.includes('mật khẩu cũ đã bị xóa') && r.text.includes('data-toast-long'));
+    r = await owner.go('/');
+    check('… only once', !r.text.includes('mật khẩu cũ đã bị xóa'));
+    r = await owner.go('/ho-so/mat-khau', { method: 'POST', body: new URLSearchParams({ newPassword: 'owner-pass-77', confirmPassword: 'owner-pass-77' }) });
+    check('… a new password can be set without the old one', r.status === 200, r.status);
+    r = await visitor().go('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: early.email, password: 'owner-pass-77' }) });
+    check('… and logs in', r.status === 303, r.status);
+  });
+
+  await part(b, 'an account already joined: logging in with Google changes nothing else', async () => {
+    const user = await createUser('google-again', 'customer');
+    setNextProfile({ sub: `g-${stamp}-again`, email: user.email, name: 'ZZ Again' });
+    const first = visitor();
+    await first.google();
+    await first.go('/ho-so/mat-khau', { method: 'POST', body: new URLSearchParams({ newPassword: 'again-pass-77', confirmPassword: 'again-pass-77' }) });
+    setNextProfile({ sub: `g-${stamp}-again`, email: user.email, name: 'ZZ Again' });
+    const second = visitor();
+    const r = await second.google();
+    check('a second Google login works', r.status === 303, r.status);
+    check('… the password set since stays', (await users.findOne({ _id: user.id })).passwordHash !== null);
+    check('… the first device stays logged in', (await first.go('/ho-so')).status === 200);
+    check('… no notice about a removed password', !(await second.go('/')).text.includes('mật khẩu cũ đã bị xóa'));
   });
 
   await part(b, 'cancel, forged return, unverified email', async () => {

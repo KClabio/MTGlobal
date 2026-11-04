@@ -446,4 +446,93 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('JSON-LD can\'t end its <script> early ("</script>" in a company name)', !jsonForScript({ name: '</script><script>alert(1)</script>' }).includes('</script>'));
 }
 
+// ---- Live server: missing settings, how long the settings stay in memory, stopping cleanly ----
+{
+  const { productionWarnings } = appRequire('./lib/production-checks.js');
+  const { settingsCacheSeconds } = appRequire('./lib/settings.js');
+  const { gracefulStop, stopOnSignals } = appRequire('./lib/graceful-stop.js');
+  const http = await import('node:http');
+  const { EventEmitter } = await import('node:events');
+
+  check('no warnings off the live server', productionWarnings({}).length === 0);
+  const complete = { NODE_ENV: 'production', TRUST_PROXY: '1', SESSION_COOKIE_SECURE: 'true', SITE_URL: 'https://mtg.vn', CLOUDINARY_CLOUD_NAME: 'x', SMTP_USER: 'u', SMTP_PASS: 'p' };
+  check('no warnings with everything set', productionWarnings(complete).length === 0, productionWarnings(complete));
+  for (const key of ['TRUST_PROXY', 'SESSION_COOKIE_SECURE', 'SITE_URL', 'CLOUDINARY_CLOUD_NAME', 'SMTP_USER', 'SMTP_PASS']) {
+    const got = productionWarnings({ ...complete, [key]: '' });
+    check(`a warning when ${key} is blank`, got.length >= 1, got);
+  }
+  check('a Secure cookie without TRUST_PROXY gets its own warning', productionWarnings({ ...complete, TRUST_PROXY: '' }).some((w) => w.includes('logging in fails')));
+
+  check('settings memory: 60 s on the live server', settingsCacheSeconds({ NODE_ENV: 'production' }) === 60);
+  check('… until the next save on a test computer', settingsCacheSeconds({}) === Infinity);
+  check('… SETTINGS_CACHE_SECONDS chooses another time', settingsCacheSeconds({ NODE_ENV: 'production', SETTINGS_CACHE_SECONDS: '5' }) === 5);
+  check('… a wrong value keeps the default', settingsCacheSeconds({ NODE_ENV: 'production', SETTINGS_CACHE_SECONDS: 'abc' }) === 60 && settingsCacheSeconds({ NODE_ENV: 'production', SETTINGS_CACHE_SECONDS: '0' }) === 60);
+
+  // A real small server with a slow page: the visit being answered must finish
+  const exited = () => { let done; const seen = new Promise((resolve) => { done = resolve; }); return { seen, exit: done }; };
+  const listening = (handler) => new Promise((resolve) => { const s = http.createServer(handler); s.listen(0, () => resolve(s)); });
+  {
+    const server = await listening((req, res) => setTimeout(() => res.end('finished'), 300));
+    const { seen, exit } = exited();
+    let dbClosed = false;
+    const stop = gracefulStop({ server, closeDb: async () => { dbClosed = true; }, exit });
+    const visit = fetch(`http://localhost:${server.address().port}/`).then((r) => r.text());
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    stop();
+    stop(); // a second signal changes nothing
+    check('a stop lets the visit in progress finish', (await visit) === 'finished');
+    check('… exits with 0', (await seen) === 0);
+    check('… and closes the database', dbClosed);
+  }
+  {
+    const server = await listening(() => {}); // never answers
+    const { seen, exit } = exited();
+    const stop = gracefulStop({ server, timeoutMs: 150, exit });
+    fetch(`http://localhost:${server.address().port}/`).catch(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    stop();
+    check('a visit that hangs can\'t block the stop: the time limit ends it with 1', (await seen) === 1);
+    server.closeAllConnections();
+  }
+  {
+    const proc = new EventEmitter();
+    let calls = 0;
+    stopOnSignals(() => { calls += 1; }, proc);
+    proc.emit('SIGTERM');
+    check('SIGTERM stops the site', calls === 1);
+    const pm2 = Object.assign(new EventEmitter(), { send() {} });
+    let pm2Calls = 0;
+    stopOnSignals(() => { pm2Calls += 1; }, pm2);
+    pm2.emit('message', 'something else');
+    pm2.emit('message', 'shutdown');
+    check('PM2\'s "shutdown" message stops it; other messages don\'t', pm2Calls === 1);
+  }
+}
+
+// ---- Hỗ trợ's starter answers follow the password rule ----
+{
+  const { DEFAULT_HELP_ITEMS } = appRequire('./lib/help-topics.js');
+  const { PASSWORD_MIN } = appRequire('./lib/passwords.js');
+  const mentions = DEFAULT_HELP_ITEMS.flatMap((item) => [item.answerVi, item.answerEn]).filter((text) => /(tối thiểu|at least) \d+ (ký tự|characters)/.test(text));
+  check('starter answers that mention the password length exist', mentions.length === 4, mentions.length);
+  check('… and all give the real minimum', mentions.every((text) => text.includes(`tối thiểu ${PASSWORD_MIN} ký tự`) || text.includes(`at least ${PASSWORD_MIN} characters`)));
+}
+
+// ---- "Quên mật khẩu": when the link can be sent, and where it points ----
+{
+  const reset = appRequire('./lib/password-reset.js');
+  const smtp = { SMTP_HOST: 'h', SMTP_USER: 'u', SMTP_PASS: 'p' };
+  check('no email account: no link can be sent', !reset.canSend({}));
+  check('a test computer with email: it can', reset.canSend(smtp));
+  check('live server without SITE_URL: it can not', !reset.canSend({ ...smtp, NODE_ENV: 'production' }));
+  check('… nor with a SITE_URL that is no address', !reset.canSend({ ...smtp, NODE_ENV: 'production', SITE_URL: 'mtg.vn' }));
+  check('live server with SITE_URL: it can', reset.canSend({ ...smtp, NODE_ENV: 'production', SITE_URL: 'https://mtg.vn' }));
+  const forged = { protocol: 'http', get: () => 'evil.example' };
+  check('the link uses SITE_URL, not the address the request claims', reset.resetLink(forged, 'abc', { SITE_URL: 'https://mtg.vn/' }) === 'https://mtg.vn/dat-lai-mat-khau/abc');
+  const vi = reset.resetMail({ link: 'https://mtg.vn/x', lang: 'vi' });
+  const en = reset.resetMail({ link: 'https://mtg.vn/x', lang: 'en' });
+  check('the email holds the link and its time limit, VI + EN', vi.text.includes('https://mtg.vn/x') && vi.text.includes('60 phút') && en.text.includes('60 minutes'));
+  check('a token is stored as its hash', reset.hashToken('abc') !== 'abc' && reset.hashToken('abc').length === 64);
+}
+
 process.exit(result() ? 1 : 0);

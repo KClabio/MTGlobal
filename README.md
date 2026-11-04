@@ -110,7 +110,7 @@ Roles are shown on each person's profile and can only be changed by an Owner in 
 <details>
 <summary><b>For the IT person:</b> install on a computer</summary>
 
-Needs Node.js 18+ and MongoDB.
+Needs Node.js 20.19+ and MongoDB.
 
 1. `git clone https://github.com/KClabio/MTGlobal.git` then `cd MTGlobal`
 2. `npm install`
@@ -237,7 +237,7 @@ Vai trò hiện trong Hồ sơ của mỗi người và chỉ Chủ sở hữu �
 <details>
 <summary><b>Dành cho người phụ trách IT:</b> cài đặt trên máy tính</summary>
 
-Cần Node.js 18+ và MongoDB.
+Cần Node.js 20.19+ và MongoDB.
 
 1. `git clone https://github.com/KClabio/MTGlobal.git` rồi `cd MTGlobal`
 2. `npm install`

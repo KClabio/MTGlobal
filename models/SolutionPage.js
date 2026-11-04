@@ -50,7 +50,9 @@ const sectionSchema = new mongoose.Schema({
 const solutionPageSchema = new mongoose.Schema({
   slug: { type: String, enum: SLUGS, required: true, unique: true },
   sections: [sectionSchema],
-}, { timestamps: true });
+  // Each save replaces its lists whole, so a version number has nothing to protect: two saves at the same moment both
+  // go through, the later one winning, instead of one failing with an error.
+}, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('SolutionPage', solutionPageSchema);
 module.exports.SLUGS = SLUGS;

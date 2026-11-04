@@ -13,6 +13,8 @@ const projectSchema = new mongoose.Schema({
   videoUrl: { type: String, default: null },
   order: { type: Number, default: 0 },
   featured: { type: Boolean, default: false },
-}, { timestamps: true });
+  // Each save replaces its lists whole, so a version number has nothing to protect: two saves at the same moment both
+  // go through, the later one winning, instead of one failing with an error.
+}, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('Project', projectSchema);

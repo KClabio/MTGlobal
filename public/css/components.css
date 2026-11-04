@@ -209,6 +209,8 @@ html:not(.js) .site-toast { animation: site-toast-in 450ms cubic-bezier(.22, 1, 
 .site-toast.is-leaving { animation: site-toast-out calc(260ms + 300ms * var(--anim)) cubic-bezier(.55, 0, .75, .2) forwards; pointer-events: none; }
 .site-toast-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--mtg-success-bg); color: var(--mtg-success); }
 .site-toast-text strong { color: var(--mtg-heading); }
+.auth-forgot { margin-block: 0 8px; }
+.auth-forgot a { display: inline-block; padding-block: 6px; } /* big enough to tap */
 .site-toast-x { flex: none; width: 30px; height: 30px; border: none; border-radius: 50%; background: transparent; color: var(--mtg-muted); font-size: 1.3rem; line-height: 1; cursor: pointer; }
 .site-toast-x:hover, .site-toast-x:focus-visible { background: var(--mtg-bg-alt); color: var(--mtg-heading); }
 @keyframes site-toast-in { from { opacity: 0; transform: var(--toast-off); } 60% { opacity: 1; } }

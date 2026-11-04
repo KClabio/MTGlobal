@@ -13,6 +13,7 @@ await suite(async (b) => {
   const { ev, sleep } = b;
   const d = await db();
   await page('/ho-tro'); // the first visit saves the starter questions (lib/help-topics.js)
+  check('Hỗ trợ gives the current password rule, not the old one', !(await ev(`document.body.textContent`)).includes('6 ký tự'));
   removeLater('helpitems', { questionVi: /^ZZ / });
   await restoreLater('helpitems', {}); // the order check re-saves a group: put every question back exactly
   const admin = await createUser('help');

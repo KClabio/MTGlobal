@@ -16,8 +16,9 @@ const { requireAdmin } = require('../middleware/auth');
 const { uploadMedia, uploadServiceMedia, uploadPageMedia, uploadSingleImage, uploadSettingsImages, fileUrl, fileUrls, wrapUpload, removeLocalUpload, removeUpload, removeLocalMedia, PAGE_MEDIA_PREFIX } = require('../middleware/upload');
 const { clearSiteSettingsCache } = require('../lib/settings');
 const { clearMemo } = require('../lib/memo-cache');
+const { endAllSessions } = require('../lib/sessions');
 const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
-const { isNonEmpty, isValidEmail } = require('../lib/validators');
+const { isNonEmpty, isValidEmail, cleanForm } = require('../lib/validators');
 const { STAFF_EMAILS_MAX } = require('../lib/request-mail');
 const { isStaff, canDeleteUser, canChangeRole, canResetTwoStep } = require('../lib/roles');
 const { getDashboardData } = require('../lib/dashboard');
@@ -75,12 +76,13 @@ function safeBack(req, fallback) {
 const done = (req, res, key, vars, to) => { flash(req, 'success', res.locals.t(key, vars)); res.redirect(to); };
 
 function parseSpecs(body) {
+  const cell = (v) => (typeof v === 'string' ? v.trim() : '');
   const keys = [].concat(body.specKey || []);
   const values = [].concat(body.specValue || []);
   const keysEn = [].concat(body.specKeyEn || []);
   const valuesEn = [].concat(body.specValueEn || []);
   return keys
-    .map((key, i) => ({ key: (key || '').trim(), value: (values[i] || '').trim(), keyEn: (keysEn[i] || '').trim(), valueEn: (valuesEn[i] || '').trim() }))
+    .map((key, i) => ({ key: cell(key), value: cell(values[i]), keyEn: cell(keysEn[i]), valueEn: cell(valuesEn[i]) }))
     .filter((s) => s.key);
 }
 
@@ -100,6 +102,12 @@ async function nextOrder(Model, filter = {}, position = 'last') {
 }
 
 // The item was deleted meanwhile (or the link is wrong): back to its list with a red notification
+// The four forms that show what was typed again when a save is refused (see cleanForm)
+const PROJECT_FORM = { text: ['titleVi', 'titleEn', 'schoolName', 'location', 'level', 'descriptionVi', 'descriptionEn', 'featured', 'videoUrl'], stored: ['images', 'videos'] };
+const PRODUCT_FORM = { text: ['nameVi', 'nameEn', 'category', 'section', 'subcategory', 'subcategoryEn', 'descriptionVi', 'descriptionEn', 'featured', 'comingSoon'], stored: ['images', 'videos', 'specs'] };
+const PARTNER_FORM = { text: ['name', 'url', 'slug', 'descriptionVi', 'descriptionEn', 'contacts'], stored: ['logo'] };
+const ARTICLE_FORM = { text: ['titleVi', 'titleEn', 'bodyVi', 'bodyEn', 'published', 'uploadedBy'], stored: ['coverImage'] };
+
 const notFound = (req, res, listPath) => { flash(req, 'error', res.locals.t('admin.flash.notFound')); res.redirect(listPath); };
 
 // ---- Dashboard ----
@@ -154,6 +162,7 @@ router.get('/du-an/moi', (req, res) => {
 
 router.post('/du-an/moi', wrapUpload(uploadMedia, async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, PROJECT_FORM);
   if (req.uploadError) return res.status(400).render('admin/project-form', { project: req.body, error: uploadErrorText(req, t) });
   const { titleVi, titleEn, schoolName, location, descriptionVi, descriptionEn, featured } = req.body;
   if (!isNonEmpty(titleVi)) {
@@ -180,6 +189,7 @@ router.get('/du-an/:id/sua', async (req, res) => {
 
 router.post('/du-an/:id/sua', wrapUpload(uploadMedia, async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, PROJECT_FORM);
   const project = await Project.findById(req.params.id).catch(() => null);
   if (!project) return notFound(req, res, '/admin/du-an');
   if (req.uploadError) return res.status(400).render('admin/project-form', { project: { ...project.toObject(), ...req.body }, error: uploadErrorText(req, t) });
@@ -250,6 +260,7 @@ for (const section of Object.values(PRODUCT_SECTIONS)) {
 
 router.post('/san-pham/moi', wrapUpload(uploadMedia, async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, PRODUCT_FORM);
   // The form says which section it came from; otherwise infer it from the category
   const section = PRODUCT_SECTIONS[req.body.section] || sectionForCategory(req.body.category);
   if (req.uploadError) return renderProductForm(res, { status: 400, product: req.body, section, error: uploadErrorText(req, t) });
@@ -277,6 +288,7 @@ router.get('/san-pham/:id/sua', async (req, res) => {
 
 router.post('/san-pham/:id/sua', wrapUpload(uploadMedia, async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, PRODUCT_FORM);
   const product = await Product.findById(req.params.id).catch(() => null);
   if (!product) return notFound(req, res, PRODUCT_SECTIONS.robot.path);
   const section = sectionForCategory(product.category);
@@ -453,6 +465,19 @@ async function uniquePartnerSlug(wanted, name, exceptId) {
   }
 }
 
+// Two saves at the same moment can both find the same address free. The database refuses the second, which then looks
+// again and takes the next one.
+async function saveWithFreeSlug(form, req, exceptId, write) {
+  for (let tries = 0; ; tries += 1) {
+    try {
+      return await write(form.fields);
+    } catch (err) {
+      if (err.code !== 11000 || !err.keyPattern || !err.keyPattern.slug || tries >= 20) throw err;
+      form.fields.slug = await uniquePartnerSlug(req.body.slug, req.body.name, exceptId);
+    }
+  }
+}
+
 // Shared by add and edit: the checked form values, or the first error to show
 async function readPartnerForm(req, t, exceptId) {
   const { name, url, slug, descriptionVi, descriptionEn, contacts } = req.body;
@@ -473,10 +498,12 @@ async function readPartnerForm(req, t, exceptId) {
 
 router.post('/doi-tac/moi', wrapUpload(uploadSingleImage('logo'), async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, PARTNER_FORM);
   if (req.uploadError) return res.status(400).render('admin/partner-form', { partner: req.body, error: uploadErrorText(req, t) });
   const form = await readPartnerForm(req, t, null);
   if (form.error) return res.status(400).render('admin/partner-form', { partner: req.body, error: form.error });
-  await Partner.create({ ...form.fields, order: await nextOrder(Partner), logo: fileUrl(req.file) });
+  const order = await nextOrder(Partner);
+  await saveWithFreeSlug(form, req, null, (fields) => Partner.create({ ...fields, order, logo: fileUrl(req.file) }));
   done(req, res, 'admin.flash.created', { name: form.fields.name }, '/admin/doi-tac');
 }));
 
@@ -488,14 +515,14 @@ router.get('/doi-tac/:id/sua', async (req, res) => {
 
 router.post('/doi-tac/:id/sua', wrapUpload(uploadSingleImage('logo'), async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, PARTNER_FORM);
   const partner = await Partner.findById(req.params.id).catch(() => null);
   if (!partner) return notFound(req, res, '/admin/doi-tac');
   if (req.uploadError) return res.status(400).render('admin/partner-form', { partner: { ...partner.toObject(), ...req.body }, error: uploadErrorText(req, t) });
   const form = await readPartnerForm(req, t, partner._id);
   if (form.error) return res.status(400).render('admin/partner-form', { partner: { ...partner.toObject(), ...req.body }, error: form.error });
-  Object.assign(partner, form.fields);
   if (req.file) partner.logo = fileUrl(req.file);
-  await partner.save();
+  await saveWithFreeSlug(form, req, partner._id, (fields) => { Object.assign(partner, fields); return partner.save(); });
   done(req, res, 'admin.flash.updated', { name: partner.name }, '/admin/doi-tac');
 }));
 
@@ -528,7 +555,8 @@ function readHelpForm(req, t) {
   const { group, questionVi, questionEn, answerVi, answerEn, published } = req.body;
   if (!HELP_GROUP_KEYS.includes(group)) return { error: t('admin.help.errGroup') };
   if (!isNonEmpty(questionVi)) return { error: t('admin.help.errQuestion') };
-  if (!isNonEmpty(answerVi)) return { error: t('admin.help.errAnswer') };
+  // Checked after tags are taken out: an answer of only tags has nothing left to save
+  if (!toPlainText(answerVi).trim()) return { error: t('admin.help.errAnswer') };
   return {
     fields: {
       group,
@@ -631,6 +659,7 @@ router.get('/tin-tuc/moi', (req, res) => renderArticleForm(req, res, { article: 
 
 router.post('/tin-tuc/moi', wrapUpload(uploadSingleImage('coverImage'), async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, ARTICLE_FORM);
   if (req.uploadError) return renderArticleForm(req, res, { article: req.body, status: 400, error: uploadErrorText(req, t) });
   const { titleVi, titleEn, bodyVi, bodyEn, published } = req.body;
   if (!isNonEmpty(titleVi)) {
@@ -654,6 +683,7 @@ router.get('/tin-tuc/:id/sua', async (req, res) => {
 
 router.post('/tin-tuc/:id/sua', wrapUpload(uploadSingleImage('coverImage'), async (req, res) => {
   const t = res.locals.t;
+  cleanForm(req.body, ARTICLE_FORM);
   const article = await Article.findById(req.params.id).catch(() => null);
   if (!article) return notFound(req, res, '/admin/tin-tuc');
   if (req.uploadError) return renderArticleForm(req, res, { article: { ...article.toObject(), ...req.body }, saved: article, status: 400, error: uploadErrorText(req, t) });
@@ -747,7 +777,7 @@ router.post('/nguoi-dung/:id/2-buoc/dat-lai', async (req, res) => {
   if (!target) return notFound(req, res, '/admin/nguoi-dung');
   if (!canResetTwoStep(req.user, target)) return forbidden(res);
   await User.updateOne({ _id: target._id }, { $unset: { twoFactor: 1 } });
-  await mongoose.connection.collection('sessions').deleteMany({ session: { $regex: `"userId":"${target._id}"` } });
+  await endAllSessions(target._id);
   done(req, res, 'admin.flash.twoStepReset', { name: target.name }, safeBack(req, '/admin/nguoi-dung'));
 });
 
@@ -759,8 +789,7 @@ router.post('/nguoi-dung/:id/xoa', async (req, res) => {
 
   // Keep their consultation requests (they carry their own contact details), just unlink them
   await QuoteRequest.updateMany({ user: target._id }, { $set: { user: null } });
-  // Log them out everywhere: connect-mongo stores each session as a JSON string
-  await mongoose.connection.collection('sessions').deleteMany({ session: { $regex: `"userId":"${target._id}"` } });
+  await endAllSessions(target._id);
   removeUpload(target.avatar); // also the Cloudinary copy
   await User.deleteOne({ _id: target._id });
   done(req, res, 'admin.flash.userDeleted', { name: target.name }, safeBack(req, '/admin/nguoi-dung'));

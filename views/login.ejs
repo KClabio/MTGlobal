@@ -6,6 +6,7 @@
     <div class="form-card">
       <%# Right after signing up (routes/auth.js): a welcome note, the new email filled in, the cursor in the password box %>
       <% if (registered) { %><div class="form-alert success" data-registered><%= t('auth.registered') %></div><% } %>
+      <% if (typeof resetDone !== 'undefined' && resetDone) { %><div class="form-alert success" data-reset-done><%= t('reset.done') %></div><% } %>
       <%# Sent here by a consultation request while logged out (routes/index.js) %>
       <% if (typeof needLogin !== 'undefined' && needLogin) { %><div class="form-alert info" data-need-login><%= t('auth.loginToRequest') %></div><% } %>
       <% if (error) { %><div class="form-alert error"><%= error %></div><% } %>
@@ -19,6 +20,7 @@
           <label for="loginPassword"><%= t('forms.password') %></label>
           <%- include('partials/password-input', { id: 'loginPassword', name: 'password', autocomplete: 'current-password' }) %>
         </div>
+        <p class="form-hint auth-forgot"><a href="/quen-mat-khau" data-forgot-link><%= t('reset.forgotLink') %></a></p>
         <button type="submit" class="btn btn-primary btn-block"><%= t('forms.loginTitle') %></button>
       </form>
       <%- include('partials/google-button', { label: 'auth.googleButton' }) %>

@@ -40,6 +40,8 @@ const siteSettingsSchema = new mongoose.Schema({
   },
   // Who gets an email for each new or changed request (Cài đặt chung; lib/request-mail.js), at most 10 addresses
   requestEmails: { type: [String], default: [] },
-}, { timestamps: true });
+  // There is one settings record, and each save writes only what it changes. Without a version number two saves at the
+  // same moment simply both go through, the later one winning, instead of one failing with an error.
+}, { timestamps: true, versionKey: false });
 
 module.exports = mongoose.model('SiteSettings', siteSettingsSchema);

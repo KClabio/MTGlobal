@@ -130,7 +130,7 @@
     "bioEmpty": "No bio yet.",
     "memberSince": "Member since",
     "updated": "Profile updated.",
-    "passwordChanged": "Password changed.",
+    "passwordChanged": "Password changed. Your other devices have been logged out.",
     "currentPassword": "Current password",
     "newPassword": "New password",
     "confirmNewPassword": "Confirm new password",
@@ -985,6 +985,31 @@
     "messenger": "Message on Messenger",
     "newTab": "(opens in a new tab)"
   },
+  "reset": {
+    "forgotLink": "Forgot your password?",
+    "forgotTitle": "Forgot your password",
+    "forgotIntro": "Enter your account's email. We will send a link to choose a new password.",
+    "send": "Send the link",
+    "sent": "If this email has an account, we have sent a link to choose a new password. The link works for {minutes} minutes.",
+    "sentHint": "No email? Check your spam folder too, or call MTG.",
+    "off": "We can't send the link by email at the moment. Please contact MTG and we will help you get back into your account.",
+    "backToLogin": "← Back to login",
+    "newTitle": "Choose a new password",
+    "save": "Save the new password",
+    "badLink": "This link no longer works: it may have expired, been used already, or been replaced by a newer one.",
+    "askAgain": "Send a new link",
+    "done": "Your new password is set. All devices have been logged out; please log in again."
+  },
+  "resetMail": {
+    "subject": "Reset your MTG account password",
+    "hello": "Hello,",
+    "intro": "We received a request to reset the password of your account. Open this link to choose a new password:",
+    "expires": "The link works once, for {minutes} minutes.",
+    "notYou": "If this wasn't you, ignore this email: your password has not changed.",
+    "changedSubject": "Your MTG account password was changed",
+    "changed": "The password of your MTG account was just changed, and all devices have been logged out.",
+    "changedNotYou": "If this wasn't you, contact MTG right away."
+  },
   "requestMail": {
     "subject": "MTG has received your consultation request",
     "hello": "Hello,",
@@ -1015,6 +1040,7 @@
     "loginToRequest": "Log in to have your details filled in; you'll then come back to the form.",
     "loginDone": "You're logged in.",
     "loginHello": "Welcome, {name}!",
+    "googleJoined": "This account is now joined to Google. To protect it, the old password was removed; you can set a new one in your Profile.",
     "closeNotice": "Close notice",
     "passwordShort": "{n} more character(s) needed (at least 8).",
     "passwordLongEnough": "Long enough ✓",

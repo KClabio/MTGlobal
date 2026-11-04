@@ -45,10 +45,8 @@ if (process.env.NODE_ENV === 'production') {
     console.error('Missing required production env var: MONGO_URI');
     process.exit(1);
   }
-  if (!process.env.CLOUDINARY_CLOUD_NAME) {
-    console.warn('Cloudinary not configured — uploads will be stored on local disk and may be lost on redeploy.');
-  }
 }
+for (const warning of require('./lib/production-checks').productionWarnings()) console.warn(`Live server setting: ${warning}`);
 
 app.set('view engine', 'ejs');
 app.locals.formatText = require('./lib/text').plainTextToHtml; // plain-text fields -> paragraphs / lists
@@ -153,7 +151,9 @@ app.use((req, res, next) => {
   }
   if (req.session && req.session.justLoggedIn && req.method === 'GET' && req.accepts('html') && req.user) {
     res.locals.loginNotice = req.user.name;
+    res.locals.googleJoinedNotice = !!req.session.googleJoined;
     delete req.session.justLoggedIn;
+    delete req.session.googleJoined;
   }
   next();
 });
@@ -208,8 +208,18 @@ app.use((err, req, res, next) => {
 connectDB()
   .then(() => {
     startRetention(); // deletes requests older than 24 months, now and daily
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, (err) => {
+      if (err) {
+        console.error(`Could not start on port ${PORT}:`, err.message);
+        process.exit(1);
+      }
       console.log(`MTGlobal server running at http://localhost:${PORT}`);
     });
+    const { gracefulStop, stopOnSignals } = require('./lib/graceful-stop');
+    stopOnSignals(gracefulStop({ server, closeDb: () => mongoose.connection.close() }));
   })
-  .catch((err) => console.error('MongoDB connection error:', err));
+  .catch((err) => {
+    // Stops rather than stays up without a site, so the host or PM2 starts it again and it tries once more
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });

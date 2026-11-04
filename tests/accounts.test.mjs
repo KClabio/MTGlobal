@@ -4,7 +4,7 @@ import { existsSync, readdirSync, unlinkSync, writeFileSync, mkdtempSync, rmSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { suite, part, check, db, BASE, ROOT, createUser, removeLater, tempArticle, stamp, twoStepCode } from './lib/index.mjs';
+import { suite, part, check, db, BASE, ROOT, createUser, removeLater, tempArticle, stamp, twoStepCode, sidClient } from './lib/index.mjs';
 
 const PUBLIC = path.join(ROOT, 'public');
 
@@ -259,6 +259,21 @@ await suite(async (b) => {
       await d.collection('loginthrottles').deleteMany({ $or: [{ _id: /^ip:/ }, { _id: new RegExp(`^email:zztest-nobody-.*-${stamp}@`) }] });
     }
     check('after the address count is cleared: logs in again', (await login(u.email, u.password)).status === 303);
+  });
+
+  await part(b, 'changing the password logs out the other devices', async () => {
+    const user = await createUser('other-device', 'customer');
+    const here = sidClient(user.sid);
+    const there = sidClient('');
+    await there.req('/dang-nhap', { method: 'POST', body: new URLSearchParams({ email: user.email, password: user.password }) });
+    const bystander = await createUser('other-person', 'customer');
+    const bystanderSession = sidClient(bystander.sid);
+    check('both devices are logged in', (await here.req('/ho-so')).status === 200 && (await there.req('/ho-so')).status === 200);
+    const r = await here.req('/ho-so/mat-khau', { method: 'POST', body: new URLSearchParams({ currentPassword: user.password, newPassword: 'changed-pass-77', confirmPassword: 'changed-pass-77' }) });
+    check('the change succeeds and says so (VI)', r.status === 200 && r.text.includes('Các thiết bị khác đã được đăng xuất'), r.status);
+    check('… this device stays logged in', (await here.req('/ho-so')).status === 200);
+    check('… the other device is logged out', (await there.req('/ho-so')).status === 302);
+    check("… another person's session is untouched", (await bystanderSession.req('/ho-so')).status === 200);
   });
 
   await part(b, 'role badge on the profile', async () => {
@@ -557,7 +572,7 @@ await suite(async (b) => {
 
     let r = await call('/ho-so/du-lieu', owner.sid);
     const data = r.status === 200 ? JSON.parse(r.text) : null;
-    check('"Tải dữ liệu của tôi": a JSON file to save (mtg-du-lieu-<date>.json), never cached', r.status === 200 && /attachment; filename="mtg-du-lieu-\d{4}-\d{2}-\d{2}\.json"/.test(r.headers.get('content-disposition') || '')
+    check('"Tải dữ liệu của tôi": a JSON file to save (mtg-du-lieu-<date>.json), never cached', r.status === 200 && /attachment; filename="?mtg-du-lieu-\d{4}-\d{2}-\d{2}\.json"?/.test(r.headers.get('content-disposition') || '')
       && (r.headers.get('content-type') || '').startsWith('application/json') && r.headers.get('cache-control') === 'no-store', { status: r.status, cd: r.headers.get('content-disposition'), cc: r.headers.get('cache-control') });
     check('… with the account (email, photo, joined, consent time) and their own request (status in words, details)', data && data.account.email === owner.email && data.account.avatar === photo && data.account.role === 'customer'
       && !!data.account.joinedAt && !!data.account.privacyAcceptedAt && data.requests.length === 1 && data.requests[0].message === 'ZZ tin nhắn của tôi' && data.requests[0].status === 'Đã liên hệ'

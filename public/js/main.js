@@ -464,7 +464,7 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
 (function () {
   var toast = document.querySelector('[data-site-toast]');
   if (!toast) return;
-  var STAY = 4000;
+  var STAY = toast.hasAttribute('data-toast-long') ? 15000 : 4000; // a longer notice needs time to be read
   var timer = null;
   function leave() {
     if (toast.classList.contains('is-leaving')) return;

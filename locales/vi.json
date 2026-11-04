@@ -130,7 +130,7 @@
     "bioEmpty": "Chưa có giới thiệu.",
     "memberSince": "Thành viên từ",
     "updated": "Cập nhật hồ sơ thành công.",
-    "passwordChanged": "Đổi mật khẩu thành công.",
+    "passwordChanged": "Đổi mật khẩu thành công. Các thiết bị khác đã được đăng xuất.",
     "currentPassword": "Mật khẩu hiện tại",
     "newPassword": "Mật khẩu mới",
     "confirmNewPassword": "Xác nhận mật khẩu mới",
@@ -985,6 +985,31 @@
     "messenger": "Nhắn qua Messenger",
     "newTab": "(mở trong thẻ mới)"
   },
+  "reset": {
+    "forgotLink": "Quên mật khẩu?",
+    "forgotTitle": "Quên mật khẩu",
+    "forgotIntro": "Nhập email của tài khoản. Chúng tôi sẽ gửi một liên kết để bạn đặt mật khẩu mới.",
+    "send": "Gửi liên kết",
+    "sent": "Nếu email này có tài khoản, chúng tôi đã gửi liên kết đặt mật khẩu mới. Liên kết dùng được trong {minutes} phút.",
+    "sentHint": "Không thấy email? Hãy xem cả thư mục Thư rác, hoặc gọi điện cho MTG.",
+    "off": "Hiện chưa gửi được liên kết qua email. Vui lòng liên hệ MTG để được giúp lấy lại quyền truy cập.",
+    "backToLogin": "← Về trang đăng nhập",
+    "newTitle": "Đặt mật khẩu mới",
+    "save": "Lưu mật khẩu mới",
+    "badLink": "Liên kết này không còn dùng được: có thể đã hết hạn, đã được dùng, hoặc đã có liên kết mới hơn.",
+    "askAgain": "Gửi lại liên kết",
+    "done": "Đã đặt mật khẩu mới. Mọi thiết bị đã được đăng xuất; vui lòng đăng nhập lại."
+  },
+  "resetMail": {
+    "subject": "Đặt lại mật khẩu tài khoản MTG",
+    "hello": "Xin chào,",
+    "intro": "Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Mở liên kết sau để đặt mật khẩu mới:",
+    "expires": "Liên kết dùng được một lần, trong {minutes} phút.",
+    "notYou": "Nếu không phải bạn yêu cầu, hãy bỏ qua email này: mật khẩu của bạn không thay đổi.",
+    "changedSubject": "Mật khẩu tài khoản MTG đã được thay đổi",
+    "changed": "Mật khẩu tài khoản MTG của bạn vừa được thay đổi, và mọi thiết bị đã được đăng xuất.",
+    "changedNotYou": "Nếu không phải bạn thực hiện, hãy liên hệ MTG ngay."
+  },
   "requestMail": {
     "subject": "MTG đã nhận được yêu cầu tư vấn của bạn",
     "hello": "Xin chào,",
@@ -1015,6 +1040,7 @@
     "loginToRequest": "Đăng nhập để điền sẵn thông tin của bạn vào biểu mẫu; sau đó bạn sẽ quay lại biểu mẫu.",
     "loginDone": "Đăng nhập thành công.",
     "loginHello": "Xin chào, {name}!",
+    "googleJoined": "Tài khoản này giờ đã liên kết với Google. Để bảo vệ tài khoản, mật khẩu cũ đã bị xóa; bạn có thể đặt mật khẩu mới trong Hồ sơ.",
     "closeNotice": "Đóng thông báo",
     "passwordShort": "Còn thiếu {n} ký tự (tối thiểu 8).",
     "passwordLongEnough": "Đủ độ dài ✓",

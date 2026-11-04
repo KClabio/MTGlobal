@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const router = express.Router();
 
-const mongoose = require('mongoose');
 const User = require('../models/User');
 const QuoteRequest = require('../models/QuoteRequest');
 const { requireAuth } = require('../middleware/auth');
@@ -11,6 +10,8 @@ const { uploadAvatar, AVATAR_MAX_BYTES, isRealImageFile, fileUrl, wrapUpload, re
 const { isValidEmail, isValidPhone, isNonEmpty } = require('../lib/validators');
 const google = require('../lib/google-auth');
 const throttle = require('../lib/login-throttle');
+const passwordReset = require('../lib/password-reset');
+const { endAllSessions } = require('../lib/sessions');
 const errorLog = require('../lib/error-log');
 const { isStaff } = require('../lib/roles');
 const { passwordProblem } = require('../lib/passwords');
@@ -88,23 +89,26 @@ router.get('/dang-nhap', (req, res) => {
   rememberReturn(req);
   const registered = req.session.justRegistered || null;
   delete req.session.justRegistered;
-  res.render('login', { error: null, registered: !!registered, email: registered || '', needLogin: forRequest(req) });
+  const resetEmail = req.session.passwordWasReset || null;
+  delete req.session.passwordWasReset;
+  res.render('login', { error: null, registered: !!registered, resetDone: !!resetEmail, email: registered || resetEmail || '', needLogin: forRequest(req) });
 });
 
 // Everyone (customer, admin, owner) lands on Trang chủ after logging in, or back on the request form they came from
 // (rememberReturn); staff open "Quản trị" from their name menu.
 // A fresh session id at login; Trang chủ then says "Đăng nhập thành công" (server.js, partials/footer.ejs).
 // Staff (owner, admin) are not logged in yet: they go on to the two-step code page (below), half-way for 10 minutes.
-function logIn(req, res, user) {
+function logIn(req, res, user, { googleJoined = false } = {}) {
   const back = req.session.returnTo ? `${req.session.returnTo}#yeu-cau` : '/';
   req.session.regenerate((err) => {
     if (err) return res.status(500).render('login', { error: res.locals.t('auth.errLogin'), registered: false, email: user.email, needLogin: false });
     if (isStaff(user.role)) {
-      req.session.twoStep = { userId: String(user._id), back, at: Date.now() };
+      req.session.twoStep = { userId: String(user._id), back, at: Date.now(), googleJoined };
       return req.session.save(() => res.redirect(303, '/dang-nhap/xac-minh'));
     }
     req.session.userId = user._id;
     req.session.justLoggedIn = true;
+    if (googleJoined) req.session.googleJoined = true;
     req.session.save(() => res.redirect(303, back));
   });
 }
@@ -221,7 +225,7 @@ router.post('/dang-nhap/xac-minh', async (req, res) => {
   if (!isSetup(p, user)) {
     const r = await checkStaffCode(req, res, user, code, { allowBackup: true });
     if (!r.ok) return refused(req, res, pending, r);
-    return finishTwoStep(req, res, user._id, p.back || '/');
+    return finishTwoStep(req, res, user._id, p.back || '/', p.googleJoined ? { googleJoined: true } : {});
   }
 
   // Setup (or a new phone): one correct code from the new key turns it on; new backup codes replace any old ones
@@ -273,8 +277,59 @@ router.post('/dang-nhap', async (req, res) => {
   logIn(req, res, user);
 });
 
+// "Quên mật khẩu" (lib/password-reset.js)
+function renderForgot(res, { status = 200, sent = false, error = null, email = '' } = {}) {
+  res.status(status).render('forgot-password', { available: passwordReset.canSend(), sent, error, email, minutes: passwordReset.LINK_MINUTES });
+}
+
+router.get('/quen-mat-khau', (req, res) => renderForgot(res));
+
+router.post('/quen-mat-khau', (req, res) => {
+  if (!passwordReset.canSend()) return renderForgot(res);
+  const email = typeof req.body.email === 'string' ? req.body.email.toLowerCase().trim() : '';
+  if (!isValidEmail(email)) return renderForgot(res, { status: 400, error: res.locals.t('forms.errEmail'), email });
+  passwordReset.requestLink(email, { req, lang: res.locals.lang });
+  renderForgot(res, { sent: true });
+});
+
+function renderReset(res, { status = 200, token = null, error = null } = {}) {
+  res.set('Cache-Control', 'no-store');
+  res.status(status).render('reset-password', { token, error });
+}
+
+router.get('/dat-lai-mat-khau/:token', async (req, res) => {
+  const works = await passwordReset.linkWorks(req.params.token);
+  renderReset(res, works ? { token: req.params.token } : { status: 410 });
+});
+
+router.post('/dat-lai-mat-khau/:token', async (req, res) => {
+  const t = res.locals.t;
+  const { token } = req.params;
+  if (!(await passwordReset.linkWorks(token))) return renderReset(res, { status: 410 });
+  const newPassword = typeof req.body.newPassword === 'string' ? req.body.newPassword : '';
+  const confirmPassword = typeof req.body.confirmPassword === 'string' ? req.body.confirmPassword : '';
+  let error = null;
+  if (passwordProblem(newPassword) === 'length') error = t('profile.errPasswordLength');
+  else if (passwordProblem(newPassword) === 'common') error = t('profile.errPasswordCommon');
+  else if (newPassword !== confirmPassword) error = t('profile.errPasswordMatch');
+  if (error) return renderReset(res, { status: 400, token, error });
+
+  const user = await passwordReset.useLink(token, await bcrypt.hash(newPassword, 10));
+  if (!user) return renderReset(res, { status: 410 });
+  await endAllSessions(user._id); // whoever else was in this account is out
+  await throttle.succeed(user.email); // the email proved who this is: a lock from wrong passwords ends
+  passwordReset.tellPasswordChanged(user, { req, lang: res.locals.lang });
+  req.session.regenerate((err) => {
+    if (err) return res.redirect(303, '/dang-nhap');
+    req.session.passwordWasReset = user.email;
+    req.session.save(() => res.redirect(303, '/dang-nhap'));
+  });
+});
+
 // "Đăng nhập bằng Google" (lib/google-auth.js). Name, email and photo are copied from Google at every Google login;
-// an existing account with the same email is joined (role, requests and password kept).
+// an existing account with the same email is joined (role and requests kept). Sign-up never proves that an email is
+// the person's own, but Google does: so joining removes the old password and ends the account's sessions, in case
+// someone else signed up first with this email. The owner can set a new password in Hồ sơ.
 const googleFailed = (req, res, key, status = 400) =>
   res.status(status).render('login', { error: res.locals.t(key), registered: false, email: '', needLogin: false });
 
@@ -300,12 +355,15 @@ router.get(google.CALLBACK_PATH, async (req, res) => {
   }
   if (!profile.emailVerified) return googleFailed(req, res, 'auth.googleUnverified');
 
+  let googleJoined = false;
   let user = await User.findOne({ googleId: profile.googleId });
   if (!user) {
     user = await User.findOne({ email: profile.email });
     if (user && user.googleId) return googleFailed(req, res, 'auth.googleOtherAccount'); // that email is joined to another Google account
     if (user) {
       user.googleId = profile.googleId;
+      googleJoined = !!user.passwordHash;
+      user.passwordHash = null;
       if (user.avatar) user.avatarMode = 'own'; // a photo uploaded before joining stays
     }
   }
@@ -316,7 +374,8 @@ router.get(google.CALLBACK_PATH, async (req, res) => {
   if (user.email !== profile.email && !(await User.exists({ email: profile.email, _id: { $ne: user._id } }))) user.email = profile.email;
   if (user.avatarMode === '') user.avatar = profile.picture;
   await user.save();
-  logIn(req, res, user);
+  if (googleJoined) await endAllSessions(user._id);
+  logIn(req, res, user, { googleJoined });
 });
 
 router.post('/dang-xuat', (req, res) => {
@@ -399,6 +458,8 @@ router.post('/ho-so/mat-khau', requireAuth, async (req, res) => {
   res.locals.user = user.toObject(); // the card now shows "Đổi mật khẩu"
   const done = { success: true, message: firstPassword ? t('profile.passwordSet') : null };
 
+  // Every other device is logged out: whoever else was in this account has to stop being in it
+  await endAllSessions(user._id);
   // New session id after a credential change; keep the user logged in (and past the two-step code, for staff)
   const twoStepOk = req.session.twoStepOk;
   req.session.regenerate((err) => {
@@ -500,7 +561,7 @@ router.post('/ho-so/xoa-tai-khoan', requireAuth, async (req, res) => {
   }
 
   await QuoteRequest.deleteMany({ user: user._id });
-  await mongoose.connection.collection('sessions').deleteMany({ session: { $regex: `"userId":"${user._id}"` } });
+  await endAllSessions(user._id);
   removeUpload(user.avatar);
   await User.deleteOne({ _id: user._id });
 

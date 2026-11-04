@@ -6,7 +6,27 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.2.13] - 2026-11-03
+## [1.3.0] - 2026-11-05
+
+### Added
+- **"Quên mật khẩu" (forgotten password):** the login page now has a link for people who signed up with an email address. They receive a one-time link by email, valid for 60 minutes, and choose a new password. Until the website has an email account set up, the page asks them to contact MTG instead.
+
+  ![The login page on a phone, with the "Quên mật khẩu?" link under the password box](docs/screenshots/1.3.0/login-forgot.jpg)
+
+- **Launch guide:** `docs/LAUNCH.md` lists, in order, how to put the website on a live server, including moving the content and leaving sample data behind.
+- **A new test campaign step:** the OWASP ZAP security scanner now also checks the admin pages, logged in as the owner, on a separate test copy of the website.
+
+### Changed
+- **Account safety:** changing or resetting a password now logs that account out on other devices, and joining an account through "Đăng nhập bằng Google" removes its old password. The person can set a new one in Hồ sơ.
+- **Live server:** the website now warns in its log when an important live setting is missing, and it finishes the visits in progress before it stops or restarts. If two copies of the website run side by side, a settings change now reaches both within about a minute.
+- **Updates:** the website now needs Node.js 20.19 or newer, and Express, Mongoose and SortableJS have been updated.
+
+### Fixed
+- **Limits on repeated requests:** the limits on emails and login attempts now also hold when many requests arrive at the same moment.
+- **Hỗ trợ:** the help answers now give the correct password rule (8 characters) and point to the new "Quên mật khẩu" page.
+- **Admin forms:** when two people save at the same moment, both saves now go through, and the later one wins. Partners saved at the same moment each get their own web address. A Hỗ trợ answer with no real text now gets a clear message, and unusual form values no longer end in a "failed" notice.
+
+## [1.2.13] - 2026-11-03 · `3925790`
 
 ### Fixed
 - **Page titles in Google:** a very long name, such as a long equipment name, is now shortened in the browser tab and in search results, so Google shows the title whole. The page heading and the Facebook / Zalo link preview keep the full name.
