@@ -36,11 +36,13 @@
     <div class="pillar-grid">
       <div class="pillar-card c-products">
         <h3><%= lang === 'en' ? '1. Products — Smart Robotics' : '1. Sản phẩm – Robotics thông minh' %></h3>
-        <ul>
-          <li><%= lang === 'en' ? 'Stair-climbing cargo robot' : 'Robot xe chở hàng leo cầu thang' %></li>
-          <li><%= lang === 'en' ? 'Follow-me cargo robot' : 'Robot xe chở hàng đi theo người' %></li>
-          <li><%= lang === 'en' ? 'Lawn-mowing robot' : 'Robot cắt cỏ' %></li>
-          <li><%= lang === 'en' ? 'Home-service robot' : 'Robot phục vụ gia đình' %></li>
+        <%# The robots of Admin → Robot, in its order, each linked to its page; "Sắp ra mắt" ones are marked %>
+        <ul data-about-robots>
+          <% (typeof robots !== 'undefined' ? robots : []).forEach(function (r) {
+               const rName = (lang === 'en' && r.nameEn) ? r.nameEn : (r.nameVi || r.nameEn); %>
+            <li><a href="/san-pham/<%= r.category %>"><%= rName %></a><% if (r.comingSoon) { %> <span class="tag about-robot-soon"><%= t('common.comingSoon') %></span><% } %></li>
+          <% }) %>
+          <% if (typeof robots === 'undefined' || !robots.length) { %><li><a href="/san-pham"><%= t('nav.products') %></a></li><% } %>
         </ul>
       </div>
       <div class="pillar-card c-solution">

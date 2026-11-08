@@ -149,6 +149,38 @@ await suite(async (b) => {
     check('the footer links the page (after the © line)', /&copy;[\s\S]{0,200}<a class="footer-bottom-link" href="\/chinh-sach-bao-mat">Chính sách bảo mật<\/a>/.test(home));
   });
 
+  await part(b, 'Về MTG: the robot list follows Admin → Robot', async () => {
+    const CATS = ['robot-leo-cau-thang', 'robot-di-theo-nguoi', 'robot-cat-co', 'robot-gia-dinh'];
+    const products = (await db()).collection('products');
+    await restoreLater('products', { category: { $in: CATS } });
+    const list = async (lang) => {
+      const html = await (await fetch(BASE + '/ve-mtg', { headers: { cookie: `lang=${lang}` } })).text();
+      const ul = (html.match(/<ul data-about-robots>([\s\S]*?)<\/ul>/) || [])[1] || '';
+      return [...ul.matchAll(/<li><a href="([^"]+)">([^<]*)<\/a>(\s*<span class="tag about-robot-soon">[^<]*<\/span>)?<\/li>/g)].map((m) => ({ href: m[1], name: m[2], soon: !!m[3] }));
+    };
+    const robots = await products.find({ category: { $in: CATS } }).sort({ order: 1, _id: 1 }).toArray();
+    let vi = await list('vi');
+    const en = await list('en');
+    check('every robot of Admin → Robot, in its order, linked to its page', robots.length > 0 && vi.length === robots.length && vi.every((x, i) => x.href === `/san-pham/${robots[i].category}`), { vi, db: robots.map((r) => r.category) });
+    check('Vietnamese names', vi.every((x, i) => x.name === robots[i].nameVi), vi.map((x) => x.name));
+    check('English names (Vietnamese when there is no English)', en.every((x, i) => x.name === (robots[i].nameEn || robots[i].nameVi)), en.map((x) => x.name));
+    check('"Sắp ra mắt" marked exactly on the coming-soon robots', vi.every((x, i) => x.soon === !!robots[i].comingSoon));
+    // A rename, a coming-soon change and a new order in the admin show at once
+    const first = robots[0];
+    const LONG = 'ZZ Robot xe chở hàng tự hành leo cầu thang thông minh thế hệ mới dành cho trường học';
+    await products.updateOne({ _id: first._id }, { $set: { nameVi: LONG, comingSoon: !first.comingSoon, order: 9999 } });
+    vi = await list('vi');
+    const moved = vi[vi.length - 1];
+    check('a renamed robot shows its new name, moved last by its new order, with its new "Sắp ra mắt" state', moved && moved.name === LONG && moved.href === `/san-pham/${first.category}` && moved.soon === !first.comingSoon, moved);
+    // Phone width with the long name: nothing wider than the screen
+    await b.viewport(390, 844);
+    await b.nav('/ve-mtg');
+    const wide = await ev(`(() => { const ul = document.querySelector('[data-about-robots]'); const r = ul.getBoundingClientRect(); return { page: document.documentElement.scrollWidth - innerWidth, right: Math.round(r.right), width: innerWidth }; })()`);
+    check('390 px with a long robot name: the card stays inside the screen', wide.page <= 0 && wide.right <= wide.width, wide);
+    await b.viewport(1280, 900);
+    await products.updateOne({ _id: first._id }, { $set: { nameVi: first.nameVi, comingSoon: first.comingSoon, order: first.order } });
+  });
+
   await part(b, 'Điều khoản sử dụng page (lib/terms-of-use.js)', async () => {
     const page = async (lang) => { const r = await fetch(BASE + '/dieu-khoan-su-dung', { headers: { cookie: `lang=${lang}` } }); return { status: r.status, text: await r.text() }; };
     const body = (html) => (html.match(/data-terms-text>([\s\S]*?)<\/div>\s*<\/div>\s*<\/section>/) || [])[1] || '';

@@ -15,6 +15,7 @@
 .pillar-card.c-solution .pillar-icon { background: var(--mtg-green); }
 .pillar-card.c-services .pillar-icon { background: var(--mtg-orange); }
 .pillar-card a.pillar-link { font-weight: 700; font-size: .9rem; }
+.pillar-card .about-robot-soon { margin-left: 4px; padding: 1px 8px; font-size: .7rem; vertical-align: 1px; white-space: nowrap; } /* Về MTG robot list */
 
 /* ---- Business areas slider (home "Lĩnh vực hoạt động"): 3½ cards in view, scrolls sideways ---- */
 .domains-head { position: relative; }

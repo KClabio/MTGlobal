@@ -6,7 +6,14 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.3.1] - 2026-11-08
+## [1.3.2] - 2026-11-08
+
+### Changed
+- **Về MTG, "Ba lĩnh vực hoạt động":** the robots in the "Sản phẩm" card now come from Admin → Robot, in the same order, each linking to its own page, with a "Sắp ra mắt" label on the robots that are not ready yet. Renaming, reordering or adding a robot in the admin now changes Về MTG too.
+
+  ![The "Sản phẩm" card on Về MTG on a phone, with the robot list and the "Sắp ra mắt" labels](docs/screenshots/1.3.2/about-robots.jpg)
+
+## [1.3.1] - 2026-11-08 · `0e37714`
 
 ### Added
 - **"Điều khoản sử dụng" (Terms of Use) page:** a new page at `/dieu-khoan-su-dung`, in Vietnamese and English, covering the use of the website, accounts, requests, intellectual property, liability and disputes. It is a draft to be checked (ideally with a lawyer) and can be edited in Admin → Thông tin công ty, like the Chính sách bảo mật. It is linked in the footer and listed for search engines.

@@ -44,9 +44,13 @@ router.get('/', async (req, res) => {
   res.render('index', { featuredProjects, robots, partners, domains });
 });
 
+// Về MTG: the "Ba lĩnh vực hoạt động" products card lists the robots of Admin → Robot, in the admin's order
 router.get('/ve-mtg', async (req, res) => {
-  const partners = await allPartners();
-  res.render('about', { partners });
+  const [partners, robots] = await Promise.all([
+    allPartners(),
+    Product.find({ category: { $in: ROBOT_CATEGORIES } }, { nameVi: 1, nameEn: 1, category: 1, comingSoon: 1 }).sort({ order: 1, _id: 1 }).lean(),
+  ]);
+  res.render('about', { partners, robots });
 });
 
 // Chính sách bảo mật: the admin's text (Thông tin công ty) or the default draft of lib/privacy-policy.js
