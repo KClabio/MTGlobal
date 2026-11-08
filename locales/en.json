@@ -37,6 +37,7 @@
     "learnMore": "Learn More",
     "back": "Back",
     "contactUs": "Contact Us",
+    "mapTitle": "Map: {address}",
     "requestQuote": "Request a Consultation",
     "address": "Address",
     "phone": "Phone",
@@ -162,7 +163,8 @@
   "footer": {
     "tagline": "Smart Solutions for Life",
     "quickLinks": "Quick Links",
-    "contactInfo": "Contact Information"
+    "contactInfo": "Contact Information",
+    "taxCode": "Business registration no."
   },
   "help": {
     "title": "Help",
@@ -194,6 +196,11 @@
     "tooLargeText": "What you sent is more than the website accepts. Please shorten your message (at most 3,000 characters) and send it again.",
     "back": "Go back",
     "crossSite": "This form was sent from another website, so it can't be accepted. If you want to send something to MTG, open the page on our website and send it again."
+  },
+  "terms": {
+    "title": "Terms of Use",
+    "and": "and the",
+    "errAgree": "Please tick the box to agree to the Terms of Use and the Privacy Policy."
   },
   "privacy": {
     "title": "Privacy Policy",
@@ -634,7 +641,13 @@
       "address": "Address",
       "phone": "Phone",
       "email": "Email",
-      "map": "Map link (Google Maps embed URL)",
+      "map": "Map on the Contact page (Google Maps)",
+      "mapHint": "In Google Maps: find the company's address → Share → Embed a map → Copy HTML, then paste it here (the whole code or just the link). Leave it empty for no map on the Contact page.",
+      "mapRefused": "The other details were saved, but the map was not changed: that is not a Google Maps embed code. In Google Maps choose Share → Embed a map → Copy HTML, and paste it again.",
+      "taxCode": "Business registration number (tax code)",
+      "taxCodeHint": "As on the business registration certificate. When set, it shows in the footer, on About MTG, in the Privacy Policy and the Terms of Use.",
+      "registration": "Issued by, issued on",
+      "registrationHint": "For example: issued by the Hanoi Department of Planning and Investment on 01/01/2020. Optional; shown right after the number.",
       "zalo": "Zalo number",
       "zaloHint": "The company's phone number on Zalo. When set, the chat button at the bottom right of the website opens Zalo.",
       "messenger": "Facebook page (Messenger)",
@@ -647,7 +660,11 @@
       "privacyEn": "Privacy Policy — English",
       "privacyDraft": "A draft written for Decree 13/2023 on personal data protection. Check it (ideally with a lawyer) before the website goes live.",
       "privacyHint": "While the draft is kept as it is, the address, email and phone from Contact information are filled in. Empty the box to go back to the draft. A paragraph that is a single line starting with a number (e.g. “1. Who we are”) becomes a section title.",
-      "privacyNoEmail": "No contact email yet: the policy tells people to use the Contact page. Better to enter an email under Contact information."
+      "privacyNoEmail": "No contact email yet: the policy tells people to use the Contact page. Better to enter an email under Contact information.",
+      "termsTitle": "Terms of Use",
+      "termsVi": "Terms of Use — Vietnamese",
+      "termsEn": "Terms of Use — English",
+      "termsDraft": "A draft on using the website, accounts, requests, intellectual property and disputes. Check it (ideally with a lawyer) before the website goes live."
     },
     "theme": {
       "dark": "Dark mode"

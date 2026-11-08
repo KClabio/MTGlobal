@@ -37,6 +37,7 @@
     "learnMore": "Tìm hiểu thêm",
     "back": "Quay lại",
     "contactUs": "Liên hệ với chúng tôi",
+    "mapTitle": "Bản đồ: {address}",
     "requestQuote": "Yêu cầu tư vấn",
     "address": "Địa chỉ",
     "phone": "Điện thoại",
@@ -162,7 +163,8 @@
   "footer": {
     "tagline": "Smart Solutions for Life",
     "quickLinks": "Liên kết nhanh",
-    "contactInfo": "Thông tin liên hệ"
+    "contactInfo": "Thông tin liên hệ",
+    "taxCode": "Mã số doanh nghiệp"
   },
   "help": {
     "title": "Hỗ trợ",
@@ -194,6 +196,11 @@
     "tooLargeText": "Thông tin bạn gửi vượt quá giới hạn của website. Hãy rút gọn nội dung (tối đa 3.000 ký tự) rồi gửi lại.",
     "back": "Quay lại",
     "crossSite": "Biểu mẫu này được gửi từ một trang web khác nên không được chấp nhận. Nếu bạn muốn gửi thông tin cho MTG, hãy mở trang trên website của chúng tôi rồi gửi lại."
+  },
+  "terms": {
+    "title": "Điều khoản sử dụng",
+    "and": "và",
+    "errAgree": "Vui lòng đánh dấu đồng ý với Điều khoản sử dụng và Chính sách bảo mật."
   },
   "privacy": {
     "title": "Chính sách bảo mật",
@@ -634,7 +641,13 @@
       "address": "Địa chỉ",
       "phone": "Điện thoại",
       "email": "Email",
-      "map": "Link bản đồ (Google Maps embed URL)",
+      "map": "Bản đồ trên trang Liên hệ (Google Maps)",
+      "mapHint": "Trên Google Maps: tìm địa chỉ công ty → Chia sẻ → Nhúng bản đồ → Sao chép HTML, rồi dán vào đây (dán cả đoạn mã hoặc chỉ đường link). Để trống thì trang Liên hệ không có bản đồ.",
+      "mapRefused": "Đã lưu các thông tin khác, nhưng bản đồ chưa được thay: đó không phải mã nhúng của Google Maps. Trên Google Maps, chọn Chia sẻ → Nhúng bản đồ → Sao chép HTML, rồi dán lại.",
+      "taxCode": "Mã số doanh nghiệp (mã số thuế)",
+      "taxCodeHint": "Ghi trên Giấy chứng nhận đăng ký doanh nghiệp. Khi có, được hiện ở chân trang, trang Về MTG, Chính sách bảo mật và Điều khoản sử dụng.",
+      "registration": "Nơi cấp, ngày cấp",
+      "registrationHint": "Ví dụ: do Sở Kế hoạch và Đầu tư TP. Hà Nội cấp lần đầu ngày 01/01/2020. Không bắt buộc; hiện ngay sau mã số.",
       "zalo": "Số Zalo",
       "zaloHint": "Số điện thoại có Zalo của công ty. Khi có, nút nhắn tin ở góc dưới bên phải website sẽ mở Zalo.",
       "messenger": "Trang Facebook (Messenger)",
@@ -647,7 +660,11 @@
       "privacyEn": "Chính sách bảo mật — Tiếng Anh",
       "privacyDraft": "Bản nháp viết theo Nghị định 13/2023 về bảo vệ dữ liệu cá nhân. Hãy kiểm tra (tốt nhất cùng luật sư) trước khi website chạy chính thức.",
       "privacyHint": "Khi để nguyên bản nháp, địa chỉ, email và điện thoại ở mục Thông tin liên hệ được tự điền vào. Xoá hết chữ trong ô để quay lại bản nháp. Một đoạn chỉ có một dòng bắt đầu bằng số (vd. “1. Chúng tôi là ai”) thành tiêu đề mục.",
-      "privacyNoEmail": "Chưa có email liên hệ: chính sách đang hướng dẫn người dùng gửi yêu cầu qua trang Liên hệ. Nên nhập email ở mục Thông tin liên hệ."
+      "privacyNoEmail": "Chưa có email liên hệ: chính sách đang hướng dẫn người dùng gửi yêu cầu qua trang Liên hệ. Nên nhập email ở mục Thông tin liên hệ.",
+      "termsTitle": "Điều khoản sử dụng",
+      "termsVi": "Điều khoản sử dụng — Tiếng Việt",
+      "termsEn": "Điều khoản sử dụng — Tiếng Anh",
+      "termsDraft": "Bản nháp về việc dùng website, tài khoản, gửi yêu cầu, sở hữu trí tuệ và giải quyết tranh chấp. Hãy kiểm tra (tốt nhất cùng luật sư) trước khi website chạy chính thức."
     },
     "theme": {
       "dark": "Giao diện tối"

@@ -32,7 +32,7 @@ function validateRegistration(values, password, confirmPassword, t) {
   else if (passwordProblem(password) === 'common') errors.password = t('auth.errPasswordCommon');
   if (!confirmPassword) errors.confirmPassword = t('auth.errConfirmRequired');
   else if (password && password !== confirmPassword) errors.confirmPassword = t('auth.errPasswordMatch');
-  if (!values.agreePrivacy) errors.agreePrivacy = t('privacy.errAgree'); // consent to the Chính sách bảo mật (Decree 13)
+  if (!values.agreePrivacy) errors.agreePrivacy = t('terms.errAgree'); // consent to the Điều khoản sử dụng and the Chính sách bảo mật (Decree 13)
   return errors;
 }
 

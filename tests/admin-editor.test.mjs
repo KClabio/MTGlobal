@@ -41,7 +41,9 @@ await suite(async (b) => {
     const ci = settingsBackup.contactInfo || {};
     await fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}` },
       body: new URLSearchParams({ companyProfile: settingsBackup.companyProfile || '', companyProfileEn: settingsBackup.companyProfileEn || '', address: ci.address || '', phone: ci.phone || '', email: ci.email || '', mapEmbedUrl: ci.mapEmbedUrl || '',
-        privacyPolicy: settingsBackup.privacyPolicy || '', privacyPolicyEn: settingsBackup.privacyPolicyEn || '' }) });
+        privacyPolicy: settingsBackup.privacyPolicy || '', privacyPolicyEn: settingsBackup.privacyPolicyEn || '',
+        termsOfUse: settingsBackup.termsOfUse || '', termsOfUseEn: settingsBackup.termsOfUseEn || '',
+        taxCode: ci.taxCode || '', registration: ci.registration || '' }) });
   };
   removeLater('products', { nameVi: { $regex: '^' + MARK } });
   removeLater('projects', { titleVi: { $regex: '^' + MARK } });
@@ -589,8 +591,8 @@ await suite(async (b) => {
       check('save redirects back to Thông tin công ty', r.status === 302 && r.headers.get('location') === '/admin/thong-tin-cong-ty', r.status);
       check('VI saved without tags', saved.companyProfile === 'Đoạn một.\n\nĐoạn hai & ba.', saved.companyProfile);
       check('EN saved without tags', saved.companyProfileEn === 'First para.\nSame para, new line.\n\nSecond para.', saved.companyProfileEn);
-      // The chat boxes (Zalo, Messenger) start empty on an older settings record: compare with them filled in
-      const contact = (c) => JSON.stringify(Object.entries({ zalo: '', messenger: '', ...c }).sort());
+      // The chat and tax code boxes start empty on an older settings record: compare with them filled in
+      const contact = (c) => JSON.stringify(Object.entries({ zalo: '', messenger: '', taxCode: '', registration: '', ...c }).sort());
       check('contact details untouched', contact(saved.contactInfo) === contact(original.contactInfo), { saved: saved.contactInfo, original: original.contactInfo });
       const page = await (await adminGet('/admin/thong-tin-cong-ty')).text();
       check('the form shows the plain-text hint and the text without tags', page.includes('Chỉ nhập văn bản thường, không cần thẻ HTML.') && /name="companyProfile" rows="\d+">Đoạn một\.\n\nĐoạn hai &amp; ba\.<\/textarea>/.test(page));
@@ -641,6 +643,108 @@ await suite(async (b) => {
     }
     const back = await d.collection('sitesettings').findOne({});
     check('policy text restored exactly', (back.privacyPolicy || '') === (original.privacyPolicy || '') && (back.privacyPolicyEn || '') === (original.privacyPolicyEn || ''));
+  });
+
+  await part(b, 'Điều khoản sử dụng text (Thông tin công ty)', async () => {
+    const original = settingsBackup;
+    const ci = original.contactInfo || {};
+    const { defaultTerms } = appRequire('./lib/terms-of-use.js');
+    const post = (fields) => fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}` },
+      body: new URLSearchParams({ companyProfile: original.companyProfile || '', companyProfileEn: original.companyProfileEn || '', address: ci.address || '', phone: ci.phone || '', email: ci.email || '', mapEmbedUrl: ci.mapEmbedUrl || '', ...fields }) });
+    const terms = async (lang) => (await fetch(BASE + '/dieu-khoan-su-dung', { headers: { cookie: `lang=${lang}` } })).text();
+    try {
+      await post({ termsOfUse: '', termsOfUseEn: '' });
+      const form = await (await adminGet('/admin/thong-tin-cong-ty')).text();
+      check('the admin boxes start with the draft (filled with the address), marked as a draft to check, with a link to the page',
+        form.includes('id="termsOfUse" name="termsOfUse"') && form.includes('id="termsOfUseEn" name="termsOfUseEn"') && form.includes('1. Về website') && form.includes('1. About the website')
+        && form.includes('data-terms-draft-note') && form.includes('href="/dieu-khoan-su-dung"') && (!ci.address || form.includes(ci.address)));
+      // The draft sent back unchanged (a plain "Lưu" of the page) stays "default"
+      await post({ termsOfUse: defaultTerms('vi', original), termsOfUseEn: defaultTerms('en', original) });
+      let saved = await d.collection('sitesettings').findOne({});
+      check('saving the unchanged draft keeps it as the default (follows later contact changes)', saved.termsOfUse === '' && saved.termsOfUseEn === '', { vi: (saved.termsOfUse || '').slice(0, 40) });
+      // Own text: plain text, a single numbered line becomes a heading
+      await post({ termsOfUse: 'ZZ điều khoản <b>thử</b>.\n\n1. Mục một\n\n- điểm a\n- điểm b', termsOfUseEn: '' });
+      saved = await d.collection('sitesettings').findOne({});
+      check('own VI text saved as plain text', saved.termsOfUse === 'ZZ điều khoản thử.\n\n1. Mục một\n\n- điểm a\n- điểm b', saved.termsOfUse);
+      let vi = await terms('vi');
+      check('the page shows it: paragraph, "1. Mục một" as a heading, the list', vi.includes('<p>ZZ điều khoản thử.</p>') && vi.includes('<h2>1. Mục một</h2>') && vi.includes('<li>điểm a</li><li>điểm b</li>') && !vi.includes('Về website'));
+      check('… English still shows the draft', (await terms('en')).includes('<h2>1. About the website</h2>'));
+      check('… and the Chính sách bảo mật is untouched', saved.privacyPolicy === (original.privacyPolicy || ''));
+      check('a save without the terms boxes (older form) leaves the text alone', (await post({}), (await d.collection('sitesettings').findOne({})).termsOfUse === saved.termsOfUse));
+      await post({ termsOfUse: '   ', termsOfUseEn: '' });
+      vi = await terms('vi');
+      check('an empty box brings the draft back', vi.includes('<h2>1. Về website</h2>') && !vi.includes('ZZ điều khoản'));
+    } finally {
+      await restoreSettingsNow();
+    }
+    const back = await d.collection('sitesettings').findOne({});
+    check('terms text restored exactly', (back.termsOfUse || '') === (original.termsOfUse || '') && (back.termsOfUseEn || '') === (original.termsOfUseEn || ''));
+  });
+
+  await part(b, 'Thông tin công ty: tax code and the map on Liên hệ', async () => {
+    const original = settingsBackup;
+    const ci = original.contactInfo || {};
+    const cookie = `connect.sid=${admin.sid}`;
+    const base = { companyProfile: original.companyProfile || '', companyProfileEn: original.companyProfileEn || '', address: ci.address || '', phone: ci.phone || '', email: ci.email || '' };
+    const post = (fields) => fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie }, body: new URLSearchParams({ ...base, ...fields }) });
+    const saved = async () => ((await d.collection('sitesettings').findOne({})).contactInfo || {});
+    const get = async (path) => { const r = await fetch(BASE + path); return { csp: r.headers.get('content-security-policy') || '', html: await r.text() }; };
+    const MAP = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3724!2d105.79!3d21.03';
+    const CODE = `<iframe src="${MAP}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+    const LONG = 'do Sở Kế hoạch và Đầu tư Thành phố Hà Nội cấp lần đầu ngày 01/01/2020, đăng ký thay đổi lần thứ 3 ngày 15/06/2025';
+    try {
+      // Empty boxes: nothing shown anywhere
+      let r = await post({ mapEmbedUrl: '', taxCode: '', registration: '', zalo: ci.zalo || '', messenger: ci.messenger || '' });
+      let c = await get('/lien-he');
+      check('empty map box → no map on Liên hệ', r.status === 302 && !c.html.includes('data-contact-map'));
+      check('empty tax code → no line in the footer or on Về MTG', !c.html.includes('data-footer-tax') && !(await get('/ve-mtg')).html.includes('data-about-tax'));
+      check('the content policy allows frames from this site and www.google.com only', /frame-src 'self' https:\/\/www\.google\.com(;|$)/.test(c.csp), c.csp);
+      const form = await (await adminGet('/admin/thong-tin-cong-ty')).text();
+      check('the admin form has the tax code, issued-by and map boxes with their hints', ['id="taxCode" name="taxCode"', 'id="registration" name="registration"', 'id="mapEmbedUrl" name="mapEmbedUrl"', 'id="mapHint"', 'Nhúng bản đồ'].every((s) => form.includes(s)));
+
+      // The whole "Embed a map" code and a tax code with where it was issued
+      r = await post({ mapEmbedUrl: CODE, taxCode: ' 0109876543 ', registration: `  ${LONG}  ` });
+      let s = await saved();
+      check('saved: the map address taken from the pasted code, the tax code and "issued by" trimmed', r.status === 302 && s.mapEmbedUrl === MAP && s.taxCode === '0109876543' && s.registration === LONG, s);
+      check('… the saved chat links are untouched', s.zalo === (ci.zalo || '') && s.messenger === (ci.messenger || ''));
+      c = await get('/lien-he');
+      check('Liên hệ shows the map: Google embed, lazy, titled with the address', c.html.includes(`<iframe src="${MAP}"`) && /<iframe[^>]*loading="lazy"/.test(c.html) && c.html.includes(`title="Bản đồ: ${ci.address || 'MTG'}"`));
+      check('the footer shows "Mã số doanh nghiệp: …, issued by …"', c.html.includes(`data-footer-tax>Mã số doanh nghiệp: 0109876543, ${LONG}</p>`));
+      const about = await get('/ve-mtg');
+      check('Về MTG shows it too', about.html.includes('data-about-tax') && about.html.includes('0109876543'));
+      const home = await get('/');
+      check('Google\'s company card (Trang chủ) carries the tax code', /"taxID":\s*"0109876543"/.test(home.html));
+      const policy = (await get('/chinh-sach-bao-mat')).html;
+      check('the privacy draft names the tax code and Google Maps', (original.privacyPolicy || policy.includes('Mã số doanh nghiệp: 0109876543')) && (original.privacyPolicy || policy.includes('Google Maps')));
+      const en = await fetch(BASE + '/lien-he', { headers: { cookie: 'lang=en' } }).then((x) => x.text());
+      check('English: "Business registration no." and the map titled "Map: …"', en.includes('Business registration no.: 0109876543') && en.includes(`title="Map: ${ci.address || 'MTG'}"`));
+
+      // Something that isn't a Google Maps embed: refused, the rest saved, the old map kept, the staff told why
+      r = await post({ mapEmbedUrl: 'https://maps.app.goo.gl/abc123', taxCode: '0109876543', registration: '', phone: ci.phone || '' });
+      s = await saved();
+      const notice = await (await adminGet('/admin/thong-tin-cong-ty')).text();
+      check('a normal map link is refused: old map kept, the other boxes saved', r.status === 302 && s.mapEmbedUrl === MAP && s.registration === '', s);
+      check('… with a red notice saying how to copy the embed code', notice.includes('không phải mã nhúng của Google Maps'));
+      r = await post({ mapEmbedUrl: '<iframe src="https://evil.example/x"></iframe>', taxCode: '0109876543' });
+      check('an iframe of another website is refused too', (await saved()).mapEmbedUrl === MAP);
+
+      // An older form without the new boxes keeps them
+      await post({ mapEmbedUrl: MAP, taxCode: '0109876543', registration: 'do Sở cấp' });
+      await fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie }, body: new URLSearchParams(base) });
+      s = await saved();
+      check('a save without the map / tax boxes leaves them alone', s.mapEmbedUrl === MAP && s.taxCode === '0109876543' && s.registration === 'do Sở cấp', s);
+
+      // Tags typed in are dropped; emptying the boxes removes the map and the line
+      await post({ mapEmbedUrl: '', taxCode: '<b>0109876543</b>', registration: '<script>x</script>do Sở cấp' });
+      s = await saved();
+      check('tags in the tax code boxes are removed', s.taxCode === '0109876543' && !/[<>]/.test(s.registration), s);
+      c = await get('/lien-he');
+      check('emptying the map box takes the map off Liên hệ', s.mapEmbedUrl === '' && !c.html.includes('data-contact-map'));
+    } finally {
+      await restoreSettingsNow();
+    }
+    const back = (await d.collection('sitesettings').findOne({})).contactInfo || {};
+    check('contact details restored exactly', ['address', 'phone', 'email', 'mapEmbedUrl', 'zalo', 'messenger', 'taxCode', 'registration'].every((k) => (back[k] || '') === (ci[k] || '')), back);
   });
 
   await part(b, 'content forms save plain text', async () => {

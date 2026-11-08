@@ -43,7 +43,7 @@ await suite(async (b) => {
     check('/dang-nhap: "Đăng nhập bằng Google" under the form, after "hoặc"', /class="auth-divider"><span>hoặc<\/span>/.test(r.text) && /href="\/dang-nhap\/google" data-google-login>[\s\S]*?Đăng nhập bằng Google/.test(r.text));
     r = await v.go('/dang-ky');
     check('/dang-ky: "Đăng ký bằng Google"', /data-google-login>[\s\S]*?Đăng ký bằng Google/.test(r.text));
-    check('under the Google button: continuing means agreeing to the Chính sách bảo mật (linked)', /data-google-consent>Khi tiếp tục với Google, bạn đồng ý với <a href="\/chinh-sach-bao-mat"/.test(r.text));
+    check('under the Google button: continuing means agreeing to the Điều khoản sử dụng and the Chính sách bảo mật (both linked)', /data-google-consent>Khi tiếp tục với Google, bạn đồng ý với <a href="\/dieu-khoan-su-dung"[^>]*>Điều khoản sử dụng<\/a> và <a href="\/chinh-sach-bao-mat"/.test(r.text));
     r = await v.go('/dang-nhap/google');
     const to = r.location ? new URL(r.location) : null;
     check('the button leads to Google with this site\'s address to come back to, a state, and "choose an account"', r.status === 302 && to && to.port === String(FAKE_GOOGLE_PORT)

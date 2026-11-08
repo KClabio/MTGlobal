@@ -439,10 +439,14 @@ body.nav-open .chat-fab-wrap, body.nav-open a.chat-fab { display: none; } /* the
 /* Liên hệ: the Zalo / Messenger buttons under the request form, each with its brand logo before the text */
 .contact-chat { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 0; }
 .contact-chat .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
+/* Liên hệ: the Google Maps map under the buttons */
+.contact-map { margin-top: 32px; aspect-ratio: 4 / 3; max-width: 100%; border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); overflow: hidden; background: var(--mtg-surface); }
+.contact-map iframe { display: block; width: 100%; height: 100%; border: 0; }
+@media (min-width: 640px) { .contact-map { aspect-ratio: 16 / 10; } }
 
 /* ---- Printing: no request form, notices, chat button or picture buttons; cards two to a row ---- */
 @media print {
-  .form-card:has([data-quote-form]), #yeu-cau, .site-toast, .media-zoom-badge, .password-toggle, .chat-fab-wrap, a.chat-fab { display: none !important; }
+  .form-card:has([data-quote-form]), #yeu-cau, .site-toast, .media-zoom-badge, .password-toggle, .chat-fab-wrap, a.chat-fab, .contact-map { display: none !important; }
   .coming-soon-overlay { background: none; }
   .coming-soon-badge { background: #fff; border-color: var(--mtg-border); color: var(--mtg-ink); }
   .card-grid, .card-grid.cols-4 { grid-template-columns: repeat(2, 1fr); gap: 16px; }

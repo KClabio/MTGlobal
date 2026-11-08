@@ -410,12 +410,14 @@ await suite(async (b) => {
     // Server checks (the browser checks are bypassed here)
     let r = await post('/dang-ky', { name: ' ', email: '', password: '', confirmPassword: '' });
     let e = errorsIn(r.text);
-    check('server: empty form refused, one message per required box (name, email, password, confirmation, consent tick)', r.status === 400 && e.name === 'Vui lòng nhập họ và tên.' && e.email === 'Vui lòng nhập email.' && e.password === 'Vui lòng nhập mật khẩu.' && e.confirmPassword === 'Vui lòng nhập lại mật khẩu.' && e.agreePrivacy === 'Vui lòng đánh dấu đồng ý với Chính sách bảo mật.' && !e.phone, e);
+    check('server: empty form refused, one message per required box (name, email, password, confirmation, consent tick)', r.status === 400 && e.name === 'Vui lòng nhập họ và tên.' && e.email === 'Vui lòng nhập email.' && e.password === 'Vui lòng nhập mật khẩu.' && e.confirmPassword === 'Vui lòng nhập lại mật khẩu.' && e.agreePrivacy === 'Vui lòng đánh dấu đồng ý với Điều khoản sử dụng và Chính sách bảo mật.' && !e.phone, e);
     const { agreePrivacy, ...noTick } = ok;
     r = await post('/dang-ky', noTick);
     e = errorsIn(r.text);
     check('server: everything right but the Chính sách bảo mật tick → refused, only the tick named', r.status === 400 && Object.keys(e).join() === 'agreePrivacy', e);
     check('… the page links the policy next to the tick', /<label class="checkbox-row consent-row" for="regAgree">[\s\S]*?href="\/chinh-sach-bao-mat"/.test(r.text));
+    check('… and the Điều khoản sử dụng: "Tôi đồng ý với Điều khoản sử dụng và Chính sách bảo mật", each opening in a new tab',
+      /for="regAgree">[\s\S]*?Tôi đồng ý với <a href="\/dieu-khoan-su-dung" target="_blank" rel="noopener">Điều khoản sử dụng<\/a> và <a href="\/chinh-sach-bao-mat" target="_blank" rel="noopener">Chính sách bảo mật<\/a> \*/.test(r.text));
     r = await post('/dang-ky', { ...ok, email: 'not-an-email', phone: '12ab', password: 'abc', confirmPassword: 'abd' });
     e = errorsIn(r.text);
     check('server: bad email, bad phone, short password, mismatched confirmation each named', r.status === 400 && e.email === 'Email không hợp lệ.' && e.phone === 'Số điện thoại không hợp lệ.' && e.password === 'Mật khẩu cần tối thiểu 8 ký tự.' && e.confirmPassword === 'Mật khẩu xác nhận không khớp.', e);

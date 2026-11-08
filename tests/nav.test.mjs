@@ -149,6 +149,27 @@ await suite(async (b) => {
     check('the footer links the page (after the © line)', /&copy;[\s\S]{0,200}<a class="footer-bottom-link" href="\/chinh-sach-bao-mat">Chính sách bảo mật<\/a>/.test(home));
   });
 
+  await part(b, 'Điều khoản sử dụng page (lib/terms-of-use.js)', async () => {
+    const page = async (lang) => { const r = await fetch(BASE + '/dieu-khoan-su-dung', { headers: { cookie: `lang=${lang}` } }); return { status: r.status, text: await r.text() }; };
+    const body = (html) => (html.match(/data-terms-text>([\s\S]*?)<\/div>\s*<\/div>\s*<\/section>/) || [])[1] || '';
+    const settings = await (await db()).collection('sitesettings').findOne({});
+    const own = { vi: settings && settings.termsOfUse, en: settings && settings.termsOfUseEn };
+    for (const [lang, title, first, privacyLink] of [['vi', 'Điều khoản sử dụng', '1. Về website', 'Chính sách bảo mật (/chinh-sach-bao-mat)'], ['en', 'Terms of Use', '1. About the website', 'Privacy Policy (/chinh-sach-bao-mat)']]) {
+      const p = await page(lang);
+      const text = body(p.text);
+      check(`${lang}: the page opens with its title "${title}", with a description for search engines`, p.status === 200 && p.text.includes(`>${title}</h1>`) && p.text.includes(`<title>${title} - MTG</title>`) && /<meta name="description" content="[^"]{20,}"/.test(p.text), p.status);
+      check(`${lang}: search engines may list it (no noindex)`, !p.text.includes('content="noindex"'));
+      if (own[lang]) continue; // the staff's own text: only the page itself is checked
+      check(`${lang}: the default draft, 12 numbered sections shown as headings, starting with "${first}"`, (text.match(/<h2>\d{1,2}\. /g) || []).length === 12 && text.includes(`<h2>${first}</h2>`), (text.match(/<h2>[^<]*/g) || []).slice(0, 3));
+      check(`${lang}: points to the privacy policy for personal data`, text.includes(privacyLink));
+      check(`${lang}: the company address from Thông tin công ty is filled in, no blanks left`, (!settings.contactInfo.address || text.includes(settings.contactInfo.address)) && !/\$\{|undefined|\bnull\b/.test(text));
+    }
+    const home = await (await fetch(BASE + '/')).text();
+    check('the footer links the page, after Chính sách bảo mật', /href="\/chinh-sach-bao-mat">Chính sách bảo mật<\/a>\s*<a class="footer-bottom-link" href="\/dieu-khoan-su-dung">Điều khoản sử dụng<\/a>/.test(home));
+    const locs = await (await fetch(BASE + '/sitemap.xml')).text();
+    check('sitemap.xml: the page in both languages', locs.includes('/dieu-khoan-su-dung<') && locs.includes('/dieu-khoan-su-dung?lang=en'));
+  });
+
   await part(b, 'buttons and form fields use the site font (Safari showed Times)', async () => {
     const sameFont = (url) => ev(`(() => { const body = getComputedStyle(document.body).fontFamily;
       return [...document.querySelectorAll('button, input:not([type=hidden]), select, textarea')].filter((el) => getComputedStyle(el).fontFamily !== body)

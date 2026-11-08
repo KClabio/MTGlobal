@@ -60,6 +60,7 @@ app.locals.levelFromSchool = require('./lib/project-levels').levelFromSchool;
 app.locals.INTEREST_GROUPS = require('./models/QuoteRequest').INTEREST_GROUPS; // "Bạn quan tâm đến" list (partials/quote-form.ejs)
 app.locals.isProductLine = require('./models/QuoteRequest').isProductLine; // robot name shown with the category (request lists)
 app.locals.chatLinks = require('./lib/chat-links').chatLinks; // Zalo / Messenger links (partials/chat-button.ejs, footer, Liên hệ)
+app.locals.mapEmbed = require('./lib/map-embed').cleanMapEmbed; // the Google Maps map on Liên hệ ('' = none)
 app.locals.QUOTE_MESSAGE_MAX = require('./lib/quote-request').MESSAGE_MAX; // request message limit + counter (partials/quote-form.ejs)
 app.locals.googleEnabled = require('./lib/google-auth').isConfigured(); // "Đăng nhập bằng Google" button (login, register)
 // Behind the host's HTTPS proxy (lib/trust-proxy.js turns TRUST_PROXY=1 into the number Express expects)

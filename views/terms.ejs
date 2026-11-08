@@ -1,0 +1,15 @@
+<%- include('partials/header', { title: t('terms.title') + ' - MTG', bannerKey: 'terms' }) %>
+
+<%- include('partials/page-banner', {
+  pill: 'MTG',
+  heading: t('terms.title'),
+  bannerKey: 'terms'
+}) %>
+
+<section class="section">
+  <div class="container">
+    <%- include('partials/legal-text', { text: terms, kind: 'terms' }) %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

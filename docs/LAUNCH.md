@@ -71,9 +71,10 @@ The next time that account opens Quản trị, it sets up two-step login. Keep t
 
 In the admin:
 
-- Thông tin công ty: phone, email, address, map, Zalo and Messenger.
-- Cài đặt chung → Email thông báo: who receives new requests.
-- The privacy policy text, once it has been checked.
+- Thông tin công ty: phone, email, address, map, Zalo and Messenger. The Zalo (`0912345678`) and Messenger (`mtg.vn`) in the development database are only samples: replace them with the company's own, or empty the boxes, before launch.
+- Cài đặt chung → Email thông báo: who receives new requests; Trang chủ → the main picture.
+- The Chính sách bảo mật and Điều khoản sử dụng texts, once they have been checked (ideally with a lawyer).
+- Content still empty in the development database: the three "Sắp ra mắt" robots, the two Dịch vụ pages, equipment and project descriptions, and the first Tin tức articles.
 
 Then, on the live address:
 

@@ -535,4 +535,36 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('a token is stored as its hash', reset.hashToken('abc') !== 'abc' && reset.hashToken('abc').length === 64);
 }
 
+// The map on Liên hệ (lib/map-embed.js): only a Google Maps embed address is kept
+{
+  const { cleanMapEmbed } = appRequire('./lib/map-embed.js');
+  const url = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3724!2d105.8!3d21.0!2m3!1f0!2f0!3f0';
+  const code = `<iframe src="${url.replace(/&/g, '&amp;')}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+  check('map: the embed address is kept as it is', cleanMapEmbed(url) === url, cleanMapEmbed(url));
+  check('map: the whole "Embed a map" code gives its address (&amp; undone)', cleanMapEmbed(code) === url && cleanMapEmbed(`  ${code}\n`) === url, cleanMapEmbed(code));
+  check('map: & inside the address survives', cleanMapEmbed(`<iframe src="https://www.google.com/maps/embed?pb=a&amp;hl=vi">`) === 'https://www.google.com/maps/embed?pb=a&hl=vi');
+  check('map: empty, spaces or nothing → ""', cleanMapEmbed('') === '' && cleanMapEmbed('   ') === '' && cleanMapEmbed(undefined) === '' && cleanMapEmbed(null) === '');
+  check('map: a normal Google Maps link (not an embed) is refused', cleanMapEmbed('https://maps.app.goo.gl/abc123') === '' && cleanMapEmbed('https://www.google.com/maps/place/Hà+Nội') === '');
+  check('map: other websites are refused, also look-alikes', ['https://evil.example/maps/embed?pb=1', 'https://www.google.com.evil.example/maps/embed?pb=1', 'https://google.com/maps/embed?pb=1',
+    'https://www.google.com@evil.example/maps/embed', 'https://user:pw@www.google.com/maps/embed?pb=1', 'https://www.google.com:8443/maps/embed?pb=1'].every((u) => cleanMapEmbed(u) === ''));
+  check('map: http, javascript: and data: are refused', cleanMapEmbed('http://www.google.com/maps/embed?pb=1') === '' && cleanMapEmbed('javascript:alert(1)') === '' && cleanMapEmbed('data:text/html,<p>x</p>') === '');
+  check('map: other markup, or an iframe of another site, is refused', cleanMapEmbed('<script src="https://www.google.com/maps/embed?pb=1"></script>') === '' && cleanMapEmbed('<iframe src="https://evil.example/x"></iframe>') === '');
+  check('map: an address that is far too long is refused', cleanMapEmbed(url + 'a'.repeat(3000)) === '');
+}
+
+// The tax code in the legal texts (lib/privacy-policy.js, lib/terms-of-use.js)
+{
+  const { defaultPolicy, registrationText } = appRequire('./lib/privacy-policy.js');
+  const { defaultTerms } = appRequire('./lib/terms-of-use.js');
+  const none = { contactInfo: { address: 'Số 4A' } };
+  const withCode = { contactInfo: { address: 'Số 4A', taxCode: '0109876543', registration: 'do Sở KH&ĐT TP. Hà Nội cấp ngày 01/01/2020.' } };
+  check('tax code: none set → no line, no "Mã số" anywhere', registrationText({}, 'vi') === '' && !defaultPolicy('vi', none).includes('Mã số') && !defaultTerms('en', none).includes('registration no.'));
+  check('tax code: shown after the address in the privacy policy (VI) and terms (EN), the ending dot not doubled',
+    defaultPolicy('vi', withCode).includes('Địa chỉ: Số 4A. Mã số doanh nghiệp: 0109876543, do Sở KH&ĐT TP. Hà Nội cấp ngày 01/01/2020. Liên hệ')
+    && defaultTerms('en', withCode).includes('Số 4A. Business registration no.: 0109876543, do Sở KH&ĐT TP. Hà Nội cấp ngày 01/01/2020. Contact:'));
+  check('tax code without "issued by": just the number', registrationText({ taxCode: '0109876543' }, 'en') === ' Business registration no.: 0109876543.');
+  check('privacy policy: Google Maps named only once a map is set', !defaultPolicy('vi', none).includes('Google Maps')
+    && defaultPolicy('vi', { contactInfo: { mapEmbedUrl: 'https://www.google.com/maps/embed?pb=1' } }).includes('trang Liên hệ có bản đồ do Google Maps hiển thị'));
+}
+
 process.exit(result() ? 1 : 0);

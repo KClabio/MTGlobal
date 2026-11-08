@@ -22,7 +22,7 @@
             data-err-confirm-required="<%= t('auth.errConfirmRequired') %>"
             data-err-password-match="<%= t('auth.errPasswordMatch') %>"
             data-password-match="<%= t('auth.passwordMatch') %>"
-            data-err-agree="<%= t('privacy.errAgree') %>">
+            data-err-agree="<%= t('terms.errAgree') %>">
         <% if (rgForRequest) { %><input type="hidden" name="forRequest" value="1"><% } %>
         <div class="form-group">
           <label for="regName"><%= t('forms.name') %> *</label>
@@ -64,7 +64,7 @@
         <div class="form-group consent-group">
           <label class="checkbox-row consent-row" for="regAgree">
             <input type="checkbox" class="<%= rgInvalid('agreePrivacy').trim() %>" id="regAgree" name="agreePrivacy" value="1"<%= values.agreePrivacy ? ' checked' : '' %>>
-            <span><%= t('privacy.agree') %> <a href="/chinh-sach-bao-mat" target="_blank" rel="noopener"><%= t('privacy.title') %></a> *</span>
+            <span><%= t('privacy.agree') %> <a href="/dieu-khoan-su-dung" target="_blank" rel="noopener"><%= t('terms.title') %></a> <%= t('terms.and') %> <a href="/chinh-sach-bao-mat" target="_blank" rel="noopener"><%= t('privacy.title') %></a> *</span>
           </label>
           <%- rgError('agreePrivacy') %>
         </div>

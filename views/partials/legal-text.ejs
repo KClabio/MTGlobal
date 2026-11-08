@@ -1,0 +1,13 @@
+<%# The text of Chính sách bảo mật / Điều khoản sử dụng (lib/privacy-policy.js, lib/terms-of-use.js or the admin's own
+    text): plain text; a paragraph that is only a short numbered line ("1. Chúng tôi là ai") becomes a section heading.
+    Takes text and kind ('privacy' | 'terms'). %>
+<div class="prose-text privacy-text" data-<%= kind %>-text>
+  <% String(text).replace(/\r\n?/g, '\n').split(/\n\s*\n/).forEach(function (block) {
+       const b = block.trim();
+       if (!b) return;
+       if (/^\d{1,2}\.\s+[^\n]{1,80}$/.test(b)) { %>
+    <h2><%= b %></h2>
+  <% } else { %>
+    <%- formatText(b) %>
+  <% } }) %>
+</div>

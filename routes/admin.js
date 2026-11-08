@@ -25,6 +25,8 @@ const { getDashboardData } = require('../lib/dashboard');
 const { toPlainText, slugify } = require('../lib/text');
 const { orderMedia } = require('../lib/media-order');
 const { defaultPolicy } = require('../lib/privacy-policy');
+const { defaultTerms } = require('../lib/terms-of-use');
+const { cleanMapEmbed } = require('../lib/map-embed');
 const { PRODUCT_SECTIONS, sectionForCategory } = require('../lib/admin-sections');
 const { parseServiceSections } = require('../lib/service-content');
 const SolutionPage = require('../models/SolutionPage');
@@ -908,15 +910,17 @@ router.post('/cai-dat', wrapUpload(uploadSettingsImages, async (req, res) => {
 // ---- Thông tin công ty (Về MTG & Liên hệ): company profile + contact details ----
 // The Chính sách bảo mật boxes start with the default draft, filled with the current contact details
 const privacyDefaults = (settings) => ({ vi: defaultPolicy('vi', settings), en: defaultPolicy('en', settings) });
+// … and so do the Điều khoản sử dụng boxes (lib/terms-of-use.js)
+const termsDefaults = (settings) => ({ vi: defaultTerms('vi', settings), en: defaultTerms('en', settings) });
 
 router.get('/thong-tin-cong-ty', async (req, res) => {
   const settings = await loadSettings();
-  res.render('admin/settings', { settings: settingsView(settings), privacyDefault: privacyDefaults(settings), error: null });
+  res.render('admin/settings', { settings: settingsView(settings), privacyDefault: privacyDefaults(settings), termsDefault: termsDefaults(settings), error: null });
 });
 
 router.post('/thong-tin-cong-ty', async (req, res) => {
   const settings = await loadSettings();
-  const { companyProfile, companyProfileEn, privacyPolicy, privacyPolicyEn, address, phone, email, mapEmbedUrl, zalo, messenger } = req.body;
+  const { companyProfile, companyProfileEn, privacyPolicy, privacyPolicyEn, termsOfUse, termsOfUseEn, address, phone, email, mapEmbedUrl, zalo, messenger, taxCode, registration } = req.body;
   // Plain text only: any tags typed or pasted in are stripped; the About page formats the paragraphs
   settings.companyProfile = toPlainText(companyProfile);
   settings.companyProfileEn = toPlainText(companyProfileEn);
@@ -926,19 +930,33 @@ router.post('/thong-tin-cong-ty', async (req, res) => {
   const ownText = (sent, draft) => (toPlainText(sent) === toPlainText(draft) ? '' : toPlainText(sent));
   if (typeof privacyPolicy === 'string') settings.privacyPolicy = ownText(privacyPolicy, before.vi);
   if (typeof privacyPolicyEn === 'string') settings.privacyPolicyEn = ownText(privacyPolicyEn, before.en);
-  // A post without the chat boxes (an older form) keeps the saved Zalo / Messenger
+  const termsBefore = termsDefaults(settings);
+  if (typeof termsOfUse === 'string') settings.termsOfUse = ownText(termsOfUse, termsBefore.vi);
+  if (typeof termsOfUseEn === 'string') settings.termsOfUseEn = ownText(termsOfUseEn, termsBefore.en);
+  // A post without the chat, map or tax code boxes (an older form) keeps the saved values
   const saved = settings.contactInfo || {};
+  // The map: only a Google Maps embed address (lib/map-embed.js); anything else is refused and the saved map kept
+  const mapSent = typeof mapEmbedUrl === 'string' ? mapEmbedUrl.trim() : null;
+  const map = mapSent === null ? saved.mapEmbedUrl || '' : cleanMapEmbed(mapSent);
+  const mapRefused = !!mapSent && !map;
+  const line = (v, max) => toPlainText(v).replace(/\s+/g, ' ').trim().slice(0, max);
   settings.contactInfo = {
     address: (address || '').trim(),
     phone: (phone || '').trim(),
     email: (email || '').trim(),
-    mapEmbedUrl: (mapEmbedUrl || '').trim(),
+    mapEmbedUrl: mapRefused ? saved.mapEmbedUrl || '' : map,
     // The chat button's links (lib/chat-links.js): stored cleaned, '' when not usable
     zalo: typeof zalo === 'string' ? cleanZalo(zalo) : saved.zalo || '',
     messenger: typeof messenger === 'string' ? cleanMessenger(messenger) : saved.messenger || '',
+    taxCode: typeof taxCode === 'string' ? line(taxCode, 40) : saved.taxCode || '',
+    registration: typeof registration === 'string' ? line(registration, 300) : saved.registration || '',
   };
   await settings.save();
   clearSiteSettingsCache();
+  if (mapRefused) {
+    flash(req, 'error', res.locals.t('admin.settings.mapRefused'));
+    return res.redirect('/admin/thong-tin-cong-ty');
+  }
   done(req, res, 'admin.flash.settingsSaved', {}, '/admin/thong-tin-cong-ty');
 });
 

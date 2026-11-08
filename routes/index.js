@@ -14,6 +14,7 @@ const { groupProjectsByLevel } = require('../lib/project-levels');
 const { buildHomeDomains, buildSolutionCards, buildServiceCards } = require('../lib/home-domains');
 const { groupEquipmentByPart, partSlug } = require('../lib/equipment-parts');
 const { policyText } = require('../lib/privacy-policy');
+const { termsText } = require('../lib/terms-of-use');
 const { getHelpItems, groupHelpItems } = require('../lib/help-topics');
 const requestThrottle = require('../lib/request-throttle');
 const requestMail = require('../lib/request-mail');
@@ -52,6 +53,12 @@ router.get('/ve-mtg', async (req, res) => {
 router.get('/chinh-sach-bao-mat', (req, res) => {
   const { settings, lang } = res.locals;
   res.render('privacy', { policy: policyText(lang, settings) });
+});
+
+// Điều khoản sử dụng: the admin's text (Thông tin công ty) or the default draft of lib/terms-of-use.js
+router.get('/dieu-khoan-su-dung', (req, res) => {
+  const { settings, lang } = res.locals;
+  res.render('terms', { terms: termsText(lang, settings) });
 });
 
 // Hỗ trợ: questions and answers on using the website, in fixed groups (lib/help-topics.js, Admin → Hỗ trợ)

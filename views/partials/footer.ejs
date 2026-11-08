@@ -5,6 +5,11 @@
       <div class="footer-brand">
         <div class="logo"><%- include('logo') %></div>
         <p class="footer-company"><%= lang === 'en' ? 'Mễ Trì Global Technology Co., Ltd' : 'Công ty TNHH Công nghệ Mễ Trì Global' %></p>
+        <%# Mã số doanh nghiệp (Admin → Thông tin công ty), with where/when it was issued; nothing while empty %>
+        <% const ftReg = (settings && settings.contactInfo) || {}; %>
+        <% if (ftReg.taxCode) { %>
+          <p class="footer-tax" data-footer-tax><%= t('footer.taxCode') %>: <%= ftReg.taxCode %><% if (ftReg.registration) { %>, <%= ftReg.registration %><% } %></p>
+        <% } %>
         <p class="footer-about">
           <%= lang === 'en'
             ? 'Smart robotics, STEM Lab solutions, and technology consulting services.'
@@ -44,6 +49,7 @@
       <div class="container">
         &copy; <%= new Date().getFullYear() %> MTG — Mễ Trì Global. <%= t('common.allRightsReserved') %>.
         <a class="footer-bottom-link" href="/chinh-sach-bao-mat"><%= t('privacy.title') %></a>
+        <a class="footer-bottom-link" href="/dieu-khoan-su-dung"><%= t('terms.title') %></a>
       </div>
     </div>
   </footer>

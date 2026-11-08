@@ -91,6 +91,7 @@
 .footer-brand .logo { color: #fff; }
 .footer-brand p { color: rgba(255,255,255,.72); }
 .footer-brand .footer-company { margin: 18px 0 6px; color: #fff; font-weight: 700; font-size: .95rem; } /* matches .footer-col .footer-title */
+.footer-brand .footer-tax { max-width: 340px; margin: 0 0 10px; font-size: .82rem; line-height: 1.5; overflow-wrap: anywhere; }
 .footer-brand .footer-about { max-width: 340px; margin: 0; font-size: .9rem; line-height: 1.6; text-wrap: pretty; }
 /* On the navy footer, present the white logo as a badge instead of a raw white block */
 .footer-brand .logo .logo-img { height: 56px; padding: 6px 12px; background: #fff; border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow); }

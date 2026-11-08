@@ -28,13 +28,19 @@ const siteSettingsSchema = new mongoose.Schema({
   // Chính sách bảo mật (/chinh-sach-bao-mat): empty = the default draft of lib/privacy-policy.js
   privacyPolicy: { type: String, default: '' }, // Vietnamese
   privacyPolicyEn: { type: String, default: '' },
+  // Điều khoản sử dụng (/dieu-khoan-su-dung): empty = the default draft of lib/terms-of-use.js
+  termsOfUse: { type: String, default: '' }, // Vietnamese
+  termsOfUseEn: { type: String, default: '' },
   // The Hỗ trợ page's starter questions were saved once (lib/help-topics.js): never again, even if all are deleted
   helpSeeded: { type: Boolean, default: false },
   contactInfo: {
     address: { type: String, default: '' },
     phone: { type: String, default: '' },
     email: { type: String, default: '' },
-    mapEmbedUrl: { type: String, default: '' },
+    mapEmbedUrl: { type: String, default: '' }, // a Google Maps embed address only (lib/map-embed.js): the map on Liên hệ
+    // Mã số doanh nghiệp (the tax code) and where/when it was issued: footer, Về MTG, Google's company card, legal texts
+    taxCode: { type: String, default: '' },
+    registration: { type: String, default: '' },
     zalo: { type: String, default: '' }, // phone number of the company's Zalo: the chat button (partials/chat-button.ejs)
     messenger: { type: String, default: '' }, // Facebook page name (m.me/<name>): the chat button
   },

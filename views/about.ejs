@@ -14,6 +14,11 @@
     <% if (settings && settings.contactInfo && settings.contactInfo.address) { %>
       <p style="text-align:center; max-width:640px; margin:0 auto 2em;">
         <strong><%= t('common.address') %>:</strong> <%= settings.contactInfo.address %>
+        <% if (settings.contactInfo.taxCode) { %><br><span data-about-tax><strong><%= t('footer.taxCode') %>:</strong> <%= settings.contactInfo.taxCode %><% if (settings.contactInfo.registration) { %>, <%= settings.contactInfo.registration %><% } %></span><% } %>
+      </p>
+    <% } else if (settings && settings.contactInfo && settings.contactInfo.taxCode) { %>
+      <p style="text-align:center; max-width:640px; margin:0 auto 2em;" data-about-tax>
+        <strong><%= t('footer.taxCode') %>:</strong> <%= settings.contactInfo.taxCode %><% if (settings.contactInfo.registration) { %>, <%= settings.contactInfo.registration %><% } %>
       </p>
     <% } %>
     <% const companyProfile = settings && (lang === 'en' && settings.companyProfileEn ? settings.companyProfileEn : settings.companyProfile); %>

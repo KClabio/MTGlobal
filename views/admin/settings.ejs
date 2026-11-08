@@ -39,6 +39,20 @@
         <textarea class="form-control" id="privacyPolicyEn" name="privacyPolicyEn" rows="14"><%= settings.privacyPolicyEn || privacyDefault.en %></textarea>
         <%- include('partials/plain-text-hint') %>
       </div>
+
+      <%# Điều khoản sử dụng: the same, with the default draft of lib/terms-of-use.js %>
+      <h2 class="admin-subhead" id="dieu-khoan-su-dung"><%= t('admin.settings.termsTitle') %></h2>
+      <p class="form-hint" data-terms-draft-note><%= t('admin.settings.termsDraft') %> <a href="/dieu-khoan-su-dung" target="_blank" rel="noopener"><%= t('admin.viewPage.item', { name: t('terms.title') }) %> ↗</a></p>
+      <div class="form-group">
+        <label for="termsOfUse"><%= t('admin.settings.termsVi') %></label>
+        <textarea class="form-control" id="termsOfUse" name="termsOfUse" rows="14"><%= settings.termsOfUse || termsDefault.vi %></textarea>
+        <p class="form-hint"><%= t('admin.settings.privacyHint') %></p>
+      </div>
+      <div class="form-group">
+        <label for="termsOfUseEn"><%= t('admin.settings.termsEn') %></label>
+        <textarea class="form-control" id="termsOfUseEn" name="termsOfUseEn" rows="14"><%= settings.termsOfUseEn || termsDefault.en %></textarea>
+        <%- include('partials/plain-text-hint') %>
+      </div>
     </div>
 
     <aside>
@@ -57,7 +71,19 @@
       </div>
       <div class="form-group">
         <label for="mapEmbedUrl"><%= t('admin.settings.map') %></label>
-        <input class="form-control" id="mapEmbedUrl" name="mapEmbedUrl" value="<%= contact.mapEmbedUrl || '' %>">
+        <input class="form-control" id="mapEmbedUrl" name="mapEmbedUrl" value="<%= contact.mapEmbedUrl || '' %>" aria-describedby="mapHint" placeholder="https://www.google.com/maps/embed?pb=…">
+        <p class="form-hint" id="mapHint"><%= t('admin.settings.mapHint') %><% if (contact.mapEmbedUrl) { %> <a href="/lien-he" target="_blank" rel="noopener"><%= t('admin.viewPage.item', { name: t('nav.contact') }) %> ↗</a><% } %></p>
+      </div>
+      <%# Mã số doanh nghiệp: shown in the footer, on Về MTG and in the legal texts once filled (empty = not shown) %>
+      <div class="form-group">
+        <label for="taxCode"><%= t('admin.settings.taxCode') %></label>
+        <input class="form-control" id="taxCode" name="taxCode" maxlength="40" inputmode="numeric" value="<%= contact.taxCode || '' %>" aria-describedby="taxCodeHint" placeholder="0123456789">
+        <p class="form-hint" id="taxCodeHint"><%= t('admin.settings.taxCodeHint') %></p>
+      </div>
+      <div class="form-group">
+        <label for="registration"><%= t('admin.settings.registration') %></label>
+        <input class="form-control" id="registration" name="registration" maxlength="300" value="<%= contact.registration || '' %>" aria-describedby="registrationHint">
+        <p class="form-hint" id="registrationHint"><%= t('admin.settings.registrationHint') %></p>
       </div>
       <%# The website's chat button (partials/chat-button.ejs): shown only for the filled ones %>
       <div class="form-group">

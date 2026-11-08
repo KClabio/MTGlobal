@@ -6,7 +6,24 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
-## [1.3.0] - 2026-11-05
+## [1.3.1] - 2026-11-08
+
+### Added
+- **"Điều khoản sử dụng" (Terms of Use) page:** a new page at `/dieu-khoan-su-dung`, in Vietnamese and English, covering the use of the website, accounts, requests, intellectual property, liability and disputes. It is a draft to be checked (ideally with a lawyer) and can be edited in Admin → Thông tin công ty, like the Chính sách bảo mật. It is linked in the footer and listed for search engines.
+
+  ![The Terms of Use page on a phone](docs/screenshots/1.3.1/terms-page.jpg)
+
+- **Map on Liên hệ:** the map box in Admin → Thông tin công ty now takes the "Nhúng bản đồ" (Embed a map) code from Google Maps, and the Liên hệ page shows the map under the request form. Only Google Maps maps are accepted; anything else is refused with a note on how to copy the right code.
+- **Business registration number:** new boxes in Admin → Thông tin công ty for the Mã số doanh nghiệp and where and when it was issued. Once filled in, it appears in the footer, on Về MTG, in Google's company information and in the privacy and terms texts.
+
+### Changed
+- **Sign-up and Google login:** the "Tôi đồng ý" tick on the sign-up page and the note under "Đăng nhập bằng Google" now name both the Điều khoản sử dụng and the Chính sách bảo mật. Request forms still ask only for the Chính sách bảo mật.
+
+  ![The sign-up tick naming both pages, dark mode on a phone](docs/screenshots/1.3.1/signup-consent.jpg)
+
+- **Launch guide:** `docs/LAUNCH.md` now lists the sample Zalo and Messenger details to replace and the content still to fill in before launch.
+
+## [1.3.0] - 2026-11-05 · `735aab0`
 
 ### Added
 - **"Quên mật khẩu" (forgotten password):** the login page now has a link for people who signed up with an email address. They receive a one-time link by email, valid for 60 minutes, and choose a new password. Until the website has an email account set up, the page asks them to contact MTG instead.
