@@ -31,8 +31,10 @@
         <% if (settings && settings.contactInfo && settings.contactInfo.address) { %>
           <p><%= settings.contactInfo.address %></p>
         <% } %>
-        <% if (settings && settings.contactInfo && settings.contactInfo.phone) { %>
-          <a href="tel:<%= settings.contactInfo.phone %>"><%= settings.contactInfo.phone %></a>
+        <%# One or more numbers ("0988460556 - 0333601279"): side by side, each its own call link %>
+        <% const ftPhones = phoneList(settings && settings.contactInfo && settings.contactInfo.phone); %>
+        <% if (ftPhones.length) { %>
+          <p class="footer-phones"><% ftPhones.forEach(function (p, i) { %><%= i ? ' - ' : '' %><a href="tel:<%= p.tel %>"><%= p.text %></a><% }) %></p>
         <% } %>
         <% if (settings && settings.contactInfo && settings.contactInfo.email) { %>
           <a href="mailto:<%= settings.contactInfo.email %>"><%= settings.contactInfo.email %></a>

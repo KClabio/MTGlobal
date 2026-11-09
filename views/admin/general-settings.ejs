@@ -58,6 +58,10 @@
       <% if (heroImage) { %>
         <div class="banner-preview is-hero"><img src="<%= heroImage %>" alt=""></div>
         <label class="checkbox-row banner-remove"><input type="checkbox" name="removeHeroHome" value="1"> <%= G('removeImage') %></label>
+      <% } else { %>
+        <%# Nothing uploaded: the home page shows the built-in photo (lib/home-domains.js), so show it here too %>
+        <div class="banner-preview is-hero" data-hero-builtin><img src="<%= defaultHomeHero %>?w=480" alt=""></div>
+        <p class="form-hint"><%= G('heroImageBuiltIn') %></p>
       <% } %>
       <input class="form-control" type="file" name="heroHome" accept="image/*" aria-label="<%= G('heroImage') %>">
     </div>

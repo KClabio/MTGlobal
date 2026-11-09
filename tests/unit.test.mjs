@@ -435,6 +435,8 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
     && org.telephone === '0901 234 567' && org.email === 'info@mtg.vn' && org.address.streetAddress === 'Số 1, Mễ Trì, Hà Nội' && org.address.addressCountry === 'VN'
     && org.sameAs.includes('https://zalo.me/0901234567') && org.sameAs.includes('https://www.facebook.com/mtg.vn'), org);
   const bare = structuredData({ base, path: '/', lang: 'vi', t, settings: {}, pageTitle: '' })[0];
+  const [org2] = structuredData({ base, path: '/', lang: 'vi', t, settings: { contactInfo: { phone: '0988460556 - 0333601279' } }, pageTitle: '' });
+  check('… two phone numbers in the box: telephone is a list of both', JSON.stringify(org2.telephone) === '["0988460556","0333601279"]', org2.telephone);
   check('… empty company fields are left out, and the MTG logo is used when none is uploaded', !('telephone' in bare) && !('address' in bare) && !('sameAs' in bare) && bare.logo === 'https://mtg.vn/images/mtg-logo-transparent.png', bare);
   const [crumbs] = structuredData({ base, path: '/giai-phap/du-an/abc', lang: 'vi', t, settings, pageTitle: 'Lab STEM THCS Cầu Giấy - MTG' });
   const names = crumbs.itemListElement.map((x) => x.name);
@@ -565,6 +567,24 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('tax code without "issued by": just the number', registrationText({ taxCode: '0109876543' }, 'en') === ' Business registration no.: 0109876543.');
   check('privacy policy: Google Maps named only once a map is set', !defaultPolicy('vi', none).includes('Google Maps')
     && defaultPolicy('vi', { contactInfo: { mapEmbedUrl: 'https://www.google.com/maps/embed?pb=1' } }).includes('trang Liên hệ có bản đồ do Google Maps hiển thị'));
+}
+
+// The company phone box with one or more numbers (lib/text.js phoneList)
+{
+  const { phoneList } = appRequire('./lib/text.js');
+  const two = phoneList('0988460556 - 0333601279');
+  check('phones: "0988460556 - 0333601279" → two numbers, each with its own call address', two.length === 2 && two[0].text === '0988460556' && two[0].tel === '0988460556' && two[1].tel === '0333601279', two);
+  check('phones: a dash inside one number keeps it one number (and a leading + stays)', phoneList('024-3999-8888').length === 1 && phoneList('+84 90-123-4567')[0].tel === '+84901234567');
+  check('phones: commas and slashes also separate numbers', phoneList('0901 234 567, 0912 000 111').length === 2 && phoneList('1900 1234 / 0988 111 222')[1].tel === '0988111222');
+  check('phones: empty box → no numbers', [null, '', ' - '].every((v) => phoneList(v).length === 0));
+}
+
+// Trang chủ's large picture: the uploaded one, else the built-in photo (lib/home-domains.js)
+{
+  const { homeHeroImage, DEFAULT_HOME_HERO } = appRequire('./lib/home-domains.js');
+  check('home hero: an uploaded picture wins', homeHeroImage({ heroImages: { home: '/uploads/images/x.jpg' } }) === '/uploads/images/x.jpg');
+  check('home hero: nothing uploaded (or no settings) → the built-in photo', DEFAULT_HOME_HERO === '/assets/home/hero-vex-iq.jpg'
+    && [null, {}, { heroImages: {} }, { heroImages: { home: null } }, { heroImages: { home: '' } }].every((s) => homeHeroImage(s) === DEFAULT_HOME_HERO));
 }
 
 process.exit(result() ? 1 : 0);

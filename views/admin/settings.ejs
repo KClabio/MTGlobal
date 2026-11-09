@@ -63,7 +63,8 @@
       </div>
       <div class="form-group">
         <label for="phone"><%= t('admin.settings.phone') %></label>
-        <input class="form-control" id="phone" name="phone" value="<%= contact.phone || '' %>">
+        <input class="form-control" id="phone" name="phone" value="<%= contact.phone || '' %>" aria-describedby="phoneHint">
+        <p class="form-hint" id="phoneHint" data-phone-hint><%= t('admin.settings.phoneHint') %></p>
       </div>
       <div class="form-group">
         <label for="email"><%= t('admin.settings.email') %></label>

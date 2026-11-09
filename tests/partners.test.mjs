@@ -34,8 +34,10 @@ await suite(async (b) => {
         const { status, html } = await page(`/doi-tac/${slug}`, lang);
         const h1 = decode((html.match(/<h1>([^<]+)<\/h1>/) || [])[1] || '');
         const visit = html.match(/<a class="btn btn-primary btn-block partner-visit" href="([^"]+)" target="_blank" rel="noopener">\s*([^<]+)/);
-        const mails = [...html.matchAll(/href="mailto:([^"]+)"/g)].map((m) => m[1]);
-        const tels = [...html.matchAll(/href="tel:([^"]+)"/g)].map((m) => m[1]);
+        // The partner's own contacts: the page before the site footer (which carries MTG's own email and phones)
+        const own = html.slice(0, html.indexOf('<footer') > 0 ? html.indexOf('<footer') : html.length);
+        const mails = [...own.matchAll(/href="mailto:([^"]+)"/g)].map((m) => m[1]);
+        const tels = [...own.matchAll(/href="tel:([^"]+)"/g)].map((m) => m[1]);
         const firstLine = (lang === 'en' ? doc.descriptionEn : doc.descriptionVi).split('\n').find((l) => l && !l.startsWith('-')).replace(/^[-*•]\s+/, '');
         const ok = status === 200 && h1 === doc.name && visit && decode(visit[1]) === URLS[slug] && visit[2].trim() === (lang === 'en' ? 'Visit website' : 'Truy cập website')
           && JSON.stringify(mails) === JSON.stringify(EMAILS[slug]) && JSON.stringify(tels) === JSON.stringify(TELS[slug])

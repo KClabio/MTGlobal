@@ -5,7 +5,7 @@
 .home-hero h1 { color: #fff; font-size: 2.4rem; }
 .home-hero p { color: rgba(255,255,255,.8); font-size: 1.05rem; }
 .home-hero-art { background: var(--mtg-gradient-brand); border-radius: var(--mtg-radius); min-height: 260px; display: flex; align-items: center; justify-content: center; }
-.home-hero-art img { border-radius: var(--mtg-radius); }
+.home-hero-art img { border-radius: var(--mtg-radius); width: 100%; height: auto; }
 
 /* ---- Pillar cards (home) ---- */
 .pillar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }

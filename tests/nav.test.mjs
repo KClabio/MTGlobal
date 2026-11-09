@@ -116,7 +116,9 @@ await suite(async (b) => {
     const [org, ...rest] = await ld('/');
     check('Trang chủ: one Organization block, valid JSON, named MTG with the legal name and a logo address', rest.length === 0 && org && org['@type'] === 'Organization' && org.legalName === 'Công ty TNHH Công nghệ Mễ Trì Global' && /^https?:\/\/.+\.(png|jpe?g|webp|svg)/i.test(org.logo || ''), org);
     const phone = settings && settings.contactInfo && settings.contactInfo.phone;
-    check('… with the phone from Thông tin công ty (when filled in)', !phone || org.telephone === phone, { phone, got: org.telephone });
+    // Several numbers in the box ("0988460556 - 0333601279") become a list, one number stays text
+    const phones = (phone || '').split(/\s+-\s+|[,;/|]/).map((x) => x.trim()).filter((x) => /\d/.test(x));
+    check('… with the phone(s) from Thông tin công ty (when filled in)', !phones.length || JSON.stringify(org.telephone) === JSON.stringify(phones.length === 1 ? phones[0] : phones), { phone, got: org.telephone });
     const [crumbs] = await ld('/giai-phap/stem-lab');
     check('/giai-phap/stem-lab: breadcrumbs Trang chủ › Giải pháp › the page', crumbs && crumbs['@type'] === 'BreadcrumbList' && crumbs.itemListElement[0].name === 'Trang chủ' && crumbs.itemListElement[1].name === 'Giải pháp' && crumbs.itemListElement.length === 3, crumbs && crumbs.itemListElement.map((x) => x.name));
     const project = await d.collection('projects').findOne({});

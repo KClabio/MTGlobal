@@ -6,6 +6,21 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Workshop trải nghiệm STEM, "Trải nghiệm STEM tại NIC":** a new photo gallery from the NIC STEM Expedition at the Vietnam National Innovation Center: students driving VEX IQ robots, trying VEX AIM and building electronic models with MTG's mentors. Six photos with captions in Vietnamese and English, under the existing workshop photos.
+
+  ![The "Trải nghiệm STEM tại NIC" gallery on a phone](docs/screenshots/1.3.3/workshop-nic.jpg)
+
+### Changed
+- **Trang chủ picture:** the large picture next to the home page title is no longer empty. Until a picture is uploaded in Admin → Cài đặt chung → Trang chủ, the page shows a built-in photo of students driving VEX IQ robots, also used when the home page is shared on Facebook or Zalo. The admin tab shows this photo and says it can be replaced; removing an uploaded picture brings it back.
+
+  ![Trang chủ with the VEX IQ photo next to the title](docs/screenshots/1.3.3/home-hero.jpg)
+- **Several company phone numbers:** the phone box in Admin → Thông tin công ty can hold more than one number, separated by « - » (for example `0988460556 - 0333601279`). The footer, Liên hệ, Hỗ trợ and Quên mật khẩu show them side by side, and each number can be tapped to call it; Google's company card lists both. The company address, email and two phone numbers are now filled in.
+
+  ![The footer's contact details on a phone, in dark mode](docs/screenshots/1.3.3/footer-contact.jpg)
+
 ## [1.3.2] - 2026-11-08
 
 ### Changed

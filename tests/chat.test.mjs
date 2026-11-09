@@ -136,8 +136,32 @@ await suite(async (b) => {
       const en = await html('/', 'en');
       check('in English: "Message on Messenger (opens in a new tab)"', en.includes('aria-label="Message on Messenger (opens in a new tab)"'));
     });
+
+    // The company phone box with two numbers: shown side by side as "0988460556 - 0333601279", each its own call link
+    await part(b, 'company phone: two numbers side by side', async () => {
+      const PHONES = '0988460556 - 0333601279';
+      const r = await fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}` },
+        body: new URLSearchParams({ companyProfile: settingsBackup.companyProfile || '', companyProfileEn: settingsBackup.companyProfileEn || '', address: ci.address || '', phone: PHONES, email: ci.email || '', mapEmbedUrl: ci.mapEmbedUrl || '', zalo: ci.zalo || '', messenger: ci.messenger || '' }) });
+      check('saved as typed', r.status === 302 && (await d.collection('sitesettings').findOne({})).contactInfo.phone === PHONES);
+      const both = /<a href="tel:0988460556">0988460556<\/a> - <a href="tel:0333601279">0333601279<\/a>/;
+      const home = await html('/');
+      check('footer: "0988460556 - 0333601279", each number its own call link', both.test(home) && !home.includes('href="tel:0988460556 - '), (home.match(/tel:[^"]*/g) || []));
+      check('Liên hệ: "Điện thoại: 0988460556 - 0333601279" with two call links', /Điện thoại: <a href="tel:0988460556">0988460556<\/a> - <a href="tel:0333601279">0333601279<\/a>/.test(await html('/lien-he')));
+      const help = await html('/ho-tro');
+      check('Hỗ trợ: one call button per number, no run-together number', help.includes('href="tel:0988460556"') && help.includes('href="tel:0333601279"') && !help.includes('tel:09884605560333601279'));
+      const org = JSON.parse(home.match(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/)[1]);
+      check('Google company card: both numbers', JSON.stringify(org.telephone) === '["0988460556","0333601279"]', org.telephone);
+      check('the admin form hints how to enter several numbers', (await (await fetch(BASE + '/admin/thong-tin-cong-ty', { headers: { cookie: `connect.sid=${admin.sid}; adminLang=vi` } })).text()).includes('data-phone-hint>Nhiều số: cách nhau bằng dấu « - », ví dụ 0988460556 - 0333601279</'));
+      await b.viewport(390, 844);
+      for (const p of ['/lien-he', '/ho-tro']) {
+        await b.nav(p, 300);
+        const ov = await ev(`(() => { const f = document.querySelector('.site-footer, footer'); f && f.scrollIntoView(); return document.documentElement.scrollWidth - innerWidth; })()`);
+        check(`390px ${p}: the two numbers fit (no sideways scroll)`, ov <= 1, ov);
+      }
+      await b.viewport(1280, 900);
+    });
   } finally {
-    // Back through an admin save: the server caches the settings
+    // Back through an admin save: the server caches the settings (the phone box goes back too)
     await saveContact(ci.zalo || '', ci.messenger || '');
   }
 });

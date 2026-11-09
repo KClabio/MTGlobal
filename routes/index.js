@@ -11,7 +11,7 @@ const { validateQuoteRequest, readQuoteValues } = require('../lib/quote-request'
 const { readServiceAnswers } = require('../lib/service-content');
 const { getSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
 const { groupProjectsByLevel } = require('../lib/project-levels');
-const { buildHomeDomains, buildSolutionCards, buildServiceCards } = require('../lib/home-domains');
+const { buildHomeDomains, buildSolutionCards, buildServiceCards, homeHeroImage, DEFAULT_HOME_HERO } = require('../lib/home-domains');
 const { groupEquipmentByPart, partSlug } = require('../lib/equipment-parts');
 const { policyText } = require('../lib/privacy-policy');
 const { termsText } = require('../lib/terms-of-use');
@@ -41,7 +41,8 @@ router.get('/', async (req, res) => {
   ]));
   const { settings, lang, t } = res.locals;
   const domains = buildHomeDomains({ settings, lang, t, services });
-  res.render('index', { featuredProjects, robots, partners, domains });
+  const heroImage = homeHeroImage(settings);
+  res.render('index', { featuredProjects, robots, partners, domains, heroImage, heroBuiltIn: heroImage === DEFAULT_HOME_HERO });
 });
 
 // Về MTG: the "Ba lĩnh vực hoạt động" products card lists the robots of Admin → Robot, in the admin's order

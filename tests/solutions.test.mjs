@@ -52,6 +52,14 @@ await suite(async (b) => {
     }
     check(`every <img>/<video>/poster URL on those pages loads (${assetSeen.size} assets)`, badAssets.length === 0, badAssets);
     check('no VEX Hong Kong phone/email/HKD text on any page', hkHits.length === 0, hkHits);
+    // Workshop: the "Trải nghiệm STEM tại NIC" gallery (6 photos, captions VI/EN) comes after "Hình ảnh workshop"
+    for (const [lang, title, first, caption] of [['vi', 'Trải nghiệm STEM tại NIC', 'Hình ảnh workshop', 'Hoàn thành mô hình đầu tiên'], ['en', 'STEM experience at NIC', 'From the workshop', 'The first finished model']]) {
+      const ws = decode(await (await get('/giai-phap/workshop', lang)).text());
+      const at = ws.indexOf(`>${title}<`);
+      const block = at < 0 ? '' : ws.slice(at, ws.indexOf('</section>', at));
+      const photos = new Set([...block.matchAll(/\/assets\/giai-phap\/workshop\/(nic-[a-z0-9-]+\.jpg)/g)].map((m) => m[1]));
+      check(`[${lang}] Workshop page: NIC gallery after the first gallery, 6 photos with captions`, at > ws.indexOf(`>${first}<`) && ws.indexOf(`>${first}<`) > 0 && photos.size === 6 && (block.match(/<figcaption/g) || []).length === 6 && block.includes(caption), { at, photos: [...photos] });
+    }
     // Catalog groups + VEX items
     const cat = await (await get('/giai-phap/thiet-bi')).text();
     const groupTitles = [...cat.matchAll(/<h2 class="equipment-group-title">([^<]+)</g)].map((m) => decode(m[1]));

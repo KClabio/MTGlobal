@@ -33,6 +33,7 @@ const SolutionPage = require('../models/SolutionPage');
 const { getSolutionPage, resetSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
 const { parseSolutionPageForm } = require('../lib/solution-page-form');
 const { BANNERS } = require('../lib/banners');
+const { DEFAULT_HOME_HERO } = require('../lib/home-domains');
 const { partSlug, groupEquipmentByPart } = require('../lib/equipment-parts');
 const { LEVELS: PROJECT_LEVELS, projectLevel } = require('../lib/project-levels');
 const { HELP_GROUPS, HELP_GROUP_KEYS, getHelpItems, groupHelpItems } = require('../lib/help-topics');
@@ -831,6 +832,7 @@ async function renderGeneralSettings(res, { status = 200, settings, tab, error =
     settings, banners: BANNERS, openTab: SETTINGS_TABS.includes(tab) ? tab : 'brand', error, resetPages,
     requestEmailsText, requestEmailsMax: STAFF_EMAILS_MAX, mailReady: mailer.isConfigured(),
     tVi: makeTranslator('vi'), tEn: makeTranslator('en'), // the default texts shown as placeholders
+    defaultHomeHero: DEFAULT_HOME_HERO, // Trang chủ tab: the built-in picture shown while none is uploaded
   });
 }
 
