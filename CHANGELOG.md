@@ -2,7 +2,7 @@
 
 All notable changes to the MTGlobal website are listed here, newest first.
 
-Each commit published to GitHub is one version: the first commit is **1.0.0** and every later commit adds one to the last number (1.0.1, 1.0.2, …); a bigger step marks a milestone (1.1.0: every security, critical and major fix from the pre-launch test). The format follows [Keep a Changelog](https://keepachangelog.com/). From 1.0.10 on, versions with visible changes include screenshots.
+Each release published on GitHub is one version: the first is **1.0.0** and every later one adds one to the last number (1.0.1, 1.0.2, …); a bigger step marks a milestone (1.1.0: every security, critical and major fix from the pre-launch test). The format follows [Keep a Changelog](https://keepachangelog.com/). From 1.0.10 on, versions with visible changes include screenshots.
 
 ---
 
@@ -20,6 +20,7 @@ Each commit published to GitHub is one version: the first commit is **1.0.0** an
 - **Several company phone numbers:** the phone box in Admin → Thông tin công ty can hold more than one number, separated by « - » (for example `0988460556 - 0333601279`). The footer, Liên hệ, Hỗ trợ and Quên mật khẩu show them side by side, and each number can be tapped to call it; Google's company card lists both. The company address, email and two phone numbers are now filled in.
 
   ![The footer's contact details on a phone, in dark mode](docs/screenshots/1.3.3/footer-contact.jpg)
+- **How versions are made:** a finished change is now merged on its own; a version on GitHub is published only when asked for, and it can hold several merged changes.
 
 ## [1.3.2] - 2026-11-08
 

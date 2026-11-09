@@ -95,7 +95,7 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
     check('home has a hero', await b.ev(`!!document.querySelector('.home-hero')`));
   });
   ```
-- After a change, run the matching test file(s), and the full `npm test` before a release, once the owner has approved the test plan (see "Branches").
+- After a change, run the matching test file(s), and the full `npm test` before a merge into `main`, once the owner has approved the test plan (see "Branches").
 - The owner's PC has "reduced motion" on, so check animations with `b.reducedMotion()` too.
 
 ## Real-world test campaign (`npm run qa`)
@@ -125,26 +125,37 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
 
   Run nothing until the owner says yes. Then use :3001 only, clean up the test data, and stop :3001 afterwards.
 - **Results:** a failing test is fixed on the branch, gets a line in "Lessons", and is run again (the permission given covers re-running the same tests). Report the numbers to the owner; a "flaky" result is the owner's call.
-- **Merge only after every test passes, and only when the owner asks for a commit or release:**
-  1. `git switch main`, `git pull`, `git merge --squash <branch>`. The branch's changes are now staged on `main` with no commit: `release.js` needs `main` level with `origin/main` and makes the one commit itself.
-  2. Check the staged files (`git diff --cached --name-only`) for anything private.
-  3. Follow "Commits and releases" below.
-  4. After the release succeeds, delete the branch: `git branch -D <branch>` (`-D`: after a squash, git doesn't see it as merged).
-- If the owner asks for a commit before the tests have passed, say so and offer the test plan first.
+- **Merging a branch into `main`, when the owner says "merge":** a merge is **not** a release (see "Commits and releases").
+  1. **Check the branch is done** before anything else:
+     - everything the owner asked for is built;
+     - CHANGELOG `[Unreleased]` and "Lessons" are written;
+     - the branch's tests **and the full `npm test` passed after the last code change**;
+     - no `ZZ` data is left;
+     - the QA report is updated when a finding or fill-in item changed;
+     - nothing is uncommitted on the branch.
+  2. **Something missing** (above all, tests not run or not passed since the last change)? Don't merge. Enter plan mode, list what's missing and the tests to run (what each checks, how long, what data it makes), and ask the owner (AskUserQuestion) before running them. The same applies when the owner asks for a commit to `main` before the tests have passed.
+  3. **Everything done:**
+     - `git switch main`, `git pull`, `git merge --squash <branch>`;
+     - check the staged files (`git diff --cached --name-only`) for anything private;
+     - `git commit` with a plain message and the trailers below;
+     - delete the branch: `git branch -D <branch>` (`-D`: after a squash, git doesn't see it as merged).
+  4. **No push, no tag, no Release after a merge.** The merge stays on this computer's `main`, and several merges can wait there for the next release. GitHub's `main` only moves at a release.
 
 ## Commits and releases
-- **Commit to `main` only when the owner asks**, after the branch's tests pass (see "Branches"). Commits on a feature branch need no asking. Each commit to `main` is a version: the first was 1.0.0, and each later one adds 0.0.1 (one tag + GitHub Release per commit), unless the owner names a bigger version: then add `--version X.Y.Z` to the release command (1.1.0 = every security, critical and major fix from the pre-launch test).
-- Routine:
-  1. Add a `## [Unreleased]` section at the top of `CHANGELOG.md` (under the intro and `---`). Use `### Added` / `### Changed` / `### Fixed` / `### Removed`, in plain words for business readers.
-  2. Screenshots (from 1.0.10 on): for visible changes, copy 1–3 small JPGs from `tests/output/` to `docs/screenshots/<next version>/` and link each under the item it shows, by relative path (`![…](docs/screenshots/1.0.10/x.jpg)`). The script makes them work on the Release page and stops if one isn't staged. The repo is public: no admin pages with real customer data.
-  3. After the squash merge, check the staged files; stage any extra file by name (`git add <files>`), never `git add -A`.
-  4. Run `npm run release -- -m "<two plain sentences>" --session <Claude-Session url>`. Try `--dry-run` first.
-- The script dates the section, sets the version in `package.json`, and commits with this trailer:
+- **Commit to `main` only through a merge the owner asked for** (see "Branches"). Commits on a feature branch need no asking.
+- **Release on GitHub only when the owner explicitly says so** ("release", "publish on GitHub"). Never release on your own, and never straight after a merge. "Merge" means merge only.
+- Each release is a version (one tag + GitHub Release), holding every merge since the previous one: the first was 1.0.0, and each later one adds 0.0.1, unless the owner names a bigger version: then add `--version X.Y.Z` to the release command (1.1.0 = every security, critical and major fix from the pre-launch test).
+- Each branch writes its changes under `## [Unreleased]` at the top of `CHANGELOG.md` (under the intro and `---`), with `### Added` / `### Changed` / `### Fixed` / `### Removed`, in plain words for business readers. Merges add to the same section until the release dates it.
+- Screenshots (from 1.0.10 on): for visible changes, the branch copies 1–3 small JPGs from `tests/output/` to `docs/screenshots/<next version>/` and links each under the item it shows, by relative path (`![…](docs/screenshots/1.0.10/x.jpg)`). The script makes them work on the Release page and stops if one isn't in git. The repo is public: no admin pages with real customer data.
+- **Release routine** (owner asked for it):
+  1. On `main`, with the merges waiting there (`git log --oneline origin/main..main`); stage any extra file by name (`git add <files>`), never `git add -A`.
+  2. Run `npm run release -- -m "<two plain sentences>" --session <Claude-Session url>`. Try `--dry-run` first: it lists the waiting merges.
+- The script dates the section, sets the version in `package.json`, and makes the version commit (on top of the waiting merges) with this trailer:
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <this session's url>
   ```
-  It then tags `vX.Y.Z`, pushes `main` and the tag, and creates the GitHub Release. Each release's notes hold the whole changelog from that version down to 1.0.0.
+  It then tags `vX.Y.Z`, pushes `main` (every waiting merge with it) and the tag, and creates the GitHub Release. Merge commits on `main` carry the same trailer. Each release's notes hold the whole changelog from that version down to 1.0.0.
 - `node scripts/release.js --notes-only 1.0.7` prints one release's notes, so an older release can be rebuilt with `gh release edit`.
 - Repo: https://github.com/KClabio/MTGlobal (public). Branch `main`.
 

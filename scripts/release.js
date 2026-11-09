@@ -1,14 +1,16 @@
 #!/usr/bin/env node
-// Publishes the next version: every commit is a version (v1.0.0 was the first, each later one adds 0.0.1,
-// unless the owner names a bigger one with --version, e.g. 1.1.0 for the release with every pre-launch fix).
+// Publishes the next version, only when the owner asks for a release: every release is a version (v1.0.0 was the
+// first, each later one adds 0.0.1, unless the owner names a bigger one with --version, e.g. 1.1.0 for the release
+// with every pre-launch fix). A version holds every merge waiting on main since the previous release.
 //
-//   1. Write the changes under "## [Unreleased]" at the top of CHANGELOG.md (Added / Changed / Fixed / Removed).
-//   2. git add <the changed files>
+//   1. Each feature branch writes its changes under "## [Unreleased]" at the top of CHANGELOG.md and is squash-merged
+//      onto main as a local commit (not pushed). Several merges may wait there.
+//   2. On main: git add <any extra file> (usually nothing)
 //   3. npm run release -- -m "<commit message>" [--version X.Y.Z] [--session <Claude-Session url>] [--dry-run]
 //
 // The script names the Unreleased section (version + today's date), adds the previous version's commit id to its
-// heading, sets package.json "version", commits (with the Co-Authored-By trailer), tags vX.Y.Z, pushes main + the tag
-// and creates the GitHub Release. Each release shows the whole changelog from its version back to 1.0.0.
+// heading, sets package.json "version", makes the version commit (with the Co-Authored-By trailer) on top of the
+// waiting merges, tags vX.Y.Z, pushes main (the merges with it) + the tag and creates the GitHub Release. Each release shows the whole changelog from its version back to 1.0.0.
 // --dry-run prints all of that and changes nothing.  --notes-only <version> prints one release's notes.
 // Screenshots (from 1.0.10 on): docs/screenshots/<version>/*.jpg, linked in the changelog by relative path
 // (`![…](docs/screenshots/…)`); they must be staged, and the release notes point them at that version's tag.
@@ -92,15 +94,16 @@ function main() {
   const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
   if (branch !== 'main') fail(`on branch ${branch}; releases are made from main`);
   git('fetch', 'origin', '--tags', '--quiet');
+  // Behind GitHub: pull first. Ahead: the merges waiting for this release (local squash-merge commits)
   const behind = +git('rev-list', '--count', 'HEAD..origin/main');
-  const ahead = +git('rev-list', '--count', 'origin/main..HEAD');
-  if (behind || ahead) fail(`main is ${behind} behind / ${ahead} ahead of origin/main; sync it first`);
+  if (behind) fail(`main is ${behind} behind origin/main; git pull first`);
+  const waiting = git('log', '--oneline', 'origin/main..HEAD').split('\n').filter(Boolean);
   try { run('gh', ['auth', 'status']); } catch { fail('GitHub CLI is not logged in (gh auth login)'); }
   const unreleased = changelog.sections[0];
   if (!unreleased || unreleased.version !== 'Unreleased' || !unreleased.body.trim()) fail('add the changes under "## [Unreleased]" at the top of CHANGELOG.md first');
   for (const file of imagePaths(unreleased.body)) {
     if (!fs.existsSync(path.join(ROOT, file))) fail(`screenshot ${file} (linked in CHANGELOG.md) does not exist`);
-    if (!git('ls-files', '--', file)) fail(`screenshot ${file} is not staged (git add ${file})`);
+    if (!git('ls-files', '--', file)) fail(`screenshot ${file} is not in git (commit it on the branch, or git add ${file})`);
   }
 
   // ---- Next version ----
@@ -135,7 +138,8 @@ function main() {
     .map((l) => l.slice(3)).filter((f) => !['CHANGELOG.md', 'package.json'].includes(f));
 
   console.log(`Release ${tag} (previous: v${prev})`);
-  console.log(`Commit includes: ${committed.join(', ')}`);
+  console.log(waiting.length ? `Merges in this release (${waiting.length}, pushed with it):\n${waiting.map((l) => `  ${l}`).join('\n')}` : 'Merges in this release: none waiting on main (only the files below)');
+  console.log(`Version commit includes: ${committed.join(', ')}`);
   if (left.length) console.log(`Not included (not staged): ${left.join(', ')}`);
 
   if (opts.dryRun) {
