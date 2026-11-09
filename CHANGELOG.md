@@ -6,7 +6,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.3.3] - 2026-11-09
 
 ### Added
 - **Workshop trải nghiệm STEM, "Trải nghiệm STEM tại NIC":** a new photo gallery from the NIC STEM Expedition at the Vietnam National Innovation Center: students driving VEX IQ robots, trying VEX AIM and building electronic models with MTG's mentors. Six photos with captions in Vietnamese and English, under the existing workshop photos.
@@ -22,7 +22,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
   ![The footer's contact details on a phone, in dark mode](docs/screenshots/1.3.3/footer-contact.jpg)
 - **How versions are made:** a finished change is now merged on its own; a version on GitHub is published only when asked for, and it can hold several merged changes.
 
-## [1.3.2] - 2026-11-08
+## [1.3.2] - 2026-11-08 · `06603b5`
 
 ### Changed
 - **Về MTG, "Ba lĩnh vực hoạt động":** the robots in the "Sản phẩm" card now come from Admin → Robot, in the same order, each linking to its own page, with a "Sắp ra mắt" label on the robots that are not ready yet. Renaming, reordering or adding a robot in the admin now changes Về MTG too.
