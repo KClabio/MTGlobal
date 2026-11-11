@@ -18,7 +18,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
   ![Trang chủ: the photo behind the title, the figures panel on the right](docs/screenshots/1.3.4/home-hero-background.jpg)
   ![Trang chủ on a phone, in dark mode](docs/screenshots/1.3.4/home-hero-phone-dark.jpg)
-- **Trang chủ, Đối tác đồng hành:** the partner logos now sit in one line that slides slowly to the right by itself. After the last partner, the first one comes round again. The line stops while the mouse is over it or over the ‹ › buttons, which move it one partner at a time. It can also be dragged with the mouse or a finger. With "reduced motion" turned on, it slides at half speed. Về MTG keeps its grid of logos.
+- **Trang chủ and Về MTG, Đối tác đồng hành:** the partner logos now sit in one line that slides slowly to the right by itself. After the last partner, the first one comes round again. The line stops while the mouse is over it or over the ‹ › buttons, which move it one partner at a time. It can also be dragged with the mouse or a finger. With "reduced motion" turned on, it slides at half speed. Về MTG shows the same sliding line.
 
   ![The partner logos in one sliding line, with the ‹ › buttons](docs/screenshots/1.3.4/home-partner-row.jpg)
 - **The menu bar at the top is see-through:** on every page it is frosted glass, so the page shows softly through it while scrolling. On Trang chủ the photo reaches up behind the bar. While the photo is behind it, the bar is dark glass with white menu text; once you scroll past the photo, it turns into the light frosted bar. The phone menu (☰) still opens over the whole screen on a solid background.

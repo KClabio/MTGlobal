@@ -806,7 +806,7 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
   });
 })();
 
-// Home "Đối tác đồng hành" (views/index.ejs [data-partner-marquee]): one line of logos sliding slowly to the right by
+// "Đối tác đồng hành" on Trang chủ and Về MTG (partials/partner-slider.ejs [data-partner-marquee]): one line of logos sliding slowly to the right by
 // itself and looping. The list is copied (one copy before the real logos, enough after them to fill the screen) and the
 // row's position wraps every list-width, so after the last partner the first comes round again with no jump. Copies
 // are hidden from screen readers and the keyboard (aria-hidden, tabindex -1) but can be clicked: each partner is read
@@ -817,9 +817,9 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
 // - The mouse or a finger can drag it; a real drag does not open the logo under the pointer.
 // - A logo reached with Tab is brought fully into view.
 // - Less motion asked for: it keeps sliding, at half speed (the owner's choice), and steps are shorter.
-(function () {
-  var box = document.querySelector('[data-partner-marquee]');
-  if (!box || !window.requestAnimationFrame) return;
+// Each row on the page (Trang chủ and Về MTG have one each, partials/partner-slider.ejs) runs on its own.
+Array.prototype.forEach.call(document.querySelectorAll('[data-partner-marquee]'), function (box) {
+  if (!window.requestAnimationFrame) return;
   var strip = box.querySelector('.partner-strip');
   var section = box.closest('section');
   var arrows = section.querySelector('[data-partner-arrows]');
@@ -1028,7 +1028,7 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
   if (!build()) return;
   render();
   wake();
-})();
+});
 
 // Home "Lĩnh vực hoạt động" slider: the mouse wheel over the cards scrolls them sideways and never the page (at the
 // first/last card it simply does nothing; over the title and around the cards the page scrolls as usual), arrow

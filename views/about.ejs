@@ -67,10 +67,7 @@
 <% if (partners && partners.length) { %>
 <section class="section" id="doi-tac">
   <div class="container">
-    <div class="section-head"><h2 class="section-title"><%= t('home.partnersTitle') %></h2></div>
-    <div class="partner-strip">
-      <% partners.forEach(function (partner) { %><%- include('partials/partner-tile', { partner }) %><% }) %>
-    </div>
+    <%- include('partials/partner-slider', { partners }) %>
   </div>
 </section>
 <% } %>

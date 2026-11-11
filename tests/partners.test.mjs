@@ -1,6 +1,6 @@
 // Partners: logo strips link to /doi-tac/<slug>; each partner page (text, logo, website button, contacts, back link);
-// admin add / edit / validation / order / delete; tiles at most 6 per row on Về MTG, float + glow on hover;
-// Trang chủ's sliding row (one line moving right and looping, stops under the mouse, ‹ › steps, drag, keyboard, print).
+// admin add / edit / validation / order / delete; float + glow on hover;
+// the sliding row on Trang chủ (one line moving right and looping, stops under the mouse, ‹ › steps, drag, keyboard, print) and Về MTG.
 import { suite, part, check, db, BASE, createUser, removeLater, restoreLater } from './lib/index.mjs';
 
 const SLUGS = ['vsi-education', 'vex-robotics', 'kc-education', 'nexta', 'robot-steam-viet-nam', 'hi-steam', 'tpe'];
@@ -117,20 +117,10 @@ await suite(async (b) => {
     await nav(`/admin/doi-tac/${partners[1]._id}/sua`); await shot('admin-partner-form');
   });
 
-  await part(b, 'partner tiles: rows, float + glow', async () => {
+  await part(b, 'partner tiles: float + glow', async () => {
     const { nav, mouse, shot } = b;
-    // Về MTG keeps the grid of tiles (Trang chủ slides them in one line: next part)
-    for (const [w, per] of [[1280, 6], [800, 4], [390, 3]]) {
-      await b.viewport(w); await nav('/ve-mtg', 200);
-      const rows = await ev(`(() => { const tiles = [...document.querySelectorAll('.partner-strip .partner-tile')]; const strip = document.querySelector('.partner-strip').getBoundingClientRect(); const byRow = {};
-        tiles.forEach((t) => { const r = t.getBoundingClientRect(); const k = Math.round(r.top); (byRow[k] = byRow[k] || []).push(r); });
-        const rs = Object.values(byRow); const last = rs[rs.length - 1]; const mid = (last[0].left + last[last.length - 1].right) / 2;
-        return { counts: rs.map((r) => r.length), lastCentred: Math.abs(mid - (strip.left + strip.width / 2)) < 2, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
-      const exp = []; for (let n = 7; n > 0; n -= per) exp.push(Math.min(per, n));
-      check(`partners at ${w}px: rows of ${JSON.stringify(exp)}, last row centred`, JSON.stringify(rows.counts) === JSON.stringify(exp) && rows.lastCentred && rows.overflow === 0, rows);
-    }
     await b.viewport(1280);
-    // The second real logo of Trang chủ's sliding row (the copies around it are not hoverable: inert)
+    // The second real logo of Trang chủ's sliding row
     const TILE2 = `document.querySelectorAll('.partner-strip .partner-tile:not([data-partner-clone])')[1]`;
     for (const theme of ['light', 'dark']) {
       await b.setCookie('theme', theme); await nav('/', 200);
@@ -297,5 +287,36 @@ await suite(async (b) => {
         arrows: getComputedStyle(document.querySelector('[data-partner-arrows]')).display }; })()`);
     await b.printMedia(false);
     check('print: the 7 logos once, in rows, not shifted; no ‹ › buttons', printed.shown === 7 && printed.rows >= 1 && printed.transform === 'none' && printed.arrows === 'none', printed);
+  });
+
+  // Về MTG: the same sliding row (partials/partner-slider.ejs); the details (drag, keyboard, wrap, print) are checked on Trang chủ
+  await part(b, 'Về MTG partner slider', async () => {
+    const { nav, mouse } = b;
+    const shift = () => ev(`(() => { const m = getComputedStyle(document.querySelector('#doi-tac .partner-strip.is-marquee')).transform; return m === 'none' ? 0 : new DOMMatrix(m).m41; })()`);
+    const loop = () => ev(`(() => { const s = document.querySelector('#doi-tac .partner-strip.is-marquee'); const o = s.querySelector('.partner-tile:not([data-partner-clone])'); return o.offsetLeft - s.firstElementChild.offsetLeft; })()`);
+    const speed = async (ms) => { const W = await loop(); const a = await shift(); const t0 = Date.now(); await sleep(ms); let d = ((await shift()) - a) % W; if (d < -W / 2) d += W; if (d > W / 2) d -= W; return d / ((Date.now() - t0) / 1000); };
+    await b.reducedMotion(false);
+    await b.viewport(1280);
+    await nav('/ve-mtg', 300);
+    await ev(`document.getElementById('doi-tac').scrollIntoView({ block: 'center', behavior: 'instant' })`);
+    await mouse('mouseMoved', { x: 5, y: 5 }); await sleep(800);
+    const info = await ev(`(() => { const sec = document.getElementById('doi-tac'); const all = [...sec.querySelectorAll('.partner-strip.is-marquee > .partner-tile')];
+      return { rows: new Set(all.map((t) => Math.round(t.getBoundingClientRect().top))).size, copies: all.filter((t) => t.hasAttribute('data-partner-clone')).length,
+        reachable: [...sec.querySelectorAll('.partner-strip.is-marquee a')].filter((a) => !a.closest('[aria-hidden="true"]')).map((a) => a.getAttribute('href')),
+        arrows: sec.querySelectorAll('[data-partner-prev], [data-partner-next]').length, list: sec.querySelector('.partner-strip').getAttribute('role'),
+        wide: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
+    check('Về MTG partners: the same sliding line as Trang chủ (one line, each logo once for screen readers and Tab, ‹ › buttons, no sideways scroll)',
+      info.rows === 1 && info.copies >= 7 && JSON.stringify(info.reachable) === JSON.stringify(SLUGS.map((s) => `/doi-tac/${s}`)) && info.arrows === 2 && info.list === 'list' && info.wide === 0, info);
+    const v = await speed(2000);
+    const box = await ev(`(() => { const r = document.querySelector('#doi-tac [data-partner-marquee]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+    await mouse('mouseMoved', box); await sleep(700);
+    const vHover = await speed(1000);
+    await mouse('mouseMoved', { x: 5, y: 5 });
+    check(`Về MTG partners: slide right at about 24 px/s (${v.toFixed(1)}) and stop under the mouse (${vHover.toFixed(1)})`, v > 18 && v < 30 && Math.abs(vHover) < 0.5, { v, vHover });
+    await b.viewport(390, 844);
+    await nav('/ve-mtg', 300);
+    const phone = await ev(`(() => { const all = [...document.querySelectorAll('#doi-tac .partner-strip.is-marquee > .partner-tile')]; return { rows: new Set(all.map((t) => Math.round(t.getBoundingClientRect().top))).size, w: Math.round(all[0].getBoundingClientRect().width), wide: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
+    check('Về MTG partners at 390px: one line of 150px logos, no sideways scroll', phone.rows === 1 && phone.w === 150 && phone.wide === 0, phone);
+    await b.viewport(1280);
   });
 });
