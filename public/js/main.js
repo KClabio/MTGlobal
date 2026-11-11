@@ -778,6 +778,34 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
   update();
 })();
 
+// Google maps (Liên hệ, Về MTG: .contact-map[data-map-hint]): a transparent cover over the map, so the mouse wheel
+// and a finger swipe scroll the page as everywhere else (inside Google's frame the wheel scrolled the page in rougher
+// steps). A click or tap on the map takes the cover away (zoom, drag, Google's buttons); it comes back when the mouse
+// leaves the map, the page is touched elsewhere, or Esc is pressed. Keyboard focus on the map takes it away too.
+// Without JavaScript there is no cover.
+(function () {
+  Array.prototype.forEach.call(document.querySelectorAll('.contact-map[data-map-hint]'), function (box) {
+    var frame = box.querySelector('iframe');
+    if (!frame) return;
+    var shield = document.createElement('div');
+    shield.className = 'map-shield';
+    shield.setAttribute('aria-hidden', 'true');
+    shield.setAttribute('data-map-shield', '');
+    var hint = document.createElement('span');
+    hint.className = 'map-shield-hint';
+    hint.textContent = box.getAttribute('data-map-hint');
+    shield.appendChild(hint);
+    box.appendChild(shield);
+    var lock = function () { box.classList.remove('is-active'); };
+    var unlock = function () { box.classList.add('is-active'); };
+    shield.addEventListener('click', unlock);
+    box.addEventListener('mouseleave', lock);
+    document.addEventListener('pointerdown', function (e) { if (!box.contains(e.target)) lock(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lock(); });
+    frame.addEventListener('focus', unlock);
+  });
+})();
+
 // Home "Đối tác đồng hành" (views/index.ejs [data-partner-marquee]): one line of logos sliding slowly to the right by
 // itself and looping. The list is copied (one copy before the real logos, enough after them to fill the screen) and the
 // row's position wraps every list-width, so after the last partner the first comes round again with no jump. Copies

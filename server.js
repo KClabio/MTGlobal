@@ -62,6 +62,8 @@ app.locals.isProductLine = require('./models/QuoteRequest').isProductLine; // ro
 app.locals.chatLinks = require('./lib/chat-links').chatLinks; // Zalo / Messenger links (partials/chat-button.ejs, footer, Liên hệ)
 app.locals.phoneList = require('./lib/text').phoneList; // the company phone box, one or more numbers (footer, Liên hệ, Hỗ trợ, Quên mật khẩu)
 app.locals.mapEmbed = require('./lib/map-embed').cleanMapEmbed; // the Google Maps map on Liên hệ ('' = none)
+app.locals.mapFor = require('./lib/map-embed').mapFor; // the map on Về MTG: the pasted one, else the address's ('' = none)
+app.locals.directionsUrl = require('./lib/map-embed').directionsUrl; // "Mở trong Google Maps" (Về MTG)
 app.locals.QUOTE_MESSAGE_MAX = require('./lib/quote-request').MESSAGE_MAX; // request message limit + counter (partials/quote-form.ejs)
 app.locals.googleEnabled = require('./lib/google-auth').isConfigured(); // "Đăng nhập bằng Google" button (login, register)
 // Behind the host's HTTPS proxy (lib/trust-proxy.js turns TRUST_PROXY=1 into the number Express expects)

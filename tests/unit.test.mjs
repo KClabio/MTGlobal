@@ -552,6 +552,22 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check('map: http, javascript: and data: are refused', cleanMapEmbed('http://www.google.com/maps/embed?pb=1') === '' && cleanMapEmbed('javascript:alert(1)') === '' && cleanMapEmbed('data:text/html,<p>x</p>') === '');
   check('map: other markup, or an iframe of another site, is refused', cleanMapEmbed('<script src="https://www.google.com/maps/embed?pb=1"></script>') === '' && cleanMapEmbed('<iframe src="https://evil.example/x"></iframe>') === '');
   check('map: an address that is far too long is refused', cleanMapEmbed(url + 'a'.repeat(3000)) === '');
+
+  // Về MTG: Google's map of the written address when no map is pasted
+  const { addressMapEmbed, directionsUrl, mapFor } = appRequire('./lib/map-embed.js');
+  const ADDR = 'Số 4A, ngõ 148 Hoàng Ngân, Phường Yên Hòa, Thành phố Hà Nội, Việt Nam';
+  const am = addressMapEmbed(ADDR);
+  const amUrl = new URL(am);
+  check('address map: Google\'s own embed on www.google.com, the address encoded whole (commas, Vietnamese letters), Vietnamese by default',
+    amUrl.origin === 'https://www.google.com' && amUrl.pathname === '/maps' && amUrl.searchParams.get('q') === ADDR && amUrl.searchParams.get('output') === 'embed' && amUrl.searchParams.get('hl') === 'vi' && !/[ ,]/.test(am), am);
+  check('address map: English page → English map; spaces and line breaks tidied', new URL(addressMapEmbed('  Số 4A,\n  Hà Nội ', 'en')).searchParams.get('q') === 'Số 4A, Hà Nội' && addressMapEmbed('x', 'en').includes('hl=en'));
+  check('address map: no address → none', addressMapEmbed('') === '' && addressMapEmbed('   ') === '' && addressMapEmbed(null) === '' && directionsUrl('') === '');
+  check('address map: markup or a link typed as the address stays plain text inside Google\'s address', (() => { const u = new URL(addressMapEmbed('"><script>x</script> https://evil.example')); return u.origin === 'https://www.google.com' && u.searchParams.get('q') === '"><script>x</script> https://evil.example'; })());
+  const dir = new URL(directionsUrl(ADDR));
+  check('"Open in Google Maps": a Google Maps search of the address', dir.origin === 'https://www.google.com' && dir.pathname === '/maps/search/' && dir.searchParams.get('api') === '1' && dir.searchParams.get('query') === ADDR);
+  check('mapFor: the pasted embed wins; else the address map; else none; a bad pasted value falls back to the address',
+    mapFor({ address: ADDR, mapEmbedUrl: url }) === url && mapFor({ address: ADDR }) === am && mapFor({}) === '' && mapFor(null) === ''
+    && mapFor({ address: ADDR, mapEmbedUrl: 'https://evil.example/maps/embed' }) === am);
 }
 
 // The tax code in the legal texts (lib/privacy-policy.js, lib/terms-of-use.js)
@@ -565,8 +581,12 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
     defaultPolicy('vi', withCode).includes('Địa chỉ: Số 4A. Mã số doanh nghiệp: 0109876543, do Sở KH&ĐT TP. Hà Nội cấp ngày 01/01/2020. Liên hệ')
     && defaultTerms('en', withCode).includes('Số 4A. Business registration no.: 0109876543, do Sở KH&ĐT TP. Hà Nội cấp ngày 01/01/2020. Contact:'));
   check('tax code without "issued by": just the number', registrationText({ taxCode: '0109876543' }, 'en') === ' Business registration no.: 0109876543.');
-  check('privacy policy: Google Maps named only once a map is set', !defaultPolicy('vi', none).includes('Google Maps')
-    && defaultPolicy('vi', { contactInfo: { mapEmbedUrl: 'https://www.google.com/maps/embed?pb=1' } }).includes('trang Liên hệ có bản đồ do Google Maps hiển thị'));
+  // Về MTG shows a Google map whenever an address is set; Liên hệ once a map is pasted (lib/map-embed.js)
+  check('privacy policy: Google Maps named for Về MTG once an address is set, for Liên hệ too once a map is pasted; never without either',
+    !defaultPolicy('vi', { contactInfo: {} }).includes('Google Maps')
+    && defaultPolicy('vi', none).includes('trang Về MTG có bản đồ do Google Maps hiển thị')
+    && defaultPolicy('en', none).includes('open the About page, whose map is shown by Google Maps')
+    && defaultPolicy('vi', { contactInfo: { address: 'Số 4A', mapEmbedUrl: 'https://www.google.com/maps/embed?pb=1' } }).includes('trang Về MTG hoặc Liên hệ có bản đồ do Google Maps hiển thị'));
 }
 
 // The company phone box with one or more numbers (lib/text.js phoneList)

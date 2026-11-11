@@ -726,6 +726,21 @@ await suite(async (b) => {
       let r = await post({ mapEmbedUrl: '', taxCode: '', registration: '', zalo: ci.zalo || '', messenger: ci.messenger || '' });
       let c = await get('/lien-he');
       check('empty map box → no map on Liên hệ', r.status === 302 && !c.html.includes('data-contact-map'));
+      // Về MTG: with no map pasted, Google's map of the company address, beside the address and contacts
+      const ADDR = 'ZZ Số 4A, ngõ 148 Hoàng Ngân, Hà Nội';
+      await post({ mapEmbedUrl: '', address: ADDR });
+      let ab = await get('/ve-mtg');
+      const abSrc = (ab.html.match(/data-about-map[^>]*>\s*<iframe src="([^"]+)"/) || [])[1] || '';
+      const abUrl = abSrc ? new URL(abSrc.replace(/&amp;/g, '&')) : null;
+      check('Về MTG, no map pasted: Google\'s map of the address (lazy, titled), the address shown, an "Open in Google Maps" link in a new tab',
+        abUrl && abUrl.origin === 'https://www.google.com' && abUrl.pathname === '/maps' && abUrl.searchParams.get('q') === ADDR && abUrl.searchParams.get('output') === 'embed'
+        && /data-about-map[^>]*>\s*<iframe[^>]*loading="lazy"/.test(ab.html) && ab.html.includes(`title="Bản đồ: ${ADDR}"`) && ab.html.includes(`data-about-address>${ADDR}</p>`)
+        && /<a class="btn btn-ghost btn-sm about-visit-open" href="https:\/\/www\.google\.com\/maps\/search\/\?api=1&amp;query=[^"]+" target="_blank" rel="noopener" data-about-directions>/.test(ab.html), abSrc);
+      const abEn = await fetch(BASE + '/ve-mtg', { headers: { cookie: 'lang=en' } }).then((x) => x.text());
+      check('Về MTG in English: "Visit MTG", an English map, "Open in Google Maps (opens in a new tab)"', abEn.includes('Visit MTG') && /data-about-map[^>]*>\s*<iframe src="[^"]*hl=en/.test(abEn) && abEn.includes('Open in Google Maps ↗<span class="sr-only"> (opens in a new tab)</span>') && abEn.includes('data-map-hint="Click to use the map"'));
+      await post({ mapEmbedUrl: '', address: '' });
+      check('no address and no map: no "Văn phòng MTG" section on Về MTG', !(await get('/ve-mtg')).html.includes('id="ban-do"'));
+      await post({ mapEmbedUrl: '', address: ci.address || '' });
       check('empty tax code → no line in the footer or on Về MTG', !c.html.includes('data-footer-tax') && !(await get('/ve-mtg')).html.includes('data-about-tax'));
       check('the content policy allows frames from this site and www.google.com only', /frame-src 'self' https:\/\/www\.google\.com(;|$)/.test(c.csp), c.csp);
       const form = await (await adminGet('/admin/thong-tin-cong-ty')).text();
@@ -741,6 +756,7 @@ await suite(async (b) => {
       check('the footer shows "Mã số doanh nghiệp: …, issued by …"', c.html.includes(`data-footer-tax>Mã số doanh nghiệp: 0109876543, ${LONG}</p>`));
       const about = await get('/ve-mtg');
       check('Về MTG shows it too', about.html.includes('data-about-tax') && about.html.includes('0109876543'));
+      check('Về MTG uses the pasted map instead of the address map', new RegExp(`data-about-map[^>]*>\\s*<iframe src="${MAP.replace(/[.*+?^${}()|[\]\\!]/g, '\\$&')}"`).test(about.html));
       const home = await get('/');
       check('Google\'s company card (Trang chủ) carries the tax code', /"taxID":\s*"0109876543"/.test(home.html));
       const policy = (await get('/chinh-sach-bao-mat')).html;
@@ -774,6 +790,47 @@ await suite(async (b) => {
     }
     const back = (await d.collection('sitesettings').findOne({})).contactInfo || {};
     check('contact details restored exactly', ['address', 'phone', 'email', 'mapEmbedUrl', 'zalo', 'messenger', 'taxCode', 'registration'].every((k) => (back[k] || '') === (ci[k] || '')), back);
+
+    // Về MTG's "Văn phòng MTG" in the browser (with the real address): beside the map on a wide screen, the map under
+    // the text on a phone with no sideways scroll, no map when printed
+    if (back.address) {
+      const layout = () => ev(`(() => { const t = document.querySelector('.about-visit-text').getBoundingClientRect(), m = document.querySelector('[data-about-map]').getBoundingClientRect();
+        return { side: m.left >= t.right - 1, below: m.top >= t.bottom - 1, mapW: Math.round(m.width), wide: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
+      await b.viewport(1280, 900); await b.nav('/ve-mtg', 300);
+      const wideL = await layout();
+
+      // The cover over the map: the wheel scrolls the page; a click takes the cover away; leaving or Esc brings it back
+      const centre = async () => { await ev(`document.getElementById('ban-do').scrollIntoView({ block: 'center', behavior: 'instant' })`); await sleep(300);
+        return ev(`(() => { const r = document.querySelector('[data-about-map]').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`); };
+      const onTop = (p) => ev(`(() => { const e = document.elementFromPoint(${p.x}, ${p.y}); return e ? (e.closest('[data-map-shield]') ? 'cover' : e.tagName) : null; })()`);
+      const active = () => ev(`document.querySelector('[data-about-map]').classList.contains('is-active')`);
+      let mp = await centre();
+      await b.mouse('mouseMoved', mp); await sleep(400);
+      const hint = await ev(`(() => { const h = document.querySelector('[data-about-map] .map-shield-hint'); return { text: h.textContent, opacity: getComputedStyle(h).opacity }; })()`);
+      const covered = await onTop(mp);
+      const y0 = await ev('scrollY');
+      await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: mp.x, y: mp.y, deltaX: 0, deltaY: 300 }); await sleep(900);
+      const y1 = await ev('scrollY');
+      mp = await centre();
+      await b.mouse('mouseMoved', mp); await b.mouse('mousePressed', mp, { button: 'left', buttons: 1, clickCount: 1 }); await b.mouse('mouseReleased', mp, { button: 'left', buttons: 0, clickCount: 1 }); await sleep(200);
+      const afterClick = { active: await active(), top: await onTop(mp) };
+      await b.mouse('mouseMoved', { x: 5, y: 5 }); await sleep(200);
+      const afterLeave = await active();
+      await b.mouse('mouseMoved', mp); await b.mouse('mousePressed', mp, { button: 'left', buttons: 1, clickCount: 1 }); await b.mouse('mouseReleased', mp, { button: 'left', buttons: 0, clickCount: 1 }); await sleep(200);
+      await b.key('Escape', 'Escape', 27); await sleep(200);
+      const afterEsc = await active();
+      check('the map has a cover: the wheel over it scrolls the page, a click uncovers the map, leaving it or Esc covers it again; the hint "Bấm để dùng bản đồ" shows on hover',
+        covered === 'cover' && y1 - y0 > 100 && afterClick.active && afterClick.top === 'IFRAME' && !afterLeave && !afterEsc && hint.text === 'Bấm để dùng bản đồ' && hint.opacity === '1',
+        { covered, scrolled: y1 - y0, afterClick, afterLeave, afterEsc, hint });
+      await b.viewport(390, 844); await b.nav('/ve-mtg', 300);
+      const phoneL = await layout();
+      await ev(`document.getElementById('ban-do').scrollIntoView()`); await b.shot('about-map-390');
+      await b.printMedia(true); await sleep(150);
+      const printed = await ev(`({ map: getComputedStyle(document.querySelector('[data-about-map]')).display, address: getComputedStyle(document.querySelector('[data-about-address]')).display })`);
+      await b.printMedia(false); await b.viewport(1280, 900);
+      check('Về MTG, Văn phòng MTG: the map beside the address (1280px), under it on a phone (390px, no sideways scroll); printed without the map',
+        wideL.side && phoneL.below && phoneL.mapW > 300 && phoneL.wide === 0 && printed.map === 'none' && printed.address !== 'none', { wideL, phoneL, printed });
+    }
   });
 
   await part(b, 'content forms save plain text', async () => {

@@ -8,6 +8,11 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ## [Unreleased]
 
+### Added
+- **Về MTG, "Văn phòng MTG":** a new section at the end of the page with the company address, phone numbers and email beside a Google map of the office. The map is made from the address in Admin → Thông tin công ty, so it follows any change there; a map pasted in the "Bản đồ" box is used instead when there is one. A "Mở trong Google Maps" button opens directions in a new tab. Scrolling the page over the map stays as smooth as anywhere else: a click on the map ("Bấm để dùng bản đồ") lets you zoom and drag it, until the mouse leaves it. This works the same on Liên hệ when a map is pasted there. On phones the map sits under the address; printed pages show the address without the map. The draft privacy policy now says this page shows a Google map.
+
+  ![Về MTG: the office address beside the Google map](docs/screenshots/1.3.4/about-map.jpg)
+
 ### Changed
 - **Trang chủ, the top section:** the photo now fills the whole section behind the title, instead of sitting in a box next to it. A dark veil keeps the text easy to read over any picture uploaded in Admin → Cài đặt chung → Trang chủ. On the right of the photo, a glass panel shows how many projects, products and partners MTG has. The numbers are counted from the admin, so they stay up to date by themselves, and each one links to the page that shows them. As the page opens, the numbers count up from 0 over about two seconds, once. On phones, the three numbers sit in one row under the button.
 

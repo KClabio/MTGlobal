@@ -75,4 +75,27 @@
 </section>
 <% } %>
 
+<%# Văn phòng MTG: the address and contacts of Thông tin công ty beside a Google map. The map is the one pasted in
+    Admin → Thông tin công ty → Bản đồ, else Google's map of the address (lib/map-embed.js mapFor); no address, no
+    section. The map loads only when scrolled near (loading="lazy"); printing shows the address without it. %>
+<% const abContact = (settings && settings.contactInfo) || {}; const abMap = mapFor(abContact, lang); %>
+<% if (abMap) { %>
+<% const abPhones = phoneList(abContact.phone); %>
+<section class="section section-alt" id="ban-do">
+  <div class="container about-visit">
+    <div class="about-visit-text">
+      <h2 class="section-title"><%= t('common.visitTitle') %></h2>
+      <% if (abContact.address) { %><p class="about-visit-address" data-about-address><%= abContact.address %></p><% } %>
+      <% if (abPhones.length) { %><p><%= t('common.phone') %>: <% abPhones.forEach(function (p, i) { %><%= i ? ' - ' : '' %><a href="tel:<%= p.tel %>"><%= p.text %></a><% }) %></p><% } %>
+      <% if (abContact.email) { %><p><%= t('common.email') %>: <a href="mailto:<%= abContact.email %>"><%= abContact.email %></a></p><% } %>
+      <% const abDirections = directionsUrl(abContact.address); %>
+      <% if (abDirections) { %><a class="btn btn-ghost btn-sm about-visit-open" href="<%= abDirections %>" target="_blank" rel="noopener" data-about-directions><%= t('common.openInMaps') %> ↗<span class="sr-only"> <%= t('common.openInMapsNewTab') %></span></a><% } %>
+    </div>
+    <div class="contact-map about-visit-map" data-about-map data-map-hint="<%= t('common.mapUse') %>">
+      <iframe src="<%= abMap %>" title="<%= t('common.mapTitle', { address: (abContact.address || 'MTG') }) %>" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+  </div>
+</section>
+<% } %>
+
 <%- include('partials/footer') %>
