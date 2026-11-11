@@ -4,9 +4,12 @@
   image: heroImage,
 }) %>
 
+<%# The photo fills the section behind the text: the uploaded picture (Cài đặt chung → Trang chủ), else the built-in
+    photo (lib/home-domains.js homeHeroImage). A dark veil (home.css) keeps the text readable over any photo. %>
 <section class="home-hero">
+  <div class="home-hero-art"><%- picture(heroImage, heroBuiltIn ? t('home.heroImageAlt') : 'MTG', { sizes: '100vw', eager: true }) %></div>
   <div class="container home-hero-inner">
-    <div>
+    <div class="home-hero-text">
       <span class="hero-pill">MTG — Mễ Trì Global</span>
       <%
         // Admin → Cài đặt chung → Trang chủ: optional text overrides (empty = the default text)
@@ -18,10 +21,24 @@
       <p><%= hhSub || t('home.heroSubtitle') %></p>
       <a href="/lien-he" class="btn btn-primary"><%= t('home.heroCta') %></a>
     </div>
-    <%# The uploaded picture (Cài đặt chung → Trang chủ), else the built-in photo (lib/home-domains.js homeHeroImage) %>
-    <div class="home-hero-art">
-      <%- picture(heroImage, heroBuiltIn ? t('home.heroImageAlt') : 'MTG', { sizes: '(max-width: 900px) 100vw, 560px', eager: true }) %>
-    </div>
+    <%# Key figures (routes/index.js heroFigures): the real number is in the HTML; public/js/main.js counts the visible
+        digits up from 0 once. Screen readers get the sr-only sentence, never the moving digits. %>
+    <% if (heroFigures && heroFigures.length) { %>
+      <% const figDigits = Math.max.apply(null, heroFigures.map(function (f) { return String(f.n).length; })); /* one width for every number: the labels line up */ %>
+      <ul class="home-hero-figures" data-hero-figures aria-label="<%= t('home.figuresLabel') %>">
+        <% heroFigures.forEach(function (f, i) { %>
+          <li class="fig accent-<%= f.accent %>" style="--fig-i: <%= i %>">
+            <a href="<%= f.href %>">
+              <span class="fig-icon" aria-hidden="true"><%- include('admin/partials/icon', { name: f.icon, size: 20 }) %></span>
+              <span class="fig-num" data-fig-count="<%= f.n %>" style="min-width: calc(<%= figDigits %>ch + .1em)" aria-hidden="true"><%= f.n %></span>
+              <span class="fig-text" aria-hidden="true"><span class="fig-label"><%= t('home.fig.' + f.key) %></span><span class="fig-sub"><%= t('home.fig.' + f.key + 'Sub') %></span></span>
+              <span class="fig-arrow" aria-hidden="true">→</span>
+              <span class="sr-only"><%= f.n %> <%= t('home.fig.' + f.key) %> <%= t('home.fig.' + f.key + 'Sub') %></span>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+    <% } %>
   </div>
 </section>
 
@@ -91,7 +108,7 @@
 </section>
 <% } %>
 
-<section class="section section-alt">
+<section class="section section-alt" id="doi-tac">
   <div class="container">
     <div class="section-head"><h2 class="section-title"><%= t('home.partnersTitle') %></h2></div>
     <% if (partners && partners.length) { %>

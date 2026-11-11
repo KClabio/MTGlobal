@@ -1,5 +1,5 @@
-// Home page "Lĩnh vực hoạt động" slider (layout, texts, wheel, smooth slides, drag/throw, arrows, "← Về trang chủ")
-// and the "← Quay lại" back link on detail pages.
+// Home page "Lĩnh vực hoạt động" slider (layout, texts, wheel, smooth slides, drag/throw, arrows, "← Về trang chủ"),
+// the hero (photo as background, the figures panel and its count-up) and the "← Quay lại" back link on detail pages.
 import { suite, part, check, db, BASE, appRequire, tempArticle } from './lib/index.mjs';
 
 const { bannerFor } = appRequire('./lib/banners.js');
@@ -242,6 +242,138 @@ await suite(async (b) => {
     await b.setCookie('theme', 'dark');
     await nav('/'); await bringIntoView(); await sleep(300);
     await shot('slider-1280-dark');
+  });
+
+  // Trang chủ hero: the photo fills the section behind the text; a glass panel on it shows live counts of projects,
+  // products and partners (lib/home-domains.js buildHeroFigures), counted up once by public/js/main.js.
+  await part(b, 'hero photo + figures', async () => {
+    const d = await db();
+    const { buildHeroFigures } = appRequire('./lib/home-domains.js');
+    const sharp = appRequire('sharp');
+    const nav = (p, settle = 300) => b.nav(p, settle);
+    const page = async (lang = 'vi') => (await fetch(BASE + '/', { headers: { cookie: `lang=${lang}` } })).text();
+    await b.setCookie('theme', 'light');
+    await viewport(1280);
+
+    // ---- 1. Which figures (plain logic) ----
+    const keys = (o) => buildHeroFigures(o).map((f) => `${f.key}:${f.n}:${f.href}`).join(' ');
+    check('figures: projects, products, partners in that order, each with the page that shows them',
+      keys({ projects: 8, products: 26, partners: 7 }) === 'projects:8:/giai-phap/du-an products:26:/san-pham partners:7:#doi-tac', keys({ projects: 8, products: 26, partners: 7 }));
+    check('figures: a count of 0 (or not a number) is left out; nothing to count → no panel',
+      keys({ projects: 0, products: 3, partners: 0 }) === 'products:3:/san-pham' && buildHeroFigures({}).length === 0 && buildHeroFigures({ projects: NaN, partners: 2.5 }).length === 0);
+
+    // ---- 2. The real numbers are in the HTML from the start (search engines, screen readers, no JavaScript) ----
+    const counts = { projects: await d.collection('projects').countDocuments(), products: await d.collection('products').countDocuments(), partners: await d.collection('partners').countDocuments() };
+    const figs = buildHeroFigures(counts);
+    const html = await page();
+    const inHtml = [...html.matchAll(/data-fig-count="(\d+)"/g)].map((m) => Number(m[1]));
+    check(`HTML carries the database counts ${JSON.stringify(counts)}`, figs.length > 0 && JSON.stringify(inHtml) === JSON.stringify(figs.map((f) => f.n)), inHtml);
+    check('screen readers get one sentence per row ("8 dự án đã triển khai"); the moving digits are hidden from them',
+      html.includes(`<span class="sr-only">${counts.projects} dự án đã triển khai</span>`) && /class="fig-num" data-fig-count="\d+" style="[^"]*" aria-hidden="true">\d+</.test(html) && html.includes('aria-label="MTG qua các con số"'));
+    const htmlEn = await page('en');
+    check('English: "MTG in numbers", "<n> products robots & STEM equipment"', htmlEn.includes('aria-label="MTG in numbers"') && htmlEn.includes(`<span class="sr-only">${counts.products} products robots &amp; STEM equipment</span>`));
+    check('the partner row leads to the partner strip on Trang chủ (#doi-tac)', /<section class="section section-alt" id="doi-tac">[\s\S]{0,400}partner-strip/.test(html));
+
+    // ---- 3. The photo fills the section, under the text ----
+    // Records every number the panel shows while counting, with the time and the panel's height (installed before the page runs)
+    const RECORDER = `(() => { window.__fig = { seen: [], heights: [] };
+      document.addEventListener('DOMContentLoaded', () => {
+        const panel = document.querySelector('[data-hero-figures]'); if (!panel) return;
+        const nums = [...panel.querySelectorAll('[data-fig-count]')];
+        const note = () => { const now = performance.now();
+          nums.forEach((el, i) => { const s = (window.__fig.seen[i] = window.__fig.seen[i] || []); const v = Number(el.textContent); if (!s.length || s[s.length - 1].v !== v) s.push({ t: now, v }); });
+          window.__fig.heights.push(Math.round(panel.getBoundingClientRect().height * 10) / 10); };
+        note(); new MutationObserver(note).observe(panel, { childList: true, characterData: true, subtree: true });
+      }); })()`;
+    const { identifier } = await send('Page.addScriptToEvaluateOnNewDocument', { source: RECORDER });
+    const countUp = async () => {
+      await nav('/', 3200); // the count runs about 2.2 s (delays included)
+      return ev(`(() => { const i = window.__fig.seen.reduce((best, s, k, all) => (s[s.length - 1].v > all[best][all[best].length - 1].v ? k : best), 0); const s = window.__fig.seen[i];
+        const moving = s.filter((x) => x.v > 0);
+        return { values: s.map((x) => x.v), final: [...document.querySelectorAll('[data-fig-count]')].map((el) => Number(el.textContent)),
+          ms: moving.length ? Math.round(moving[moving.length - 1].t - moving[0].t) : 0, heights: [...new Set(window.__fig.heights)],
+          ready: document.querySelector('[data-hero-figures]').classList.contains('is-ready'), opacity: getComputedStyle(document.querySelector('[data-hero-figures]')).opacity }; })()`);
+    };
+    // Said explicitly: the test browser otherwise follows the computer's own setting (the owner's PC asks for less motion)
+    await b.reducedMotion(false);
+    const normal = await countUp();
+    const cover =await ev(`(() => { const box = (el) => { const r = el.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(Math.round).join(','); };
+      const hero = document.querySelector('.home-hero'), img = document.querySelector('.home-hero-art img'), h1 = document.querySelector('.home-hero h1'), r = h1.getBoundingClientRect();
+      return { hero: box(hero), img: box(img), fit: getComputedStyle(img).objectFit, loaded: img.naturalWidth, h1OnTop: document.elementFromPoint(r.left + 20, r.top + r.height / 2) === h1,
+        panelOnTop: !!document.elementFromPoint(document.querySelector('.fig-num').getBoundingClientRect().left + 5, document.querySelector('.fig-num').getBoundingClientRect().top + 10).closest('[data-hero-figures]'),
+        side: document.querySelector('[data-hero-figures]').getBoundingClientRect().left > r.right }; })()`);
+    check('1280px: the photo fills the whole section (cropped to cover) and has loaded', cover.hero === cover.img && cover.fit === 'cover' && cover.loaded > 0, cover);
+    check('1280px: the title and the figures sit on top of the photo; the panel is to the right of the text', cover.h1OnTop && cover.panelOnTop && cover.side, cover);
+
+    // ---- 4. The count-up: plays once, really counts, ends on the real numbers, the panel doesn't move ----
+    check('count-up: ends on the real numbers, panel shown', JSON.stringify(normal.final) === JSON.stringify(inHtml) && normal.ready && normal.opacity === '1', normal);
+    const top = normal.values[normal.values.length - 1];
+    check(`count-up: passes through numbers between 0 and ${top}, never going down`, normal.values.some((v) => v > 0 && v < top) && normal.values.every((v, i, a) => i === 0 || v >= a[i - 1]), normal.values);
+    check(`count-up: takes about 2 seconds (${normal.ms} ms from the first number above 0 to the last)`, normal.ms >= 1500 && normal.ms <= 2500, normal.ms);
+    check('count-up: the panel keeps its height while counting', normal.heights.length === 1, normal.heights);
+    await b.reducedMotion(true);
+    const reduced = await countUp();
+    await b.reducedMotion(false);
+    check(`reduced motion: still counts up, shorter (${reduced.ms} ms vs ${normal.ms} ms), ends on the real numbers`,
+      reduced.values.some((v) => v > 0 && v < top) && reduced.ms > 0 && reduced.ms < normal.ms * 0.7 && JSON.stringify(reduced.final) === JSON.stringify(inHtml), { reduced, normal: normal.ms });
+    await send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+
+    // ---- 5. Readable over any photo: a pure white photo is the worst case for white text ----
+    // The photo is hidden and its place painted white; the text is hidden; the brightest pixel behind each text is read.
+    const lum = ([r, g, bl]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(bl); };
+    const worstContrast = async (label) => {
+      await nav('/', 1500);
+      const texts = await ev(`(() => {
+        const art = document.querySelector('.home-hero-art'); art.style.background = '#fff'; art.querySelector('img').style.visibility = 'hidden';
+        const out = [];
+        for (const sel of ['.home-hero h1', '.home-hero-text p', '.fig-num', '.fig-label', '.fig-sub']) {
+          const el = document.querySelector(sel); if (!el || getComputedStyle(el).display === 'none' || !el.getClientRects().length) continue;
+          const r = el.getBoundingClientRect(); out.push({ sel, x: r.left, y: r.top, w: r.width, h: r.height, color: getComputedStyle(el).color });
+        }
+        document.querySelectorAll('.home-hero-text > *, .fig a > *').forEach((el) => { el.style.visibility = 'hidden'; });
+        return out; })()`);
+      await sleep(300);
+      const out = [];
+      for (const tx of texts) {
+        const { data } = await send('Page.captureScreenshot', { format: 'png', clip: { x: tx.x, y: tx.y, width: Math.max(1, tx.w), height: Math.max(1, tx.h), scale: 1 } });
+        const { data: px, info } = await sharp(Buffer.from(data, 'base64')).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+        let bright = [0, 0, 0], max = -1;
+        for (let i = 0; i < px.length; i += info.channels) { const c = [px[i], px[i + 1], px[i + 2]]; const L = lum(c); if (L > max) { max = L; bright = c; } }
+        const [r, g, bl, a = 1] = (tx.color.match(/[\d.]+/g) || []).map(Number);
+        const fg = [r, g, bl].map((v, k) => v * a + bright[k] * (1 - a));
+        const L1 = lum(fg), L2 = lum(bright);
+        out.push({ sel: tx.sel, ratio: Math.round((Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05) * 10) / 10 });
+      }
+      const low = out.filter((o) => o.ratio < 4.5);
+      check(`${label}: every hero text keeps >= 4.5:1 even over a white photo (lowest ${Math.min(...out.map((o) => o.ratio))}:1)`, out.length >= 4 && low.length === 0, out);
+    };
+    await worstContrast('1280px');
+
+    // ---- 6. Phones: the figures become a row of 3 under the button ----
+    await viewport(390, 844);
+    await worstContrast('390px');
+    await nav('/', 1500);
+    const phone = await ev(`(() => { const figs = [...document.querySelectorAll('.fig')].map((f) => f.getBoundingClientRect());
+      const btn = document.querySelector('.home-hero .btn').getBoundingClientRect(), panel = document.querySelector('[data-hero-figures]').getBoundingClientRect();
+      return { wide: document.documentElement.scrollWidth, oneRow: new Set(figs.map((r) => Math.round(r.top))).size === 1, under: panel.top >= btn.bottom, right: Math.round(panel.right),
+        cover: (() => { const h = document.querySelector('.home-hero').getBoundingClientRect(), i = document.querySelector('.home-hero-art img').getBoundingClientRect(); return Math.round(h.height) === Math.round(i.height) && Math.round(h.width) === Math.round(i.width); })() }; })()`);
+    check('390px: no sideways scroll; the figures are one row under the button, inside the screen; the photo still fills the section',
+      phone.wide <= 390 && phone.oneRow && phone.under && phone.right <= 390 - 12 && phone.cover, phone);
+    await shot('hero-390');
+    await viewport(1280);
+    await b.setCookie('theme', 'dark');
+    await nav('/', 1800);
+    await shot('hero-1280-dark');
+    await b.setCookie('theme', 'light');
+
+    // ---- 7. Printing: text, the figures as one plain line, then the photo ----
+    await b.printMedia(true); await sleep(200);
+    const printed = await ev(`(() => { const p = document.querySelector('[data-hero-figures]'), cs = getComputedStyle(p), art = document.querySelector('.home-hero-art');
+      return { opacity: cs.opacity, glass: cs.backdropFilter, bg: cs.backgroundColor, art: getComputedStyle(art).position, artBelow: art.getBoundingClientRect().top >= p.getBoundingClientRect().bottom,
+        numColor: getComputedStyle(document.querySelector('.fig-num')).color, icons: getComputedStyle(document.querySelector('.fig-icon')).display }; })()`);
+    await b.printMedia(false);
+    check('print: figures shown as plain dark text (no glass, no icons), the photo below them in the page flow',
+      printed.opacity === '1' && printed.glass === 'none' && printed.bg === 'rgba(0, 0, 0, 0)' && printed.art === 'static' && printed.artBelow && printed.icons === 'none' && printed.numColor !== 'rgb(255, 255, 255)', printed);
   });
 
   await part(b, 'back link', async () => {

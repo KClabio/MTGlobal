@@ -717,6 +717,45 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
   });
 })();
 
+// Home hero figures (views/index.ejs [data-hero-figures]): the panel rises in (CSS, on .is-ready) and each number counts
+// up from 0 to its real value once, row after row, slowing down at the end. The real numbers are already in the HTML
+// (search engines, screen readers, printing, no JavaScript); any error leaves them as they are. When the device asks for
+// less motion it still plays, shorter (--anim, base.css), like the dashboard. Each number keeps its final width (its
+// min-width in ch, views/index.ejs), so the panel doesn't move while counting. The clock starts at the first frame the
+// browser draws (with the CSS rise), not when this script runs: on a slow page that can be much later, and the count
+// would skip its start. A page restored by Back keeps its final numbers (this doesn't run again).
+(function () {
+  var panel = document.querySelector('[data-hero-figures]');
+  if (!panel) return;
+  var nums = Array.prototype.slice.call(panel.querySelectorAll('[data-fig-count]'));
+  var finalText = function (el) { return el.getAttribute('data-fig-count'); };
+  try {
+    var anim = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--anim')) || 1;
+    panel.classList.add('is-ready');
+    if (!window.requestAnimationFrame) return;
+    var targets = nums.map(function (el) { return parseInt(finalText(el), 10) || 0; });
+    nums.forEach(function (el) { el.textContent = '0'; });
+    var start = null;
+    var step = function (now) {
+      if (start === null) start = now;
+      var running = false;
+      nums.forEach(function (el, i) {
+        var delay = (200 + 120 * i) * anim; // the same delay as the row's own rise (home.css)
+        // About 2 s until the last number shows (the owner's wish). A gentle slow-down: with a steeper one the final
+        // number is already on screen long before the time is up, and the count looks shorter than it is.
+        var p = Math.min(1, Math.max(0, (now - start - delay) / (2000 * anim)));
+        el.textContent = String(Math.round(targets[i] * (1 - Math.pow(1 - p, 2))));
+        if (p < 1) running = true;
+      });
+      if (running) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  } catch (e) {
+    panel.classList.add('is-ready');
+    nums.forEach(function (el) { el.textContent = finalText(el); });
+  }
+})();
+
 // Home "Lĩnh vực hoạt động" slider: the mouse wheel over the cards scrolls them sideways and never the page (at the
 // first/last card it simply does nothing; over the title and around the cards the page scrolls as usual), arrow
 // buttons and ← / → step one card, the mouse can drag and throw it, and it always comes

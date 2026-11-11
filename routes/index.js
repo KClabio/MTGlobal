@@ -11,7 +11,7 @@ const { validateQuoteRequest, readQuoteValues } = require('../lib/quote-request'
 const { readServiceAnswers } = require('../lib/service-content');
 const { getSolutionPage, TITLE_KEYS: SOLUTION_TITLE_KEYS, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
 const { groupProjectsByLevel } = require('../lib/project-levels');
-const { buildHomeDomains, buildSolutionCards, buildServiceCards, homeHeroImage, DEFAULT_HOME_HERO } = require('../lib/home-domains');
+const { buildHomeDomains, buildSolutionCards, buildServiceCards, buildHeroFigures, homeHeroImage, DEFAULT_HOME_HERO } = require('../lib/home-domains');
 const { groupEquipmentByPart, partSlug } = require('../lib/equipment-parts');
 const { policyText } = require('../lib/privacy-policy');
 const { termsText } = require('../lib/terms-of-use');
@@ -33,16 +33,19 @@ const allPartners = () => memo('partners', homeCacheSeconds(), () => Partner.fin
 router.get('/', async (req, res) => {
   // The same for every visitor, so kept in memory for a minute on the live server (lib/memo-cache.js); the
   // language, settings and logged-in header are still built for each visit
-  const [featuredProjects, robots, partners, services] = await memo('home', homeCacheSeconds(), () => Promise.all([
+  const [featuredProjects, robots, partners, services, projectCount, productCount] = await memo('home', homeCacheSeconds(), () => Promise.all([
     Project.find().sort({ featured: -1, order: 1, createdAt: -1 }).limit(3).lean(),
     Product.find({ category: { $in: ROBOT_CATEGORIES } }).sort({ order: 1, _id: 1 }).lean(),
     allPartners(),
     Service.find().sort({ order: 1, _id: 1 }).lean(),
+    Project.countDocuments(),
+    Product.countDocuments(),
   ]));
   const { settings, lang, t } = res.locals;
   const domains = buildHomeDomains({ settings, lang, t, services });
   const heroImage = homeHeroImage(settings);
-  res.render('index', { featuredProjects, robots, partners, domains, heroImage, heroBuiltIn: heroImage === DEFAULT_HOME_HERO });
+  const heroFigures = buildHeroFigures({ projects: projectCount, products: productCount, partners: partners.length });
+  res.render('index', { featuredProjects, robots, partners, domains, heroImage, heroBuiltIn: heroImage === DEFAULT_HOME_HERO, heroFigures });
 });
 
 // Về MTG: the "Ba lĩnh vực hoạt động" products card lists the robots of Admin → Robot, in the admin's order

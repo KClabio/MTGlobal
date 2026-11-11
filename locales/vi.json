@@ -53,6 +53,15 @@
     "heroSubtitle": "MTG mang đến robot thông minh, giải pháp phòng Lab STEM toàn diện và các dịch vụ tư vấn công nghệ cho trường học và doanh nghiệp.",
     "heroCta": "Yêu cầu tư vấn",
     "heroImageAlt": "Học sinh điều khiển robot VEX IQ trên sân thi đấu trong buổi trải nghiệm STEM",
+    "figuresLabel": "MTG qua các con số",
+    "fig": {
+      "projects": "dự án",
+      "projectsSub": "đã triển khai",
+      "products": "sản phẩm",
+      "productsSub": "robot & thiết bị STEM",
+      "partners": "đối tác",
+      "partnersSub": "đồng hành cùng MTG"
+    },
     "pillarsTitle": "Lĩnh vực hoạt động",
     "featuredProjectsTitle": "Dự án tiêu biểu",
     "partnersTitle": "Đối tác đồng hành",

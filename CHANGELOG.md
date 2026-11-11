@@ -6,6 +6,14 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Trang chủ, the top section:** the photo now fills the whole section behind the title, instead of sitting in a box next to it. A dark veil keeps the text easy to read over any picture uploaded in Admin → Cài đặt chung → Trang chủ. On the right of the photo, a glass panel shows how many projects, products and partners MTG has. The numbers are counted from the admin, so they stay up to date by themselves, and each one links to the page that shows them. As the page opens, the numbers count up from 0 over about two seconds, once. On phones, the three numbers sit in one row under the button.
+
+  ![Trang chủ: the photo behind the title, the figures panel on the right](docs/screenshots/1.3.4/home-hero-background.jpg)
+  ![Trang chủ on a phone, in dark mode](docs/screenshots/1.3.4/home-hero-phone-dark.jpg)
+
 ## [1.3.3] - 2026-11-09
 
 ### Added

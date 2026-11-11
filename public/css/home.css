@@ -1,11 +1,42 @@
 /* Home page (views/index.ejs): hero, pillar cards and the "Lĩnh vực hoạt động" slider (public/js/main.js). */
 
-.home-hero { background: linear-gradient(135deg, var(--mtg-navy) 0%, #142334 100%); color: #fff; padding: 80px 0 60px; }
-.home-hero-inner { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
-.home-hero h1 { color: #fff; font-size: 2.4rem; }
-.home-hero p { color: rgba(255,255,255,.8); font-size: 1.05rem; }
-.home-hero-art { background: var(--mtg-gradient-brand); border-radius: var(--mtg-radius); min-height: 260px; display: flex; align-items: center; justify-content: center; }
-.home-hero-art img { border-radius: var(--mtg-radius); width: 100%; height: auto; }
+/* ---- Hero: the photo fills the section; a navy veil (dark behind the text, lighter on the right) keeps the text
+   readable over any uploaded photo. The solid colour shows while the photo loads. ---- */
+.home-hero { position: relative; isolation: isolate; overflow: hidden; background-color: var(--mtg-navy); color: #fff; min-height: clamp(460px, 64vh, 660px); display: flex; align-items: center; padding: 96px 0 80px; }
+.home-hero > .container { width: 100%; }
+.home-hero-art { position: absolute; inset: 0; z-index: -1; }
+.home-hero-art img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 60%; }
+.home-hero-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(12,20,33,.92) 0%, rgba(12,20,33,.84) 40%, rgba(12,20,33,.52) 70%, rgba(12,20,33,.42) 100%); }
+.home-hero-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 48px; align-items: center; }
+.home-hero-text { max-width: 620px; }
+.home-hero h1 { color: #fff; font-size: 2.4rem; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+.home-hero p { color: rgba(255,255,255,.88); font-size: 1.05rem; text-shadow: 0 1px 10px rgba(0,0,0,.35); }
+
+/* Key figures (routes/index.js heroFigures): one dark glass panel, a row per figure, each row a link.
+   Dark glass, not white: white text stays readable over bright parts of any photo. */
+.home-hero-figures { list-style: none; margin: 0; padding: 6px; width: 340px; background: rgba(12,20,33,.55); -webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2); border: 1px solid rgba(255,255,255,.18); border-radius: var(--mtg-radius); box-shadow: 0 18px 44px rgba(0,0,0,.3); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .home-hero-figures { background: rgba(12,20,33,.82); } }
+.fig + .fig { border-top: 1px solid rgba(255,255,255,.14); }
+.fig a { display: grid; grid-template-columns: 40px auto minmax(0, 1fr) auto; align-items: center; column-gap: 14px; padding: 14px; color: #fff; text-decoration: none; border-radius: calc(var(--mtg-radius) - 4px); transition: background .2s; }
+.fig a:hover { background: rgba(255,255,255,.1); }
+.fig a:focus-visible { background: rgba(255,255,255,.1); outline: 3px solid #6aaef0; outline-offset: 2px; } /* the dark theme's light blue: the light theme's blue is too faint on the dark panel */
+.fig-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; }
+.fig.accent-green .fig-icon { background: var(--mtg-green); }
+.fig.accent-blue .fig-icon { background: var(--mtg-blue-solid); }
+.fig.accent-orange .fig-icon { background: var(--mtg-orange); }
+.fig-num { font-size: 2.25rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; text-align: right; }
+.fig-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.fig-label { font-weight: 700; font-size: 1rem; }
+.fig-sub { font-size: .85rem; color: rgba(255,255,255,.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fig-arrow { opacity: .7; transition: transform .2s, opacity .2s; }
+.fig a:hover .fig-arrow, .fig a:focus-visible .fig-arrow { transform: translateX(4px); opacity: 1; }
+/* Entrance, once (public/js/main.js adds .is-ready and counts the numbers up). With JavaScript the panel waits hidden
+   for it; if the script never runs, it shows after 2 s anyway. Reduced motion: shorter (--anim, base.css), not removed. */
+.js .home-hero-figures { opacity: 0; animation: figShow 0s linear 2s forwards; }
+.js .home-hero-figures.is-ready { opacity: 1; animation: figRise calc(500ms * var(--anim)) cubic-bezier(.2,.7,.2,1) both; }
+.js .home-hero-figures.is-ready .fig { animation: figRise calc(450ms * var(--anim)) cubic-bezier(.2,.7,.2,1) both; animation-delay: calc((200ms + 120ms * var(--fig-i, 0)) * var(--anim)); }
+@keyframes figRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes figShow { to { opacity: 1; } }
 
 /* ---- Pillar cards (home) ---- */
 .pillar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
@@ -80,21 +111,48 @@
 }
 
 /* ---- Responsive ---- */
+@media (max-width: 1200px) {
+  .home-hero-figures { width: 260px; }
+  .fig-sub { display: none; }
+}
+/* Text across the whole width: an even veil, and the figures become a row of 3 under the button */
 @media (max-width: 960px) {
-  .home-hero-inner { grid-template-columns: 1fr; }
+  .home-hero { min-height: 0; padding: 72px 0 56px; }
+  .home-hero-art::after { background: rgba(12,20,33,.78); }
+  .home-hero-inner { grid-template-columns: 1fr; gap: 32px; }
+  .home-hero-figures { width: auto; max-width: 560px; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .fig + .fig { border-top: 0; border-left: 1px solid rgba(255,255,255,.14); }
+  .fig a { height: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 14px 8px; }
+  .fig-num { font-size: 1.9rem; text-align: center; }
+  .fig-arrow { display: none; }
   .pillar-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
   .pillar-grid { grid-template-columns: 1fr; }
+  .home-hero { padding: 64px 0 48px; }
   .home-hero h1 { font-size: 1.7rem; }
+  .home-hero-figures { max-width: none; }
+  .fig-icon { display: none; }
+  .fig-num { font-size: 1.5rem; }
+  .fig-label { font-size: .9rem; }
 }
 
-/* ---- Printing: a plain hero; "Lĩnh vực hoạt động" as rows of cards instead of a sideways slider ---- */
+/* ---- Printing: a plain hero (text, the figures as one bordered line, then the photo); "Lĩnh vực hoạt động" as rows of
+   cards instead of a sideways slider ---- */
 @media print {
-  .home-hero { background: none; color: var(--mtg-ink); padding: 20px 0; }
-  .home-hero h1 { color: var(--mtg-heading); }
-  .home-hero p { color: var(--mtg-muted); }
-  .home-hero-art { background: none; min-height: 0; }
+  .home-hero { display: flex; flex-direction: column; min-height: 0; background: none; color: var(--mtg-ink); padding: 20px 0; overflow: visible; }
+  .home-hero h1 { color: var(--mtg-heading); text-shadow: none; }
+  .home-hero p { color: var(--mtg-muted); text-shadow: none; }
+  .home-hero-art { position: static; order: 2; z-index: auto; }
+  .home-hero-art::after { display: none; }
+  .home-hero-art img { width: auto; max-width: 100%; height: auto; max-height: 8cm; }
+  .home-hero-inner { display: block; }
+  .js .home-hero-figures, .home-hero-figures { opacity: 1; animation: none; display: flex; flex-wrap: wrap; width: auto; max-width: none; margin: 12px 0; padding: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; border: 1px solid #999; box-shadow: none; }
+  .js .home-hero-figures .fig { animation: none; }
+  .fig + .fig { border-top: 0; border-left: 1px solid #999; }
+  .fig a { display: flex; flex-direction: row; align-items: baseline; gap: 6px; padding: 6px 14px; color: var(--mtg-ink); }
+  .fig-icon, .fig-arrow, .fig-sub { display: none; }
+  .fig-num { font-size: 1.2rem; }
   .domain-arrows { display: none; }
   .domain-track { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); grid-auto-columns: auto; overflow: visible; margin: 0; padding: 0; }
 }
