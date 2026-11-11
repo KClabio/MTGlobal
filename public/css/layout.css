@@ -3,7 +3,7 @@
 
 /* ---- Header / Nav ---- */
 .brand-bar { height: 4px; background: var(--mtg-gradient-brand); }
-.site-header { position: sticky; top: 0; z-index: 50; background: var(--mtg-surface); box-shadow: var(--mtg-shadow); }
+.site-header { position: sticky; top: 0; z-index: 50; } /* its see-through glass: below, "See-through menu bar" */
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 20px; }
 /* flex: none: a full header must never squeeze the logo away */
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; color: var(--mtg-heading); flex: none; }
@@ -65,6 +65,48 @@
 
 .nav-toggle { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 6px; }
 .nav-toggle span { width: 24px; height: 2px; background: var(--mtg-heading); }
+
+/* ---- See-through menu bar: frosted glass on every page, so the page shows softly through it while scrolling. On
+   Trang chủ the hero photo reaches up behind the bar, which is dark glass with white text while it lies over the photo
+   (.is-over-hero: set by the server for the first paint, then by main.js on scroll).
+   The glass is a layer behind the bar (::before), not a filter on the bar itself: a filter there would trap the phone
+   menu drawer (position: fixed) inside the bar. ---- */
+.site-header { background: transparent; box-shadow: 0 1px 0 color-mix(in srgb, var(--mtg-border) 80%, transparent), 0 8px 24px rgba(15, 23, 42, .06);
+  transition: box-shadow calc(.25s * var(--anim, 1)) ease; }
+.site-header::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: color-mix(in srgb, var(--mtg-surface) 75%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px);
+  transition: background-color calc(.25s * var(--anim, 1)) ease; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .site-header::before { background: var(--mtg-surface); } }
+body.nav-open .site-header::before { background: var(--mtg-surface); }
+/* Trang chủ: the hero slides up under the bar (--header-h: the bar's real height, main.js) */
+:root[data-page="home"] .home-hero { margin-top: calc(-1 * var(--header-h, 72px)); padding-top: calc(96px + var(--header-h, 72px));
+  min-height: calc(clamp(460px, 64vh, 660px) + var(--header-h, 72px)); }
+@media (max-width: 960px) { :root[data-page="home"] .home-hero { padding-top: calc(72px + var(--header-h, 64px)); } }
+@media (max-width: 640px) { :root[data-page="home"] .home-hero { padding-top: calc(64px + var(--header-h, 64px)); } }
+@media print { :root[data-page="home"] .home-hero { margin-top: 0; padding-top: 20px; } }
+/* Over the photo: dark glass, white text (dropdown panels keep their own light look). Screen only: a printed page
+   keeps the normal dark-on-white header. */
+@media screen {
+body:not(.nav-open) .site-header.is-over-hero { box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .14); }
+body:not(.nav-open) .site-header.is-over-hero::before { background: rgba(12, 20, 33, .3); }
+body:not(.nav-open) .is-over-hero .main-nav > a,
+body:not(.nav-open) .is-over-hero .nav-dropdown > .nav-dropdown-trigger,
+body:not(.nav-open) .is-over-hero .logo-text,
+body:not(.nav-open) .is-over-hero .user-menu-trigger { color: #fff; }
+body:not(.nav-open) .is-over-hero .main-nav > a:hover,
+body:not(.nav-open) .is-over-hero .nav-dropdown:hover > .nav-dropdown-trigger,
+body:not(.nav-open) .is-over-hero .nav-dropdown > .nav-dropdown-trigger:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+body:not(.nav-open) .is-over-hero .logo-text small { color: rgba(255, 255, 255, .8); }
+body:not(.nav-open) .is-over-hero .logo .logo-img { background: #fff; border-radius: 6px; padding: 2px 6px; }
+body:not(.nav-open) .is-over-hero .nav-toggle span { background: #fff; }
+body:not(.nav-open) .is-over-hero .lang-switch { border-color: rgba(255, 255, 255, .4); }
+body:not(.nav-open) .is-over-hero .lang-switch a:not(.active) { color: rgba(255, 255, 255, .88); }
+body:not(.nav-open) .is-over-hero .lang-switch a:not(.active):hover { color: #fff; }
+body:not(.nav-open) .is-over-hero .btn-ghost { color: #fff; border-color: rgba(255, 255, 255, .5); }
+body:not(.nav-open) .is-over-hero .btn-ghost:hover { border-color: #fff; background: rgba(255, 255, 255, .12); }
+body:not(.nav-open) .is-over-hero .user-menu-trigger { background: rgba(255, 255, 255, .14); }
+body:not(.nav-open) .is-over-hero .theme-toggle:not([aria-checked="true"]) .theme-toggle-track { background: rgba(255, 255, 255, .35); }
+}
 
 /* ---- Hero ---- */
 .page-hero { background: var(--mtg-navy); color: #fff; padding: 64px 0; text-align: center; }

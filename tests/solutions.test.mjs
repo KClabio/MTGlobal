@@ -40,7 +40,8 @@ await suite(async (b) => {
         if (r.status !== 200) { notOk.push(`${lang} ${p} ${r.status}`); continue; }
         const urls = [...html.matchAll(/(?:<img[^>]+src|<source[^>]+src|poster)="([^"]+)"/g)].map((m) => m[1]).filter((u) => u.startsWith('/'));
         for (const u of urls) if (!assetSeen.has(u)) assetSeen.set(u, p);
-        if (/HKD|2152 ?0727|ap-sales@/.test(html)) hkHits.push(`${lang} ${p}`);
+        // Without the page's random security codes (nonce), which now and then contain the letters "HKD"
+        if (/HKD|2152 ?0727|ap-sales@/.test(html.replace(/nonce="[^"]*"/g, ''))) hkHits.push(`${lang} ${p}`);
       }
     }
     check(`all ${pages.length} pages × 2 languages return 200`, notOk.length === 0, notOk);

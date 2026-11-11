@@ -16,7 +16,8 @@
 %>
 <!doctype html>
 <% const langFade = typeof langSwitched !== 'undefined' && langSwitched; %>
-<html lang="<%= lang %>" data-theme="<%= theme %>"<%- langFade ? ' class="lang-fading"' : '' %>>
+<% const hdHomeHero = typeof homeHero !== 'undefined' && homeHero; /* Trang chủ: its photo reaches up behind the menu bar (layout.css) */ %>
+<html lang="<%= lang %>" data-theme="<%= theme %>"<%- langFade ? ' class="lang-fading"' : '' %><% if (hdHomeHero) { %> data-page="home"<% } %>>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,7 +67,7 @@
 </head>
 <body>
   <div class="brand-bar"></div>
-  <header class="site-header<%= user ? '' : ' is-guest' %>" id="siteHeader">
+  <header class="site-header<%= user ? '' : ' is-guest' %><%= hdHomeHero ? ' is-over-hero' : '' %>" id="siteHeader">
     <div class="container header-inner">
       <a href="/" class="logo"><%- include('logo') %></a>
 

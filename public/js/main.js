@@ -756,6 +756,28 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
   }
 })();
 
+// Trang chủ: the hero photo lies under the see-through menu bar. --header-h is the bar's real height (the hero slides
+// up by it, layout.css), and the bar is dark glass with white text (.is-over-hero, set by the server for the first
+// paint) while the photo is still behind it.
+(function () {
+  var root = document.documentElement;
+  if (root.getAttribute('data-page') !== 'home') return;
+  var header = document.getElementById('siteHeader');
+  var hero = document.querySelector('.home-hero');
+  if (!header || !hero) return;
+  var setHeight = function () { root.style.setProperty('--header-h', header.offsetHeight + 'px'); };
+  setHeight();
+  if ('ResizeObserver' in window) new ResizeObserver(setHeight).observe(header);
+  else window.addEventListener('resize', setHeight);
+  var queued = false;
+  var update = function () {
+    queued = false;
+    header.classList.toggle('is-over-hero', hero.getBoundingClientRect().bottom > header.offsetHeight + 24);
+  };
+  window.addEventListener('scroll', function () { if (!queued) { queued = true; requestAnimationFrame(update); } }, { passive: true });
+  update();
+})();
+
 // Home "Đối tác đồng hành" (views/index.ejs [data-partner-marquee]): one line of logos sliding slowly to the right by
 // itself and looping. The list is copied (one copy before the real logos, enough after them to fill the screen) and the
 // row's position wraps every list-width, so after the last partner the first comes round again with no jump. Copies

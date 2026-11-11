@@ -305,6 +305,23 @@ await suite(async (b) => {
     check('1280px: the photo fills the whole section (cropped to cover) and has loaded', cover.hero === cover.img && cover.fit === 'cover' && cover.loaded > 0, cover);
     check('1280px: the title and the figures sit on top of the photo; the panel is to the right of the text', cover.h1OnTop && cover.panelOnTop && cover.side, cover);
 
+    // ---- 3b. The menu bar: see-through everywhere; on Trang chủ the photo reaches up behind it ----
+    const alpha = (c) => { const m = c.match(/\/\s*([\d.]+)\)|rgba\([^)]*,\s*([\d.]+)\)/); return m ? Number(m[1] || m[2]) : 1; };
+    const bar = () => ev(`(() => { const h = document.getElementById('siteHeader'); const r = h.getBoundingClientRect(); const hero = document.querySelector('.home-hero');
+      return { over: h.classList.contains('is-over-hero'), glass: getComputedStyle(h, '::before').backgroundColor, blur: getComputedStyle(h, '::before').backdropFilter, own: getComputedStyle(h).backgroundColor,
+        heroUnder: hero ? hero.getBoundingClientRect().top <= r.top + 1 : null, link: (document.querySelector('.main-nav > a') ? getComputedStyle(document.querySelector('.main-nav > a')).color : null) }; })()`);
+    const atTop = await bar();
+    await ev(`window.scrollTo(0, document.querySelector('.home-hero').getBoundingClientRect().bottom + scrollY)`); await sleep(400);
+    const scrolled = await bar();
+    await ev('window.scrollTo(0, 0)'); await sleep(300);
+    check('Trang chủ, top: the photo reaches up under the menu bar, which is dark see-through glass with white menu text',
+      atTop.over && atTop.heroUnder && atTop.own === 'rgba(0, 0, 0, 0)' && alpha(atTop.glass) < 0.5 && /blur/.test(atTop.blur) && atTop.link === 'rgb(255, 255, 255)', atTop);
+    check('Trang chủ, scrolled past the photo: the light frosted bar (see-through, blurred), dark menu text',
+      !scrolled.over && alpha(scrolled.glass) > 0.6 && alpha(scrolled.glass) < 1 && /blur/.test(scrolled.blur) && scrolled.link !== 'rgb(255, 255, 255)', scrolled);
+    await nav('/lien-he', 300);
+    const other = await bar();
+    check('other pages: the light frosted bar from the start, the page starts below it', !other.over && alpha(other.glass) > 0.6 && alpha(other.glass) < 1 && other.heroUnder === null && !(await ev(`document.documentElement.hasAttribute('data-page')`)), other);
+
     // ---- 4. The count-up: plays once, really counts, ends on the real numbers, the panel doesn't move ----
     check('count-up: ends on the real numbers, panel shown', JSON.stringify(normal.final) === JSON.stringify(inHtml) && normal.ready && normal.opacity === '1', normal);
     const top = normal.values[normal.values.length - 1];
@@ -326,11 +343,11 @@ await suite(async (b) => {
       const texts = await ev(`(() => {
         const art = document.querySelector('.home-hero-art'); art.style.background = '#fff'; art.querySelector('img').style.visibility = 'hidden';
         const out = [];
-        for (const sel of ['.home-hero h1', '.home-hero-text p', '.fig-num', '.fig-label', '.fig-sub']) {
+        for (const sel of ['.home-hero h1', '.home-hero-text p', '.fig-num', '.fig-label', '.fig-sub', '.main-nav > a', '.header-actions .btn-ghost']) {
           const el = document.querySelector(sel); if (!el || getComputedStyle(el).display === 'none' || !el.getClientRects().length) continue;
           const r = el.getBoundingClientRect(); out.push({ sel, x: r.left, y: r.top, w: r.width, h: r.height, color: getComputedStyle(el).color });
         }
-        document.querySelectorAll('.home-hero-text > *, .fig a > *').forEach((el) => { el.style.visibility = 'hidden'; });
+        document.querySelectorAll('.home-hero-text > *, .fig a > *, .main-nav > a, .header-actions .btn-ghost').forEach((el) => { el.style.visibility = 'hidden'; });
         return out; })()`);
       await sleep(300);
       const out = [];

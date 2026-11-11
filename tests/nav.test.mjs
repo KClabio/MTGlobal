@@ -300,22 +300,31 @@ await suite(async (b) => {
     // Smooth: a menu fades and slides in while its ▾ turns; on leaving it waits a moment, then fades out. Also with reduced motion.
     const look = (sel, caret) => ev(`(() => { const m = document.querySelector('${sel}'); const c = document.querySelector('${caret}');
       return { vis: getComputedStyle(m).visibility, opacity: +(+getComputedStyle(m).opacity).toFixed(2), y: Math.round(new DOMMatrix(getComputedStyle(m).transform).m42), caret: Math.round(Math.atan2(new DOMMatrix(getComputedStyle(c).transform).b, new DOMMatrix(getComputedStyle(c).transform).a) * 180 / Math.PI) }; })()`);
+    // Every drawn frame for `ms` (recorded in the page): a real fade has frames between hidden and shown. One snapshot at
+    // a fixed moment missed it when frames were slow to draw (the blurred menu bar in the headless test browser).
+    const frames = (ms) => ev(`new Promise((done) => { const m = document.querySelector('#zzTrig1 + .nav-dropdown-menu'); const seen = []; const t0 = performance.now();
+      const step = (now) => { const cs = getComputedStyle(m); seen.push({ o: +(+cs.opacity).toFixed(2), y: Math.round(new DOMMatrix(cs.transform).m42) }); if (now - t0 < ${ms}) requestAnimationFrame(step); else done(seen); };
+      requestAnimationFrame(step); })`);
     for (const motion of ['normal', 'reduced']) {
       await b.reducedMotion(motion === 'reduced');
       await nav('/'); await away(); await sleep(300); await markIds(1);
       const rest = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret');
-      const p = await center('#zzTrig1'); await mouse('mouseMoved', p.x, p.y); await sleep(motion === 'reduced' ? 25 : 50);
-      const opening = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret'); await sleep(400);
+      const p = await center('#zzTrig1');
+      const fadingIn = frames(450); await mouse('mouseMoved', p.x, p.y);
+      const inFrames = await fadingIn;
       const open = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret');
       if (motion === 'normal') await b.shot('nav-menu-open');
-      await mouse('mouseMoved', 640, 700); await sleep(motion === 'reduced' ? 15 : 40);
-      const pause = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret'); await sleep(motion === 'reduced' ? 60 : 130);
-      const closing = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret'); await sleep(500);
+      const fadingOut = frames(600); await mouse('mouseMoved', 640, 700);
+      const outFrames = await fadingOut;
+      await sleep(300);
       const closed = await look('#zzTrig1 + .nav-dropdown-menu', '#zzTrig1 .nav-caret');
+      const midIn = inFrames.some((f) => f.o > 0 && f.o < 1 && f.y < 0);
+      const waits = outFrames[0].o >= .95; // leaving: still fully shown on the first frame
+      const midOut = outFrames.some((f) => f.o > 0 && f.o < 1);
       check(`[${motion}] "Giải pháp" menu fades and slides in while ▾ turns; leaving waits a moment, then it fades out and is gone`,
-        rest.vis === 'hidden' && rest.opacity === 0 && rest.caret === 0 && opening.vis === 'visible' && opening.opacity > 0 && opening.opacity < 1 && opening.y < 0
-        && open.opacity === 1 && open.y === 0 && Math.abs(open.caret) === 180 && pause.opacity >= .95 && (motion === 'reduced' || (closing.vis === 'visible' && closing.opacity < 1)) && closed.vis === 'hidden' && closed.opacity === 0 && closed.caret === 0,
-        { rest, opening, open, pause, closing, closed });
+        rest.vis === 'hidden' && rest.opacity === 0 && rest.caret === 0 && midIn
+        && open.opacity === 1 && open.y === 0 && Math.abs(open.caret) === 180 && waits && (motion === 'reduced' || midOut) && closed.vis === 'hidden' && closed.opacity === 0 && closed.caret === 0,
+        { rest, inFrames: inFrames.map((f) => f.o), open, outFrames: outFrames.map((f) => f.o), closed });
     }
     await b.reducedMotion(false);
 
