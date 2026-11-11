@@ -6,24 +6,24 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.4.0] - 2026-11-11
 
 ### Added
 - **Về MTG, "Văn phòng MTG":** a new section at the end of the page with the company address, phone numbers and email beside a Google map of the office. The map is made from the address in Admin → Thông tin công ty, so it follows any change there; a map pasted in the "Bản đồ" box is used instead when there is one. A "Mở trong Google Maps" button opens directions in a new tab. Scrolling the page over the map stays as smooth as anywhere else: a click on the map ("Bấm để dùng bản đồ") lets you zoom and drag it, until the mouse leaves it. This works the same on Liên hệ when a map is pasted there. On phones the map sits under the address; printed pages show the address without the map. The draft privacy policy now says this page shows a Google map.
 
-  ![Về MTG: the office address beside the Google map](docs/screenshots/1.3.4/about-map.jpg)
+  ![Về MTG: the office address beside the Google map](docs/screenshots/1.4.0/about-map.jpg)
 
 ### Changed
 - **Trang chủ, the top section:** the photo now fills the whole section behind the title, instead of sitting in a box next to it. A dark veil keeps the text easy to read over any picture uploaded in Admin → Cài đặt chung → Trang chủ. On the right of the photo, a glass panel shows how many projects, products and partners MTG has. The numbers are counted from the admin, so they stay up to date by themselves, and each one links to the page that shows them. As the page opens, the numbers count up from 0 over about two seconds, once. On phones, the three numbers sit in one row under the button.
 
-  ![Trang chủ: the photo behind the title, the figures panel on the right](docs/screenshots/1.3.4/home-hero-background.jpg)
-  ![Trang chủ on a phone, in dark mode](docs/screenshots/1.3.4/home-hero-phone-dark.jpg)
+  ![Trang chủ: the photo behind the title, the figures panel on the right](docs/screenshots/1.4.0/home-hero-background.jpg)
+  ![Trang chủ on a phone, in dark mode](docs/screenshots/1.4.0/home-hero-phone-dark.jpg)
 - **Trang chủ and Về MTG, Đối tác đồng hành:** the partner logos now sit in one line that slides slowly to the right by itself. After the last partner, the first one comes round again. The line stops while the mouse is over it or over the ‹ › buttons, which move it one partner at a time. It can also be dragged with the mouse or a finger. With "reduced motion" turned on, it slides at half speed. Về MTG shows the same sliding line.
 
-  ![The partner logos in one sliding line, with the ‹ › buttons](docs/screenshots/1.3.4/home-partner-row.jpg)
+  ![The partner logos in one sliding line, with the ‹ › buttons](docs/screenshots/1.4.0/home-partner-row.jpg)
 - **The menu bar at the top is see-through:** on every page it is frosted glass, so the page shows softly through it while scrolling. On Trang chủ the photo reaches up behind the bar. While the photo is behind it, the bar is dark glass with white menu text; once you scroll past the photo, it turns into the light frosted bar. The phone menu (☰) still opens over the whole screen on a solid background.
 
-## [1.3.3] - 2026-11-09
+## [1.3.3] - 2026-11-09 · `8b13b38`
 
 ### Added
 - **Workshop trải nghiệm STEM, "Trải nghiệm STEM tại NIC":** a new photo gallery from the NIC STEM Expedition at the Vietnam National Innovation Center: students driving VEX IQ robots, trying VEX AIM and building electronic models with MTG's mentors. Six photos with captions in Vietnamese and English, under the existing workshop photos.
