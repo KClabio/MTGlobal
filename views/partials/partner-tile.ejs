@@ -1,8 +1,9 @@
-<%# Each logo opens the partner's own page on this site (/doi-tac/<slug>); that page has the button to the partner's website %>
-<div class="partner-tile">
+<%# Each logo opens the partner's own page on this site (/doi-tac/<slug>); that page has the button to the partner's website.
+    listItem: inside a role="list" strip (Trang chủ's sliding row) %>
+<div class="partner-tile"<%- (typeof listItem !== 'undefined' && listItem) ? ' role="listitem"' : '' %>>
   <% if (partner.slug) { %>
-    <a href="/doi-tac/<%= partner.slug %>" title="<%= t('home.partnerView', { name: partner.name }) %>"><img src="<%= partner.logo %>" alt="<%= t('home.partnerView', { name: partner.name }) %>" loading="lazy"></a>
+    <a href="/doi-tac/<%= partner.slug %>" title="<%= t('home.partnerView', { name: partner.name }) %>"><img src="<%= partner.logo %>" alt="<%= t('home.partnerView', { name: partner.name }) %>" loading="lazy" draggable="false"></a>
   <% } else { %>
-    <img src="<%= partner.logo %>" alt="<%= partner.name %>" loading="lazy">
+    <img src="<%= partner.logo %>" alt="<%= partner.name %>" loading="lazy" draggable="false">
   <% } %>
 </div>

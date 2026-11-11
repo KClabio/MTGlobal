@@ -756,6 +756,230 @@ document.querySelectorAll('[data-history-back]').forEach(function (link) {
   }
 })();
 
+// Home "Đối tác đồng hành" (views/index.ejs [data-partner-marquee]): one line of logos sliding slowly to the right by
+// itself and looping. The list is copied (one copy before the real logos, enough after them to fill the screen) and the
+// row's position wraps every list-width, so after the last partner the first comes round again with no jump. Copies
+// are hidden from screen readers and the keyboard (aria-hidden, tabindex -1) but can be clicked: each partner is read
+// and reached with Tab once.
+// - Stops (easing to a halt) while the mouse is over the row or the ‹ › buttons, while a logo or a button has keyboard
+//   focus, while a finger is on the row (and 2 s after), when the row is off-screen or the tab is hidden.
+// - ‹ moves the row one logo to the right, › one to the left; quick clicks add up.
+// - The mouse or a finger can drag it; a real drag does not open the logo under the pointer.
+// - A logo reached with Tab is brought fully into view.
+// - Less motion asked for: it keeps sliding, at half speed (the owner's choice), and steps are shorter.
+(function () {
+  var box = document.querySelector('[data-partner-marquee]');
+  if (!box || !window.requestAnimationFrame) return;
+  var strip = box.querySelector('.partner-strip');
+  var section = box.closest('section');
+  var arrows = section.querySelector('[data-partner-arrows]');
+  var originals = Array.prototype.slice.call(strip.children);
+  if (!originals.length) return;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SPEED = reduceMotion ? 12 : 24; // px per second, to the right
+  var STEP_MS = 450 * (reduceMotion ? 0.6 : 1);
+  var W = 0;          // width of one list, gap included: the loop's length
+  var STEP = 0;       // one logo + gap
+  var base = 0;       // how far the row has moved to the right (not wrapped)
+  var hold = null;    // a fixed position while a logo has keyboard focus
+  var speed = 0;      // current speed, easing towards SPEED or 0
+  var slide = null;   // an arrow step in progress: { from, to, t0 }
+  var drag = null;
+  var dragged = false;
+  var over = { row: false, arrows: false };
+  var focusInside = false;
+  var touchHeld = false;
+  var touchUntil = 0;
+  var onScreen = true;
+  var raf = null;
+  var lastT = null;
+  var lastX = 0;
+
+  var mod = function (a, n) { return ((a % n) + n) % n; };
+  var padLeft = function () { return parseFloat(getComputedStyle(box).paddingLeft) || 0; };
+  var innerWidth = function () { return box.clientWidth - 2 * padLeft(); };
+
+  // Copies: the pre copy keeps the real logos in view; the copies after cover the rest of the window
+  function build() {
+    Array.prototype.slice.call(strip.querySelectorAll('[data-partner-clone]')).forEach(function (el) { el.remove(); });
+    var first = originals[0];
+    var last = originals[originals.length - 1];
+    var gap = parseFloat(getComputedStyle(strip).columnGap) || 0;
+    W = last.offsetLeft + last.offsetWidth - first.offsetLeft + gap;
+    STEP = originals.length > 1 ? originals[1].offsetLeft - first.offsetLeft : W;
+    if (W <= 0) return false;
+    var copy = function () {
+      var frag = document.createDocumentFragment();
+      originals.forEach(function (o) {
+        var c = o.cloneNode(true);
+        c.setAttribute('data-partner-clone', '');
+        c.setAttribute('aria-hidden', 'true'); // still clickable (not inert): about half the logos on screen are copies
+        c.removeAttribute('role');
+        c.querySelectorAll('a').forEach(function (a) { a.tabIndex = -1; });
+        c.querySelectorAll('img').forEach(function (img) { img.alt = ''; img.loading = 'eager'; });
+        frag.appendChild(c);
+      });
+      return frag;
+    };
+    strip.insertBefore(copy(), first);
+    var after = Math.max(1, Math.ceil(box.clientWidth / W));
+    for (var i = 0; i < after; i++) strip.appendChild(copy());
+    return true;
+  }
+
+  function render() {
+    lastX = hold !== null ? hold : -W + mod(base, W);
+    strip.style.transform = 'translate3d(' + lastX.toFixed(2) + 'px, 0, 0)';
+  }
+
+  var paused = function (now) {
+    return over.row || over.arrows || focusInside || touchHeld || now < touchUntil || !!drag;
+  };
+
+  function tick(now) {
+    raf = null;
+    var dt = lastT === null ? 0 : Math.min(100, now - lastT);
+    lastT = now;
+    var target = paused(now) ? 0 : SPEED;
+    speed += (target - speed) * Math.min(1, dt / 250);
+    if (slide) {
+      var p = Math.min(1, (now - slide.t0) / STEP_MS);
+      base = slide.from + (slide.to - slide.from) * (1 - Math.pow(1 - p, 3));
+      if (p >= 1) slide = null;
+    } else if (!drag && hold === null) {
+      base += speed * dt / 1000;
+    }
+    render();
+    var idle = !slide && !drag && speed < 0.05 && target === 0;
+    if (onScreen && !document.hidden && !idle) raf = requestAnimationFrame(tick);
+    else lastT = null;
+  }
+  function wake() {
+    if (raf === null && onScreen && !document.hidden) { lastT = null; raf = requestAnimationFrame(tick); }
+  }
+
+  // A logo held in view for the keyboard goes back to the moving row at the same place (no visible jump)
+  function release() {
+    if (hold === null) return;
+    base = hold + W;
+    hold = null;
+  }
+
+  function stepBy(dir) {
+    release();
+    var from = base;
+    var to = (slide ? slide.to : base) + dir * STEP;
+    slide = { from: from, to: to, t0: performance.now() };
+    wake();
+  }
+
+  // ---- Hover (mouse only: a tap must not leave the row stopped) ----
+  var watchHover = function (el, key) {
+    el.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') { over[key] = true; wake(); } });
+    el.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') { over[key] = false; wake(); } });
+  };
+  watchHover(box, 'row');
+  if (arrows) {
+    watchHover(arrows, 'arrows');
+    arrows.querySelector('[data-partner-prev]').addEventListener('click', function () { stepBy(1); });
+    arrows.querySelector('[data-partner-next]').addEventListener('click', function () { stepBy(-1); });
+  }
+
+  // ---- Keyboard focus: stops; a focused logo is brought fully into view. Focus from a mouse click (not
+  // :focus-visible) changes nothing: the mouse already stops the row, and a drag must still move it. ----
+  var keyboardFocus = function (el) { try { return el.matches(':focus-visible'); } catch (err) { return true; } };
+  section.addEventListener('focusin', function (e) {
+    if (!keyboardFocus(e.target)) {
+      focusInside = false;
+      release();
+      box.classList.remove('has-focus');
+      wake();
+      return;
+    }
+    focusInside = true;
+    var tile = e.target.closest && e.target.closest('.partner-tile');
+    if (tile && box.contains(tile) && !tile.hasAttribute('data-partner-clone')) {
+      slide = null;
+      var L = tile.offsetLeft - strip.firstElementChild.offsetLeft;
+      var R = L + tile.offsetWidth;
+      var x = hold !== null ? hold : lastX;
+      hold = Math.max(-L, Math.min(Math.min(0, innerWidth() - R), x));
+      box.scrollLeft = 0;
+      box.classList.add('has-focus');
+      render();
+    } else {
+      release();
+      box.classList.remove('has-focus');
+    }
+    wake();
+  });
+  section.addEventListener('focusout', function (e) {
+    if (e.relatedTarget && section.contains(e.relatedTarget)) return;
+    focusInside = false;
+    release();
+    box.classList.remove('has-focus');
+    wake();
+  });
+
+  // ---- Drag (mouse and finger) ----
+  box.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    release();
+    slide = null;
+    if (e.pointerType !== 'mouse') touchHeld = true;
+    drag = { x: e.clientX, base: base, id: e.pointerId, type: e.pointerType };
+    dragged = false;
+    wake();
+  });
+  box.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var dx = e.clientX - drag.x;
+    if (!dragged && Math.abs(dx) > 6) {
+      dragged = true;
+      box.classList.add('is-dragging');
+      try { box.setPointerCapture(drag.id); } catch (err) { /* pointer already gone */ }
+    }
+    if (dragged) { base = drag.base + dx; render(); }
+  });
+  function endDrag(e) {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    if (drag.type !== 'mouse') { touchHeld = false; touchUntil = performance.now() + 2000; setTimeout(wake, 2050); }
+    drag = null;
+    box.classList.remove('is-dragging');
+    // The click that follows a drag's pointerup (if any) comes first and is cancelled below; then the flag is cleared
+    if (dragged) setTimeout(function () { dragged = false; }, 0);
+    wake();
+  }
+  box.addEventListener('pointerup', endDrag);
+  box.addEventListener('pointercancel', endDrag);
+  box.addEventListener('click', function (e) {
+    if (dragged) { e.preventDefault(); e.stopPropagation(); }
+    dragged = false;
+  }, true);
+  box.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  // Focusing a logo makes the browser scroll the clipped window itself; the slide's own position does that job
+  box.addEventListener('scroll', function () { if (box.scrollLeft) box.scrollLeft = 0; });
+
+  // ---- Only while it can be seen ----
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      onScreen = entries[entries.length - 1].isIntersecting;
+      if (onScreen) wake();
+    }).observe(box);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) wake(); });
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { if (build()) { render(); wake(); } }, 150);
+  });
+
+  originals.forEach(function (o) { o.querySelectorAll('img').forEach(function (img) { img.loading = 'eager'; }); });
+  if (!build()) return;
+  render();
+  wake();
+})();
+
 // Home "Lĩnh vực hoạt động" slider: the mouse wheel over the cards scrolls them sideways and never the page (at the
 // first/last card it simply does nothing; over the title and around the cards the page scrolls as usual), arrow
 // buttons and ← / → step one card, the mouse can drag and throw it, and it always comes

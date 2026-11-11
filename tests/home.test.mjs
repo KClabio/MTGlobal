@@ -272,7 +272,7 @@ await suite(async (b) => {
       html.includes(`<span class="sr-only">${counts.projects} dự án đã triển khai</span>`) && /class="fig-num" data-fig-count="\d+" style="[^"]*" aria-hidden="true">\d+</.test(html) && html.includes('aria-label="MTG qua các con số"'));
     const htmlEn = await page('en');
     check('English: "MTG in numbers", "<n> products robots & STEM equipment"', htmlEn.includes('aria-label="MTG in numbers"') && htmlEn.includes(`<span class="sr-only">${counts.products} products robots &amp; STEM equipment</span>`));
-    check('the partner row leads to the partner strip on Trang chủ (#doi-tac)', /<section class="section section-alt" id="doi-tac">[\s\S]{0,400}partner-strip/.test(html));
+    check('the partner row leads to the partner strip on Trang chủ (#doi-tac)', /<section class="section section-alt" id="doi-tac">[\s\S]{0,3000}partner-strip/.test(html));
 
     // ---- 3. The photo fills the section, under the text ----
     // Records every number the panel shows while counting, with the time and the panel's height (installed before the page runs)

@@ -110,7 +110,28 @@
   .domain-card:hover, .domain-card:hover .domain-media img { transform: none; }
 }
 
+/* ---- Partners (home "Đối tác đồng hành"): one line of logos sliding slowly to the right, looping (public/js/main.js).
+   The window bleeds into the container padding like the Lĩnh vực slider; the padding above and below leaves room for the
+   tile's hover float + glow (components.css). Without JavaScript: one line to scroll sideways. ---- */
+.partner-marquee { margin: 0 -20px; padding: 14px 20px 30px; overflow-x: auto; scrollbar-width: thin; }
+.js .partner-marquee { overflow: hidden; touch-action: pan-y; cursor: grab;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 56px, #000 calc(100% - 56px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 56px, #000 calc(100% - 56px), transparent 100%); }
+/* A logo with keyboard focus is shown whole: no faded edges while focus is inside */
+.js .partner-marquee.has-focus { -webkit-mask-image: none; mask-image: none; }
+.js .partner-marquee.is-dragging { cursor: grabbing; user-select: none; }
+.js .partner-marquee.is-dragging .partner-tile { pointer-events: none; }
+.partner-strip.is-marquee { --gap: 20px; flex-wrap: nowrap; justify-content: flex-start; width: max-content; gap: var(--gap); }
+.js .partner-strip.is-marquee { will-change: transform; }
+.partner-strip.is-marquee .partner-tile { flex: 0 0 200px; height: 104px; }
+
 /* ---- Responsive ---- */
+@media (max-width: 560px) {
+  .partner-strip.is-marquee { --gap: 12px; }
+  .partner-strip.is-marquee .partner-tile { flex-basis: 150px; height: 80px; }
+  .js .partner-marquee { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%); }
+}
 @media (max-width: 1200px) {
   .home-hero-figures { width: 260px; }
   .fig-sub { display: none; }
@@ -153,6 +174,10 @@
   .fig a { display: flex; flex-direction: row; align-items: baseline; gap: 6px; padding: 6px 14px; color: var(--mtg-ink); }
   .fig-icon, .fig-arrow, .fig-sub { display: none; }
   .fig-num { font-size: 1.2rem; }
+  /* Partners: the logos once, in rows, standing still */
+  .js .partner-marquee, .partner-marquee { overflow: visible; margin: 0; padding: 0; -webkit-mask-image: none; mask-image: none; }
+  .partner-strip.is-marquee { flex-wrap: wrap; justify-content: center; width: auto; transform: none !important; }
+  .partner-strip.is-marquee [data-partner-clone], [data-partner-arrows] { display: none; }
   .domain-arrows { display: none; }
   .domain-track { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); grid-auto-columns: auto; overflow: visible; margin: 0; padding: 0; }
 }

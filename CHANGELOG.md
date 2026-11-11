@@ -13,6 +13,9 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
   ![Trang chủ: the photo behind the title, the figures panel on the right](docs/screenshots/1.3.4/home-hero-background.jpg)
   ![Trang chủ on a phone, in dark mode](docs/screenshots/1.3.4/home-hero-phone-dark.jpg)
+- **Trang chủ, Đối tác đồng hành:** the partner logos now sit in one line that slides slowly to the right by itself. After the last partner, the first one comes round again. The line stops while the mouse is over it or over the ‹ › buttons, which move it one partner at a time. It can also be dragged with the mouse or a finger. With "reduced motion" turned on, it slides at half speed. Về MTG keeps its grid of logos.
+
+  ![The partner logos in one sliding line, with the ‹ › buttons](docs/screenshots/1.3.4/home-partner-row.jpg)
 
 ## [1.3.3] - 2026-11-09
 
