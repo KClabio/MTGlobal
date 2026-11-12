@@ -6,19 +6,19 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.5.0] - 2026-11-12
 
 ### Changed
 - **The website's emails have one MTG look:** the email staff get for a new or changed request, the confirmation the sender gets, and the alert sent when the website has an error now share the same layout: the blue MTG bar, a coloured label saying what kind of email it is ("Yêu cầu mới", "Yêu cầu đã sửa", "Đã nhận yêu cầu", "Lỗi máy chủ"), a title, the details in a table, the customer's message in its own box, one button ("Xem trong trang quản trị", "Xem website MTG", "Mở Nhật ký lỗi"). The confirmation ends with "Email tự động từ MTG, vui lòng không trả lời lại email này." and is written in the language the visitor had the website in (Vietnamese or English); the staff email is always in Vietnamese. "Gửi từ trang" in the staff email now names the page, such as "Sản phẩm/Robot cắt cỏ", "Dịch vụ/Tư vấn du học" or "Liên hệ", instead of its address. A plain-text copy goes along for mail apps that don't show pictures and colours. When Gmail groups several of these emails into one conversation, it no longer hides the end of the newest one (its button and notes) behind "•••". Anything a visitor typed is shown as plain text, never as part of the email's design. The error alert now also gives the status code, when the error was first seen and who was logged in, and still leaves the technical details in Admin → Nhật ký lỗi. Tested by sending real emails from two Gmail accounts.
 
-  ![The staff email for a new request](docs/screenshots/1.4.1/email-request-staff.jpg)
-  ![The confirmation the sender gets](docs/screenshots/1.4.1/email-request-confirmation.jpg)
-  ![The error alert](docs/screenshots/1.4.1/email-error-alert.jpg)
+  ![The staff email for a new request](docs/screenshots/1.5.0/email-request-staff.jpg)
+  ![The confirmation the sender gets](docs/screenshots/1.5.0/email-request-confirmation.jpg)
+  ![The error alert](docs/screenshots/1.5.0/email-error-alert.jpg)
 
 ### Added
 - **Checking the email account:** `node scripts/send-test-mails.js --to <address>` sends one sample of each email (made-up data, subjects starting "[THỬ]"), to check that the email settings work before launch and on the live server.
 
-## [1.4.0] - 2026-11-11
+## [1.4.0] - 2026-11-11 · `55db3fe`
 
 ### Added
 - **Về MTG, "Văn phòng MTG":** a new section at the end of the page with the company address, phone numbers and email beside a Google map of the office. The map is made from the address in Admin → Thông tin công ty, so it follows any change there; a map pasted in the "Bản đồ" box is used instead when there is one. A "Mở trong Google Maps" button opens directions in a new tab. Scrolling the page over the map stays as smooth as anywhere else: a click on the map ("Bấm để dùng bản đồ") lets you zoom and drag it, until the mouse leaves it. This works the same on Liên hệ when a map is pasted there. On phones the map sits under the address; printed pages show the address without the map. The draft privacy policy now says this page shows a Google map.
