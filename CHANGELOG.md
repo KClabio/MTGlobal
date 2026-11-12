@@ -6,6 +6,17 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
+## [Unreleased]
+
+### Added
+- **"Xác nhận yêu cầu" in the staff email:** next to "Xem trong trang quản trị", a green "Xác nhận yêu cầu" button opens a new page in Quản trị for that request (after logging in and the two-step code, staff land straight on it). The page shows the request, the page it was sent from and the email the customer will get, and its "Gửi email xác nhận" button sends it. The request then moves from "Mới" to "Đã liên hệ", which the customer sees in "Yêu cầu của tôi" (where it can no longer be edited) and staff see in Admin → Yêu cầu; the page also shows when and by whom it was confirmed, and can send the email again. A request without an email has no button: the staff email says to call the customer instead.
+
+  ![The staff email with "Xác nhận yêu cầu" beside "Xem trong trang quản trị"](docs/screenshots/1.5.1/email-confirm-button.jpg)
+  ![The confirm page on a phone, for a request sent in English](docs/screenshots/1.5.1/request-confirm-phone.jpg)
+
+### Changed
+- **The customer's "MTG đã nhận được yêu cầu tư vấn của bạn" email is sent when staff confirm the request, no longer automatically the moment it is sent.** It is written in the language the customer had the website in when they sent it (Vietnamese or English), even if staff confirm days later. Since only staff can now send it, the limit of 3 such emails a day per address is gone, and the draft privacy policy no longer mentions it.
+
 ## [1.5.0] - 2026-11-12
 
 ### Changed

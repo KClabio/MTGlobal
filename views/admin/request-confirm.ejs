@@ -1,0 +1,60 @@
+<%- include('partials/head', { active: 'yeu-cau' }) %>
+<%# Admin → Yêu cầu → Xác nhận (routes/admin.js): opened from "Xác nhận yêu cầu" in the staff email. Shows the request
+    and the email the customer will get; only the "Gửi email xác nhận" button (POST) sends it. %>
+<% const r = request; const loc = lang === 'en' ? 'en-GB' : 'vi-VN';
+   const at = function (d) { return new Date(d).toLocaleString(loc, { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }); };
+   const R = function (k, v) { return t('admin.requests.' + k, v); }; %>
+
+<div class="admin-topbar">
+  <div>
+    <h1><%= R('confirmTitle') %></h1>
+    <p class="admin-subtitle"><%= R('confirmSubtitle') %></p>
+  </div>
+  <div class="row-actions">
+    <a class="btn btn-ghost btn-sm" href="/admin/yeu-cau"><%= R('confirmBack') %></a>
+  </div>
+</div>
+
+<% if (r.confirmedAt) { %>
+  <p class="form-alert info" data-confirmed><%= R('confirmDone', { time: at(r.confirmedAt), name: r.confirmedByName || '—' }) %></p>
+<% } %>
+
+<section class="settings-card request-confirm" aria-labelledby="rc-request">
+  <h2 class="admin-panel-title" id="rc-request"><%= R('confirmRequest') %></h2>
+  <dl class="request-confirm-list">
+    <div><dt><%= R('colName') %></dt><dd data-rc-name><%= r.name %></dd></div>
+    <div><dt><%= R('confirmPhone') %></dt><dd><%= r.phone || '—' %></dd></div>
+    <div><dt>Email</dt><dd data-rc-email><%= r.email || '—' %></dd></div>
+    <% if (r.schoolOrCompany) { %><div><dt><%= R('confirmSchool') %></dt><dd><%= r.schoolOrCompany %></dd></div><% } %>
+    <div><dt><%= R('colInterest') %></dt><dd><%= t('admin.interest.' + r.interestedIn) %></dd></div>
+    <% (r.details || []).forEach(function (d) { %>
+      <div><dt><%= (lang === 'en' && d.labelEn) || d.labelVi %></dt><dd><%= (lang === 'en' && d.valueEn) || d.valueVi %></dd></div>
+    <% }) %>
+    <div><dt><%= R('confirmFrom') %></dt><dd data-rc-page><%= page %></dd></div>
+    <div><dt><%= R('confirmSentAt') %></dt><dd><%= at(r.createdAt) %></dd></div>
+    <div><dt><%= R('colStatus') %></dt><dd><span class="tag status-<%= r.status %>" data-rc-status><%= t('admin.status.' + r.status) %></span></dd></div>
+    <div><dt><%= R('colMessage') %></dt><dd class="request-confirm-message"><%= r.message %></dd></div>
+  </dl>
+</section>
+
+<section class="settings-card request-confirm" aria-labelledby="rc-mail">
+  <h2 class="admin-panel-title" id="rc-mail"><%= R('confirmMailTitle') %></h2>
+  <% if (!mail) { %>
+    <p class="form-alert error" data-rc-no-email><%= R('confirmNoEmail') %></p>
+  <% } else { %>
+    <dl class="request-confirm-list">
+      <div><dt><%= R('confirmTo') %></dt><dd><%= r.email %></dd></div>
+      <div><dt><%= R('confirmSubject') %></dt><dd data-rc-subject><%= mail.subject %></dd></div>
+      <div><dt><%= R('confirmLang') %></dt><dd data-rc-lang="<%= r.lang === 'en' ? 'en' : 'vi' %>"><%= R(r.lang === 'en' ? 'langEn' : 'langVi') %></dd></div>
+    </dl>
+    <div class="request-confirm-mail" lang="<%= r.lang === 'en' ? 'en' : 'vi' %>" data-rc-text><%= mail.text %></div>
+    <% if (!mailReady) { %><p class="form-alert info" data-rc-mail-off><%= R('confirmMailOff') %></p><% } %>
+    <p class="form-hint"><%= R('confirmStatusNote') %></p>
+    <form method="POST" action="/admin/yeu-cau/<%= r._id %>/xac-nhan" class="request-confirm-actions">
+      <button class="btn btn-primary" type="submit" data-rc-send <%= mailReady ? '' : 'disabled' %>><%= R(r.confirmedAt ? 'confirmResend' : 'confirmSend') %></button>
+      <a class="btn btn-ghost" href="/admin/yeu-cau"><%= R('confirmBack') %></a>
+    </form>
+  <% } %>
+</section>
+
+<%- include('partials/foot') %>

@@ -318,6 +318,10 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   const tail = (h) => h.slice(h.lastIndexOf('</table>'));
   check("layout: two identical emails still end differently in HTML (Gmail doesn't trim the end), same text copy",
     tail(twice[0].html) !== tail(twice[1].html) && twice[0].text === twice[1].text && /<div style="display:none[^"]*" aria-hidden="true">[0-9a-z]{16,}<\/div>\s*<\/body>/.test(twice[0].html));
+  const two = renderMail({ buttons: [{ label: 'A <b>', url: 'https://x/a' }, { label: 'B', url: 'https://x/b?c=1&d=2', tone: 'ok' }, { label: 'none', url: '' }] });
+  check('layout: buttons side by side (escaped, the green one, an empty one left out), one text line each',
+    two.html.includes('>A &lt;b&gt;</a><a href="https://x/b?c=1&amp;d=2"') && two.html.includes('background:#1e7b34') && !two.html.includes('>none<')
+    && two.text === ['', 'A <b>: https://x/a', 'B: https://x/b?c=1&d=2'].join('\n'), two.text);
   const bare = renderMail({ intro: 'Một', notes: 'ghi chú' });
   check('layout: no footer given → no footer row and no "--" line', bare.text === 'Một\n\nghi chú' && !bare.html.includes('border-top:1px solid #e2e8f0;font-size:12px'), bare.text);
   const { staffMail, pageName } = appRequire('./lib/request-mail.js');

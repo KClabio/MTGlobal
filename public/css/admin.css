@@ -543,6 +543,15 @@ tbody.is-filtered .drag-handle:hover { background: transparent; color: var(--mtg
 .error-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 20px; padding: 12px 16px; border-radius: var(--mtg-radius-sm); background: var(--mtg-error-bg); color: var(--mtg-error); box-shadow: inset 0 0 0 1px var(--mtg-error-border); font-weight: 600; }
 .error-notice a { color: inherit; text-decoration: underline; }
 .error-email { margin: 0 0 16px; color: var(--mtg-muted); font-size: .9rem; }
+/* Yêu cầu → Xác nhận (views/admin/request-confirm.ejs): the request, then the email the customer will get */
+.request-confirm-list { margin: 0; }
+.request-confirm-list > div { display: grid; grid-template-columns: minmax(110px, 30%) minmax(0, 1fr); gap: 2px 16px; padding: 9px 0; border-top: 1px solid var(--mtg-border); }
+.request-confirm-list > div:first-child { border-top: 0; }
+.request-confirm-list dt { color: var(--mtg-muted); font-size: .9rem; }
+.request-confirm-list dd { margin: 0; overflow-wrap: anywhere; }
+.request-confirm-message { white-space: pre-wrap; }
+.request-confirm-mail { margin: 14px 0; padding: 12px 16px; border-left: 4px solid var(--mtg-blue); border-radius: var(--mtg-radius-sm); background: var(--mtg-bg-alt); font-size: .92rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.request-confirm-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .error-table td { vertical-align: top; }
 .error-table tr.is-seen td { color: var(--mtg-muted); }
 .error-msg { font-weight: 600; overflow-wrap: anywhere; }
@@ -676,4 +685,7 @@ body:has(.page-form-actions) .admin-toast { bottom: 96px; } /* and above a stick
   .banner-row-action { grid-row: 1; grid-column: 3; }
   .banner-editor { padding: 4px 14px 16px; }
   .banner-editor-actions .banner-view { margin-left: 0; }
+}
+@media (max-width: 560px) {
+  .request-confirm-list > div { grid-template-columns: minmax(0, 1fr); }
 }

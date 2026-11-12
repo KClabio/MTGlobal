@@ -218,8 +218,9 @@ router.get('/lien-he', (req, res) => {
 // "/giai-phap/workshop" for a page of this site; '' for anything else (another site, a made-up value)
 const sitePath = (value) => (typeof value === 'string' && /^\/(?!\/)[^\s?#]{0,200}$/.test(value) ? value : '');
 
-function saveQuoteRequest(values, user, req) {
+function saveQuoteRequest(values, user, req, lang) {
   return QuoteRequest.create({
+    lang: lang === 'en' ? 'en' : 'vi', // the confirmation staff send later is in this language
     name: values.name,
     phone: values.phone,
     email: values.email,
@@ -234,15 +235,16 @@ function saveQuoteRequest(values, user, req) {
   });
 }
 
-// Saves a checked request and tells staff and the sender by email (lib/request-mail.js, not waited for).
+// Saves a checked request and tells staff by email (lib/request-mail.js, not waited for). The sender is emailed only
+// when staff confirm it (Admin → Yêu cầu → Xác nhận).
 // Returns 0 when done, or 429 when this address already sent 5 requests without an account this hour
 // (lib/request-throttle.js). A filled-in hidden "website" box (a trap only robots see: partials/quote-form.ejs)
 // is answered as if sent, but nothing is saved.
 async function sendRequest(req, res, values) {
   if (typeof req.body.website === 'string' && req.body.website.trim()) return 0;
   if (!req.user && !(await requestThrottle.take('guestRequest', req.ip))) return 429;
-  const request = await saveQuoteRequest(values, req.user, req);
-  requestMail.notifyNewRequest(request, { req, lang: res.locals.lang, user: req.user });
+  const request = await saveQuoteRequest(values, req.user, req, res.locals.lang);
+  requestMail.notifyNewRequest(request, { req, user: req.user });
   return 0;
 }
 

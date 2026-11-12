@@ -19,7 +19,9 @@ const { clearMemo } = require('../lib/memo-cache');
 const { endAllSessions } = require('../lib/sessions');
 const { loadAdminLanguage, makeTranslator } = require('../lib/i18n');
 const { isNonEmpty, isValidEmail, cleanForm } = require('../lib/validators');
-const { STAFF_EMAILS_MAX } = require('../lib/request-mail');
+const requestMail = require('../lib/request-mail');
+
+const { STAFF_EMAILS_MAX } = requestMail;
 const { isStaff, canDeleteUser, canChangeRole, canResetTwoStep } = require('../lib/roles');
 const { getDashboardData } = require('../lib/dashboard');
 const { toPlainText, slugify } = require('../lib/text');
@@ -733,6 +735,45 @@ router.post('/yeu-cau/:id/trang-thai', async (req, res) => {
     : null;
   if (!request) return notFound(req, res, back);
   done(req, res, 'admin.flash.statusUpdated', { name: request.name, status: res.locals.t(`admin.status.${status}`) }, back);
+});
+
+// "Xác nhận yêu cầu" (the button in the staff email, lib/request-mail.js): a page showing the request and the email the
+// customer will get; only its "Gửi email xác nhận" button (a POST) sends it. Opening the link never sends anything, so
+// a mail scanner or a forwarded email can't confirm a request.
+router.get('/yeu-cau/:id/xac-nhan', async (req, res) => {
+  const request = await QuoteRequest.findById(req.params.id).lean().catch(() => null);
+  if (!request) return notFound(req, res, '/admin/yeu-cau');
+  res.render('admin/request-confirm', {
+    request,
+    page: await requestMail.pageName(request.sourcePage),
+    mail: request.email ? await requestMail.confirmationFor(request, { req }) : null,
+    mailReady: mailer.isConfigured(),
+  });
+});
+
+// Sends the customer's "Đã nhận yêu cầu" email (in the request's language), notes who confirmed it and when, and moves
+// a "Mới" request to "Đã liên hệ" (shown in Admin → Yêu cầu and in the customer's "Yêu cầu của tôi").
+router.post('/yeu-cau/:id/xac-nhan', async (req, res) => {
+  const request = await QuoteRequest.findById(req.params.id).catch(() => null);
+  if (!request) return notFound(req, res, '/admin/yeu-cau');
+  const page = `/admin/yeu-cau/${request._id}/xac-nhan`;
+  const t = res.locals.t;
+  if (!request.email || !mailer.isConfigured()) {
+    flash(req, 'error', t(request.email ? 'admin.requests.confirmMailOff' : 'admin.requests.confirmNoEmail'));
+    return res.redirect(page);
+  }
+  try {
+    await requestMail.sendConfirmation(request.toObject(), { req });
+  } catch (err) {
+    errorLog.record(err, { req, where: 'Confirmation email not sent (Admin → Yêu cầu → Xác nhận)' });
+    flash(req, 'error', t('admin.requests.confirmFailed', { email: request.email }));
+    return res.redirect(page);
+  }
+  const set = { confirmedAt: new Date(), confirmedBy: req.user._id, confirmedByName: req.user.name || req.user.email || '' };
+  if (request.status === 'moi') set.status = 'da_lien_he';
+  await QuoteRequest.updateOne({ _id: request._id }, { $set: set });
+  done(req, res, set.status ? 'admin.requests.confirmSentMoved' : 'admin.requests.confirmSent',
+    { email: request.email, status: t('admin.status.da_lien_he') }, '/admin/yeu-cau');
 });
 
 router.post('/yeu-cau/:id/xoa', async (req, res) => {

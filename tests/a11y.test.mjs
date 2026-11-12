@@ -1,11 +1,11 @@
 // Screen-reader structure checked with axe-core (the same engine as the pre-launch test, use case #9) on one page of
-// each kind and the admin overview: heading levels in order, card pictures that don't repeat the card title, lists
+// each kind, the admin overview and lists, and Yêu cầu → Xác nhận (also at 390 px): heading levels in order, card pictures that don't repeat the card title, lists
 // made of list items, no clickable parts inside a picture or another control, spoken names that start with the
 // visible text, and no table column without a name (the admin lists' action and drag columns).
 // Also: keyboard focus shows a ring on form fields, search boxes, partner logos and videos (pre-launch finding #10).
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { suite, part, check, db, createUser, tempArticle, ROOT } from './lib/index.mjs';
+import { suite, part, check, db, createUser, tempArticle, removeLater, ROOT } from './lib/index.mjs';
 
 const AXE = readFileSync(path.join(ROOT, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
 const RULES = ['heading-order', 'image-redundant-alt', 'list', 'listitem', 'nested-interactive', 'aria-prohibited-attr', 'label-content-name-mismatch', 'empty-table-header'];
@@ -54,7 +54,28 @@ await suite(async (b) => {
         check(`${url} (${lang}): every table column has a name (hidden for the action and drag columns)`, named.length === 0, named);
       }
     }
+    // Yêu cầu → Xác nhận (the "Xác nhận yêu cầu" button of the staff email), with long, realistic data
+    const d = await db();
+    const long = await d.collection('quoterequests').insertOne({
+      name: 'ZZ a11y Nguyễn Thị Phương Thảo Hoàng Bảo Ngọc Trâm', email: 'zz.a11y.nguyen-thi-phuong-thao.hoang-bao-ngoc@truong-thcs-va-thpt-example.edu.vn',
+      phone: '0912 345 678 - 0333 601 279', schoolOrCompany: 'Trường Trung học cơ sở và Trung học phổ thông Nguyễn Tất Thành, Đại học Sư phạm Hà Nội',
+      message: 'Xin báo giá trọn gói phòng STEM Lab cho 3 lớp học.\nhttps://example.edu.vn/mot-duong-dan-rat-dai-khong-co-cho-xuong-dong-de-kiem-tra-man-hinh-hep',
+      interestedIn: 'giai-phap-stem-lab', status: 'moi', lang: 'en', sourcePage: '/lien-he', details: [], createdAt: new Date(), updatedAt: new Date(),
+    });
+    removeLater('quoterequests', { _id: long.insertedId });
+    const confirmUrl = `/admin/yeu-cau/${long.insertedId}/xac-nhan`;
+    for (const lang of ['vi', 'en']) {
+      await b.setCookie('adminLang', lang);
+      const found = await audit(confirmUrl);
+      check(`${confirmUrl} (${lang}): headings in order, clean lists and controls`, found.length === 0, found);
+    }
     await b.setCookie('adminLang', 'vi');
+    await b.viewport(390, 844);
+    await b.nav(confirmUrl, 400);
+    const fits = await b.ev(`({ page: document.documentElement.scrollWidth, cards: Math.max(...[...document.querySelectorAll('.request-confirm')].map((e) => e.getBoundingClientRect().right)) })`);
+    check('the confirm page fits a 390 px phone with a long name, email, school and link (nothing wider than the screen)', fits.page <= 390 && fits.cards <= 390, fits);
+    await b.shot('request-confirm-390', true);
+    await b.viewport(1280, 900);
     // The four W3C checker errors of QA use case 40 stay fixed
     await b.nav('/admin/nguoi-dung', 300);
     check('W3C: the avatar dialog picture has an address (an empty src is invalid)', await b.ev(`!!document.querySelector('[data-avatar-img]').getAttribute('src')`));

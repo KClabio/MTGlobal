@@ -19,6 +19,13 @@ const quoteRequestSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   editedAt: { type: Date, default: null }, // last change by the sender ("Yêu cầu của tôi" → Sửa); staff see "Đã sửa lúc …"
   privacyAcceptedAt: { type: Date, default: null }, // when the sender ticked "Tôi đồng ý với Chính sách bảo mật" (sent or changed)
+  // The website's language when it was sent: the confirmation email staff send later is in that language
+  lang: { type: String, enum: ['vi', 'en'], default: 'vi' },
+  // Staff pressed "Gửi email xác nhận" (Admin → Yêu cầu → Xác nhận, also linked from the staff email): when and who
+  // (the name is kept in case that account is deleted later)
+  confirmedAt: { type: Date, default: null },
+  confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  confirmedByName: { type: String, default: '' },
   // Where it came from, for the admin overview's "Trang mang lại yêu cầu" (lib/dashboard.js): the page whose form sent it,
   // and the site page the visitor opened just before (main.js fills it from document.referrer; '' when from elsewhere)
   sourcePage: { type: String, default: '' },

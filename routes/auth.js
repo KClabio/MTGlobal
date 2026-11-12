@@ -95,11 +95,13 @@ router.get('/dang-nhap', (req, res) => {
 });
 
 // Everyone (customer, admin, owner) lands on Trang chủ after logging in, or back on the request form they came from
-// (rememberReturn); staff open "Quản trị" from their name menu.
+// (rememberReturn); staff open "Quản trị" from their name menu, or come back to the admin page they tried to open.
 // A fresh session id at login; Trang chủ then says "Đăng nhập thành công" (server.js, partials/footer.ejs).
 // Staff (owner, admin) are not logged in yet: they go on to the two-step code page (below), half-way for 10 minutes.
 function logIn(req, res, user, { googleJoined = false } = {}) {
-  const back = req.session.returnTo ? `${req.session.returnTo}#yeu-cau` : '/';
+  // Staff who opened an admin page before logging in (middleware/auth.js requireAdmin) go back to it
+  const adminBack = isStaff(user.role) && typeof req.session.adminBack === 'string' && req.session.adminBack.startsWith('/admin') ? req.session.adminBack : '';
+  const back = adminBack || (req.session.returnTo ? `${req.session.returnTo}#yeu-cau` : '/');
   req.session.regenerate((err) => {
     if (err) return res.status(500).render('login', { error: res.locals.t('auth.errLogin'), registered: false, email: user.email, needLogin: false });
     if (isStaff(user.role)) {

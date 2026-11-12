@@ -62,6 +62,7 @@ async function main() {
     interestedIn: 'san-pham-robot', details: [{ labelVi: 'Sản phẩm', valueVi: 'Robot cắt cỏ' }],
     message: 'Đây là email thử của website MTG.\nXin báo giá 2 robot và lịch giới thiệu sản phẩm tại trường.',
     sourcePage: '/san-pham/robot-cat-co', createdAt: now, editedAt: now,
+    _id: new mongoose.Types.ObjectId(), // a made-up request: its "Xác nhận yêu cầu" button opens "not found"
   };
   const error = {
     name: 'TypeError', message: "Cannot read properties of undefined (reading 'title') (lỗi thử)", where: 'GET /san-pham/robot-cat-co',
