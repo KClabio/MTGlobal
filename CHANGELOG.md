@@ -6,7 +6,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.7.0] - 2026-11-12
 
 ### Changed
 - **Equipment pages under Giải pháp → Thiết bị no longer have a request form beside them.** Opening one item (for example VEX IQ) now shows only its photos, description and specifications, in one wider column in the middle of the page. Visitors can still ask for advice through "Yêu cầu tư vấn" at the bottom of the Thiết bị page, the Liên hệ page and the footer.
@@ -19,7 +19,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
   ![Lĩnh vực hoạt động sliding: the next card comes in at the left edge](docs/screenshots/1.7.0/domains-sliding.jpg)
 
-## [1.6.0] - 2026-11-12
+## [1.6.0] - 2026-11-12 · `075516d`
 
 ### Added
 - **"Xác nhận yêu cầu" in the staff email:** next to "Xem trong trang quản trị", a green "Xác nhận yêu cầu" button opens a new page in Quản trị for that request (after logging in and the two-step code, staff land straight on it). The page shows the request, the page it was sent from and the email the customer will get, and its "Gửi email xác nhận" button sends it. The request then moves from "Mới" to "Đã liên hệ", which the customer sees in "Yêu cầu của tôi" (where it can no longer be edited) and staff see in Admin → Yêu cầu; the page also shows when and by whom it was confirmed, and can send the email again. A request without an email has no button: the staff email says to call the customer instead.
