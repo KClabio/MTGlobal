@@ -6,18 +6,18 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.6.0] - 2026-11-12
 
 ### Added
 - **"Xác nhận yêu cầu" in the staff email:** next to "Xem trong trang quản trị", a green "Xác nhận yêu cầu" button opens a new page in Quản trị for that request (after logging in and the two-step code, staff land straight on it). The page shows the request, the page it was sent from and the email the customer will get, and its "Gửi email xác nhận" button sends it. The request then moves from "Mới" to "Đã liên hệ", which the customer sees in "Yêu cầu của tôi" (where it can no longer be edited) and staff see in Admin → Yêu cầu; the page also shows when and by whom it was confirmed, and can send the email again. A request without an email has no button: the staff email says to call the customer instead.
 
-  ![The staff email with "Xác nhận yêu cầu" beside "Xem trong trang quản trị"](docs/screenshots/1.5.1/email-confirm-button.jpg)
-  ![The confirm page on a phone, for a request sent in English](docs/screenshots/1.5.1/request-confirm-phone.jpg)
+  ![The staff email with "Xác nhận yêu cầu" beside "Xem trong trang quản trị"](docs/screenshots/1.6.0/email-confirm-button.jpg)
+  ![The confirm page on a phone, for a request sent in English](docs/screenshots/1.6.0/request-confirm-phone.jpg)
 
 ### Changed
 - **The customer's "MTG đã nhận được yêu cầu tư vấn của bạn" email is sent when staff confirm the request, no longer automatically the moment it is sent.** It is written in the language the customer had the website in when they sent it (Vietnamese or English), even if staff confirm days later. Since only staff can now send it, the limit of 3 such emails a day per address is gone, and the draft privacy policy no longer mentions it.
 
-## [1.5.0] - 2026-11-12
+## [1.5.0] - 2026-11-12 · `e2b4503`
 
 ### Changed
 - **The website's emails have one MTG look:** the email staff get for a new or changed request, the confirmation the sender gets, and the alert sent when the website has an error now share the same layout: the blue MTG bar, a coloured label saying what kind of email it is ("Yêu cầu mới", "Yêu cầu đã sửa", "Đã nhận yêu cầu", "Lỗi máy chủ"), a title, the details in a table, the customer's message in its own box, one button ("Xem trong trang quản trị", "Xem website MTG", "Mở Nhật ký lỗi"). The confirmation ends with "Email tự động từ MTG, vui lòng không trả lời lại email này." and is written in the language the visitor had the website in (Vietnamese or English); the staff email is always in Vietnamese. "Gửi từ trang" in the staff email now names the page, such as "Sản phẩm/Robot cắt cỏ", "Dịch vụ/Tư vấn du học" or "Liên hệ", instead of its address. A plain-text copy goes along for mail apps that don't show pictures and colours. When Gmail groups several of these emails into one conversation, it no longer hides the end of the newest one (its button and notes) behind "•••". Anything a visitor typed is shown as plain text, never as part of the email's design. The error alert now also gives the status code, when the error was first seen and who was logged in, and still leaves the technical details in Admin → Nhật ký lỗi. Tested by sending real emails from two Gmail accounts.

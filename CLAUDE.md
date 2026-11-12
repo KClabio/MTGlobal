@@ -144,12 +144,18 @@ Pages load them as one file: `/css/site.css` (admin: `/css/admin-all.css`), join
 ## Commits and releases
 - **Commit to `main` only through a merge the owner asked for** (see "Branches"). Commits on a feature branch need no asking.
 - **Release on GitHub only when the owner explicitly says so** ("release", "publish on GitHub"). Never release on your own, and never straight after a merge. "Merge" means merge only.
-- Each release is a version (one tag + GitHub Release), holding every merge since the previous one: the first was 1.0.0, and each later one adds 0.0.1, unless the owner names a bigger version: then add `--version X.Y.Z` to the release command (1.1.0 = every security, critical and major fix from the pre-launch test).
+- Each release is a version (one tag + GitHub Release), holding every merge since the previous one. The first was 1.0.0 (1.1.0 = every security, critical and major fix from the pre-launch test).
+- **Choosing the version: decided by me at every release, without asking.** Read every waiting merge again (`git log origin/main..main`, the `## [Unreleased]` section, and `git diff --stat origin/main..main` where a message is unclear), give each merge a level, and use the **highest** one (one minor merge among patches makes a minor release):
+  - **Patch** (1.0.0 → 1.0.1): small fixes, minor errors, optimisation and speed, any small change. E.g. a typo, a fixed check, a faster query. Run the release command without `--version` (it adds 0.0.1).
+  - **Minor** (1.0.0 → 1.1.0): a new feature, finishing a half-done feature, a new layout: any addition or change that is quite visible and affects what visitors see or how they use the pages. E.g. the "Xác nhận yêu cầu" button, the new Trang chủ top section, the email layout. Add `--version X.Y.0` (the minor number + 1, patch back to 0).
+  - **Major** (1.0.0 → 2.0.0): fundamental changes: rewriting the structure, redesigning or replacing the core tech stack or how the website works underneath. E.g. moving off Express/EJS or MongoDB, a full rewrite. Add `--version X.0.0`.
+  - Say the chosen version and a one-line reason before the dry run. A version the owner names ("release 2.0.0") wins.
 - Each branch writes its changes under `## [Unreleased]` at the top of `CHANGELOG.md` (under the intro and `---`), with `### Added` / `### Changed` / `### Fixed` / `### Removed`, in plain words for business readers. Merges add to the same section until the release dates it.
-- Screenshots (from 1.0.10 on): for visible changes, the branch copies 1–3 small JPGs from `tests/output/` to `docs/screenshots/<next version>/` and links each under the item it shows, by relative path (`![…](docs/screenshots/1.0.10/x.jpg)`). The script makes them work on the Release page and stops if one isn't in git. The repo is public: no admin pages with real customer data.
+- Screenshots (from 1.0.10 on): for visible changes, the branch copies 1–3 small JPGs from `tests/output/` to `docs/screenshots/<expected next version>/` (at release, if the decided version differs, `git mv` the folder to the real version and update its changelog links before the dry run) and links each under the item it shows, by relative path (`![…](docs/screenshots/1.0.10/x.jpg)`). The script makes them work on the Release page and stops if one isn't in git. The repo is public: no admin pages with real customer data.
 - **Release routine** (owner asked for it):
-  1. On `main`, with the merges waiting there (`git log --oneline origin/main..main`); stage any extra file by name (`git add <files>`), never `git add -A`.
-  2. Run `npm run release -- -m "<two plain sentences>" --session <Claude-Session url>`. Try `--dry-run` first: it lists the waiting merges.
+  1. Decide the version (see "Choosing the version"): read the waiting merges, pick patch / minor / major, and say which and why. Rename the screenshot folder if needed.
+  2. On `main`, with the merges waiting there (`git log --oneline origin/main..main`); stage any extra file by name (`git add <files>`), never `git add -A`.
+  3. Run `npm run release -- -m "<two plain sentences>" --session <Claude-Session url>` (+ `--version X.Y.Z` for minor or major). Try `--dry-run` first: it lists the waiting merges and the version.
 - The script dates the section, sets the version in `package.json`, and makes the version commit (on top of the waiting merges) with this trailer:
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
