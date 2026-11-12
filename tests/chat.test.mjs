@@ -146,6 +146,14 @@ await suite(async (b) => {
       const both = /<a href="tel:0988460556">0988460556<\/a> - <a href="tel:0333601279">0333601279<\/a>/;
       const home = await html('/');
       check('footer: "0988460556 - 0333601279", each number its own call link', both.test(home) && !home.includes('href="tel:0988460556 - '), (home.match(/tel:[^"]*/g) || []));
+      // Address, phones and email sit under the logo block (after the tagline), not in the "Thông tin liên hệ" column
+      const foot = home.slice(home.lastIndexOf('<footer'));
+      const brand = foot.slice(foot.indexOf('class="footer-brand"'), foot.indexOf('class="footer-col"'));
+      const contactCol = foot.slice(foot.lastIndexOf('class="footer-col"'), foot.indexOf('class="footer-bottom"'));
+      const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&#34;').replace(/'/g, '&#39;');
+      check('footer: address, call links and email under the logo block, after the tagline; none left in "Thông tin liên hệ"',
+        brand.indexOf('data-footer-contact') > brand.indexOf('footer-about') && both.test(brand) && (!ci.address || brand.includes(`<p>${esc(ci.address)}</p>`)) && (!ci.email || brand.includes(`href="mailto:${esc(ci.email)}"`))
+          && !/href="(tel|mailto):/.test(contactCol) && /<a href="\/lien-he">[^<]*<\/a>\s*<a href="\/ho-tro">/.test(contactCol), { brand: brand.slice(-600), contactCol });
       check('Liên hệ: "Điện thoại: 0988460556 - 0333601279" with two call links', /Điện thoại: <a href="tel:0988460556">0988460556<\/a> - <a href="tel:0333601279">0333601279<\/a>/.test(await html('/lien-he')));
       const help = await html('/ho-tro');
       check('Hỗ trợ: one call button per number, no run-together number', help.includes('href="tel:0988460556"') && help.includes('href="tel:0333601279"') && !help.includes('tel:09884605560333601279'));
@@ -157,6 +165,9 @@ await suite(async (b) => {
         await b.nav(p, 300);
         const ov = await ev(`(() => { const f = document.querySelector('.site-footer, footer'); f && f.scrollIntoView(); return document.documentElement.scrollWidth - innerWidth; })()`);
         check(`390px ${p}: the two numbers fit (no sideways scroll)`, ov <= 1, ov);
+        // The call links inside the phone line look like the email and the address (not the default blue link colour)
+        const colors = await ev(`(() => { const c = (e) => getComputedStyle(e).color; const box = document.querySelector('[data-footer-contact]'); return { text: c(box.querySelector('p')), links: [...box.querySelectorAll('a')].map(c) }; })()`);
+        check(`${p}: footer address, call links and email in the same colour`, colors.links.length === 3 && colors.links.every((x) => x === colors.text), colors);
       }
       await b.viewport(1280, 900);
     });

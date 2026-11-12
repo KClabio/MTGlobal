@@ -135,13 +135,18 @@ body:not(.nav-open) .is-over-hero .theme-toggle:not([aria-checked="true"]) .them
 .footer-brand .footer-company { margin: 18px 0 6px; color: #fff; font-weight: 700; font-size: .95rem; } /* matches .footer-col .footer-title */
 .footer-brand .footer-tax { max-width: 340px; margin: 0 0 10px; font-size: .82rem; line-height: 1.5; overflow-wrap: anywhere; }
 .footer-brand .footer-about { max-width: 340px; margin: 0; font-size: .9rem; line-height: 1.6; text-wrap: pretty; }
+/* Address, phone(s), email under the logo block: the same look as the link columns */
+.footer-brand .footer-contact { max-width: 340px; margin-top: 16px; }
+.footer-brand .footer-contact p, .footer-brand .footer-contact > a { color: rgba(255,255,255,.72); font-size: .9rem; line-height: 1.6; display: block; margin: 0 0 8px; overflow-wrap: anywhere; }
+.footer-brand .footer-contact a { color: rgba(255,255,255,.72); } /* the call links inside the phone line too */
+.footer-brand .footer-contact a:hover { color: #fff; }
 /* On the navy footer, present the white logo as a badge instead of a raw white block */
 .footer-brand .logo .logo-img { height: 56px; padding: 6px 12px; background: #fff; border-radius: var(--mtg-radius-sm); box-shadow: var(--mtg-shadow); }
 /* h2 so the page's headings stay in order (an h4 straight after an h1 or h2 skips levels); sized like before */
 .footer-col .footer-title { color: #fff; font-size: .95rem; margin-bottom: 14px; }
 .footer-col a, .footer-col p { color: rgba(255,255,255,.72); font-size: .9rem; display: block; margin-bottom: 8px; }
 .footer-col a:hover { color: #fff; }
-.footer-col .footer-phones a { display: inline; margin: 0; } /* several company numbers on one line: "0988460556 - 0333601279" */
+.footer-phones a { display: inline; margin: 0; } /* several company numbers on one line: "0988460556 - 0333601279" */
 .footer-bottom { margin-top: 36px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); text-align: center; font-size: .82rem; color: rgba(255,255,255,.55); }
 .footer-bottom-link { margin-left: 10px; color: rgba(255,255,255,.72); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
 .footer-bottom-link:hover { color: #fff; }
@@ -249,6 +254,6 @@ body.nav-open.nav-closing .main-nav { animation: nav-drawer-out calc(.22s * var(
   .footer-inner { grid-template-columns: 1fr 1fr; gap: 20px; }
   .footer-inner > .footer-col:nth-child(2), .footer-col a[href^="/"], .footer-about, .footer-bottom-link { display: none; }
   .footer-brand .logo .logo-img { height: 40px; padding: 0; }
-  .footer-brand p, .footer-brand .footer-company, .footer-col .footer-title, .footer-col a, .footer-col p { color: var(--mtg-ink); }
+  .footer-brand p, .footer-brand .footer-company, .footer-brand .footer-contact a, .footer-col .footer-title, .footer-col a, .footer-col p { color: var(--mtg-ink); }
   .footer-bottom { margin-top: 12px; padding-top: 0; border: 0; text-align: left; color: var(--mtg-muted); }
 }

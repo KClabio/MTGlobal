@@ -9,12 +9,14 @@
 }) %>
 <% const edProductShot = item.images && item.images[0] && item.images[0].indexOf('/assets/giai-phap/robot-stem/') === 0; %>
 
+<%# One centred column: photos, description, specs (no request form here; visitors reach Liên hệ from the menu, the
+    footer and the Thiết bị page's own "Yêu cầu tư vấn" band) %>
 <section class="section">
-  <div class="container admin-form-grid">
+  <div class="container equipment-detail">
     <div>
       <% if (item.images && item.images.length) { %>
         <div class="card-media<%= edProductShot ? ' is-contain' : '' %>" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/10;">
-          <%- picture(item.images[0], pick(item, 'name'), { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
+          <%- picture(item.images[0], pick(item, 'name'), { sizes: '(max-width: 800px) 100vw, 760px', eager: true }) %>
         </div>
         <% if (item.images.length > 1) { %>
           <div class="detail-thumbs">
@@ -37,9 +39,6 @@
         </table>
       <% } %>
     </div>
-    <aside>
-      <%- include('partials/quote-form', { prefillInterestedIn: 'giai-phap-stem-lab' }) %>
-    </aside>
   </div>
 </section>
 

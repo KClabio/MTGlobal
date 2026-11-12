@@ -159,6 +159,8 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 @media (max-width: 760px) { .media-grid.is-single { max-width: none; } }
 .equipment-group + .equipment-group { margin-top: 48px; }
 .equipment-group-title { font-size: 1.25rem; margin: 0 0 18px; padding-bottom: 10px; border-bottom: 2px solid var(--mtg-border); color: var(--mtg-heading); }
+/* One equipment item (views/equipment-detail.ejs): photos, description and specs in one centred column */
+.container.equipment-detail { max-width: 800px; } /* 760 px of content (the description's own width) + the container's 20 px sides */
 
 /* ---- STEM equipment: search + one Phần per tab (switched on by main.js; without JS all parts show) ---- */
 .equip-tools { display: grid; gap: 14px; margin-bottom: 28px; }

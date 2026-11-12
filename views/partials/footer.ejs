@@ -6,15 +6,27 @@
         <div class="logo"><%- include('logo') %></div>
         <p class="footer-company"><%= lang === 'en' ? 'Mễ Trì Global Technology Co., Ltd' : 'Công ty TNHH Công nghệ Mễ Trì Global' %></p>
         <%# Mã số doanh nghiệp (Admin → Thông tin công ty), with where/when it was issued; nothing while empty %>
-        <% const ftReg = (settings && settings.contactInfo) || {}; %>
-        <% if (ftReg.taxCode) { %>
-          <p class="footer-tax" data-footer-tax><%= t('footer.taxCode') %>: <%= ftReg.taxCode %><% if (ftReg.registration) { %>, <%= ftReg.registration %><% } %></p>
+        <% const ftInfo = (settings && settings.contactInfo) || {}; %>
+        <% if (ftInfo.taxCode) { %>
+          <p class="footer-tax" data-footer-tax><%= t('footer.taxCode') %>: <%= ftInfo.taxCode %><% if (ftInfo.registration) { %>, <%= ftInfo.registration %><% } %></p>
         <% } %>
         <p class="footer-about">
           <%= lang === 'en'
             ? 'Smart robotics, STEM Lab solutions, and technology consulting services.'
             : 'Robot thông minh, giải pháp phòng Lab STEM và các dịch vụ tư vấn công nghệ.' %>
         </p>
+        <%# The company's address, phone(s) and email (Admin → Thông tin công ty), under the logo block; nothing while empty %>
+        <% const ftPhones = phoneList(ftInfo.phone); %>
+        <% if (ftInfo.address || ftPhones.length || ftInfo.email) { %>
+          <div class="footer-contact" data-footer-contact>
+            <% if (ftInfo.address) { %><p><%= ftInfo.address %></p><% } %>
+            <%# One or more numbers ("0988460556 - 0333601279"): side by side, each its own call link %>
+            <% if (ftPhones.length) { %>
+              <p class="footer-phones"><% ftPhones.forEach(function (p, i) { %><%= i ? ' - ' : '' %><a href="tel:<%= p.tel %>"><%= p.text %></a><% }) %></p>
+            <% } %>
+            <% if (ftInfo.email) { %><a href="mailto:<%= ftInfo.email %>"><%= ftInfo.email %></a><% } %>
+          </div>
+        <% } %>
       </div>
 
       <div class="footer-col">
@@ -28,17 +40,6 @@
 
       <div class="footer-col">
         <h2 class="footer-title"><%= t('footer.contactInfo') %></h2>
-        <% if (settings && settings.contactInfo && settings.contactInfo.address) { %>
-          <p><%= settings.contactInfo.address %></p>
-        <% } %>
-        <%# One or more numbers ("0988460556 - 0333601279"): side by side, each its own call link %>
-        <% const ftPhones = phoneList(settings && settings.contactInfo && settings.contactInfo.phone); %>
-        <% if (ftPhones.length) { %>
-          <p class="footer-phones"><% ftPhones.forEach(function (p, i) { %><%= i ? ' - ' : '' %><a href="tel:<%= p.tel %>"><%= p.text %></a><% }) %></p>
-        <% } %>
-        <% if (settings && settings.contactInfo && settings.contactInfo.email) { %>
-          <a href="mailto:<%= settings.contactInfo.email %>"><%= settings.contactInfo.email %></a>
-        <% } %>
         <% chatLinks(settings && settings.contactInfo).forEach(function (l) { %>
           <a href="<%= l.url %>" target="_blank" rel="noopener" data-footer-chat="<%= l.kind %>"><%= t('chat.' + l.kind) %></a>
         <% }) %>

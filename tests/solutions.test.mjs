@@ -71,6 +71,17 @@ await suite(async (b) => {
     const iq = vexItems.find((v) => /^VEX IQ/.test(v.nameEn));
     const iqHtml = await (await get(`/giai-phap/thiet-bi/${iq._id}`)).text();
     check('VEX IQ detail page: description list + extra image thumbnails', iqHtml.includes('<li>') && iqHtml.includes('detail-thumbs') && iqHtml.includes('VEXcode IQ'));
+    // An equipment item has no request form beside it: photos, description and specs in one centred column
+    const noForm = [];
+    for (const v of vexItems) { const h = await (await get(`/giai-phap/thiet-bi/${v._id}`)).text(); if (h.includes('data-quote-form') || h.includes('admin-form-grid') || !h.includes('equipment-detail')) noForm.push(v.nameEn); }
+    check(`no request form on the ${vexItems.length} VEX item pages (one column instead)`, noForm.length === 0, noForm);
+    for (const [w, h] of [[1280, 900], [390, 844]]) {
+      await b.viewport(w, h);
+      await nav(`/giai-phap/thiet-bi/${iq._id}`, 300);
+      const col = await ev(`(() => { const c = document.querySelector('.equipment-detail > div').getBoundingClientRect(); return { left: Math.round(c.left), right: Math.round(innerWidth - c.right), width: Math.round(c.width), photo: Math.round(document.querySelector('.equipment-detail .card-media').getBoundingClientRect().width), text: Math.round(document.querySelector('.equipment-detail .prose-text').getBoundingClientRect().width), over: document.documentElement.scrollWidth - innerWidth, form: !!document.querySelector('[data-quote-form]') }; })()`);
+      check(`${w}px: the item page is one centred column (≤ 760 px, photo and text the same width), no form, no sideways scroll`, !col.form && col.over <= 1 && col.width <= 760 && col.photo === col.width && col.text === col.width && Math.abs(col.left - col.right) <= 2, col);
+    }
+    await b.viewport(1280, 900);
 
     // Browser: images decode, videos load metadata
     for (const theme of ['light', 'dark']) {

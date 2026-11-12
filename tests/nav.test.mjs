@@ -580,7 +580,7 @@ await suite(async (b) => {
       return out;
     })()`;
     const pages = {
-      '/': ['.main-nav > a', '.home-hero h1', '.section-title', '.pillar-card h3', '.pillar-card p', '.card-body h3', '.card-body p', '.footer-col a', '.footer-brand .footer-about', '.lang-switch a'],
+      '/': ['.main-nav > a', '.home-hero h1', '.section-title', '.pillar-card h3', '.pillar-card p', '.card-body h3', '.card-body p', '.footer-col a', '.footer-brand .footer-about', '.footer-contact p', '.footer-contact a', '.lang-switch a'],
       '/lien-he': ['.form-group label', '.form-control', '.contact-hint', '.page-hero h1'],
       '/admin': ['.admin-nav a', '.admin-nav a.active', '.kpi-label', '.kpi-value', '.kpi-sub', '.panel-head h2', '.panel-head p', '.legend-label', '.hbar-label', '.latest-main strong', '.latest-main span', '.mini-label', '.tag'],
       '/admin/robot': ['.data-table th', '.data-table td', '.admin-hint span', '.btn-ghost', '.tag'],

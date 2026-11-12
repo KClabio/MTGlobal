@@ -6,6 +6,16 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Equipment pages under Giải pháp → Thiết bị no longer have a request form beside them.** Opening one item (for example VEX IQ) now shows only its photos, description and specifications, in one wider column in the middle of the page. Visitors can still ask for advice through "Yêu cầu tư vấn" at the bottom of the Thiết bị page, the Liên hệ page and the footer.
+
+  ![The end of an equipment page: the description alone, with the new footer below](docs/screenshots/1.7.0/equipment-item-no-form.jpg)
+- **The company's address, phone numbers and email moved in the footer:** they now sit under the logo, the company name and the short description, instead of in the "Thông tin liên hệ" column. That column keeps the Zalo / Messenger links, "Liên hệ với chúng tôi" and "Hỗ trợ".
+
+  ![The footer: address, phones and email under the company name](docs/screenshots/1.7.0/footer-contacts.jpg)
+
 ## [1.6.0] - 2026-11-12
 
 ### Added
