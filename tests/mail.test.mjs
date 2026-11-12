@@ -55,7 +55,8 @@ await suite(async (b) => {
 
     await part(b, 'a new request: staff email and confirmation', async () => {
       const name = `${MARK}-guest`;
-      const r = await send('/san-pham/robot-cat-co/yeu-cau', { name, email: SENDER, schoolOrCompany: 'ZZ Trường', message: `Báo giá ${MARK}`, cameFrom: '/giai-phap' });
+      const robot = await d.collection('products').findOne({ category: 'robot-cat-co' });
+      const r = await send('/san-pham/robot-cat-co/yeu-cau', { name, email: SENDER, schoolOrCompany: 'ZZ Trường', message: `Báo giá ${MARK} <b>đậm</b>`, cameFrom: '/giai-phap' });
       check('sent (guest)', r.status === 303, r.status);
       const [staff] = await waitMails((m) => toStaff(m) && (m.subject || '').includes(name));
       check('one email to every staff address, subject "[MTG] Yêu cầu mới: <category> – <name>"', !!staff && JSON.stringify(addresses(staff.to)) === JSON.stringify(STAFF) && staff.subject === `[MTG] Yêu cầu mới: Sản phẩm Robot thông minh – ${name}`, staff && { to: staff.to, subject: staff.subject });
@@ -63,10 +64,22 @@ await suite(async (b) => {
       const text = (staff && staff.text) || '';
       check('… holds the whole request: contact, school, robot, message, page, "Khách", admin link',
         text.includes('Số điện thoại: 0912345678') && text.includes(`Email: ${SENDER}`) && text.includes('Trường / Đơn vị: ZZ Trường') && /Sản phẩm: .+/.test(text)
-        && text.includes(`Báo giá ${MARK}`) && text.includes('Gửi từ trang: /san-pham/robot-cat-co') && text.includes('Tài khoản: Khách (không đăng nhập)') && text.includes(`${BASE}/admin/yeu-cau`), text);
+        && text.includes(`Báo giá ${MARK}`) && text.includes(`Gửi từ trang: Sản phẩm/${robot.nameVi}`) && text.includes('Tài khoản: Khách (không đăng nhập)') && text.includes(`${BASE}/admin/yeu-cau`), text);
+      check('… no footer on the staff email (no "Bạn nhận email này…", no site link at the end)', !!staff && !(text + staff.html).includes('Bạn nhận email này') && !text.includes('\n--\n'), text.slice(-200));
+      // The same email in the MTG layout (lib/mail-layout.js): typed text shown as text, never as HTML
+      const html = (staff && staff.html) || '';
+      check('… also as HTML in the MTG layout: "Yêu cầu mới" tag, title, the details table, a button to the admin list',
+        html.includes('Yêu cầu tư vấn mới') && html.includes('>Yêu cầu mới<') && html.includes('ZZ Trường') && html.includes(`href="${BASE}/admin/yeu-cau"`) && html.includes('Xem trong trang quản trị'), html.slice(0, 300));
+      check('… what the sender typed is shown as text: <b>đậm</b> arrives escaped', html.includes('&lt;b&gt;đậm&lt;/b&gt;') && !html.includes('<b>đậm'));
       const [mine] = await waitMails((m) => toSender(m));
       check('the sender gets "MTG đã nhận được yêu cầu tư vấn của bạn"', !!mine && mine.subject === 'MTG đã nhận được yêu cầu tư vấn của bạn' && /yêu cầu tư vấn về "Sản phẩm Robot thông minh" gửi lúc \d\d:\d\d \d\d\/\d\d\/\d{4}/.test(mine.text || ''), mine && mine.text);
       check('… with no text typed into the form (no name, school or message), and no Reply-To', !!mine && !mine.text.includes(MARK) && !mine.text.includes('ZZ Trường') && !mine.replyTo);
+      const mineHtml = (mine && mine.html) || '';
+      check('… its HTML: "Đã nhận yêu cầu" tag, thank-you title, a button to the website, still nothing typed into the form',
+        mineHtml.includes('Đã nhận yêu cầu') && mineHtml.includes('Cảm ơn bạn đã liên hệ MTG') && mineHtml.includes(`href="${BASE}"`) && !mineHtml.includes(MARK) && !mineHtml.includes('ZZ Trường') && !mineHtml.includes('đậm'));
+      check('… site in Vietnamese → all Vietnamese, ending "Email tự động từ MTG, vui lòng không trả lời lại email này."',
+        !!mine && mineHtml.includes('lang="vi"') && mineHtml.includes('Xem website MTG') && mine.text.endsWith('Email tự động từ MTG, vui lòng không trả lời lại email này.')
+        && mineHtml.includes('Email tự động từ MTG, vui lòng không trả lời lại email này.') && !/Request received|Thank you|Visit the|Hello|Kind regards|do not reply/.test(mine.text + mineHtml), mine && mine.text.slice(-200));
     });
 
     await part(b, 'English page, no email, the daily limit, a changed request', async () => {
@@ -79,6 +92,7 @@ await suite(async (b) => {
       const sent = await waitMails((m) => (m.subject || '').includes(`${MARK}-noemail`));
       await sleep(300);
       check('no email given → the staff email only, without Reply-To', sent.length === 1 && !sent[0].replyTo && mails().length === before + 1, { staff: sent.length, all: mails().length - before });
+      check('… sent from Liên hệ → "Gửi từ trang: Liên hệ"', !!sent[0] && sent[0].text.includes('Gửi từ trang: Liên hệ\n'), sent[0] && sent[0].text);
       // An account isn't limited per address, so this tests the per-recipient limit alone: 3 confirmations a day
       const asCustomer = { cookie: `lang=vi; connect.sid=${customer.sid}` };
       const limited = `zzsender-many-${stamp}@example.com`;
@@ -91,6 +105,36 @@ await suite(async (b) => {
       const r = await send(`/tai-khoan/yeu-cau/${own._id}/sua`, { name: `${MARK}-many-1-changed`, email: limited, message: 'Đã sửa', interestedIn: 'khac' }, asCustomer);
       const [changed] = await waitMails((m) => (m.subject || '').includes(`${MARK}-many-1-changed`));
       check('changing a sent request → staff get "[MTG] Yêu cầu đã sửa: …", the sender no new confirmation', r.status === 303 && !!changed && changed.subject.startsWith('[MTG] Yêu cầu đã sửa:') && changed.text.startsWith('Người gửi vừa sửa lại') && mails().filter((m) => addresses(m.to).includes(limited)).length === 3, changed && changed.subject);
+    });
+
+    await part(b, 'language: the confirmation follows the VI / EN switch, staff always get Vietnamese; page names', async () => {
+      // As the customer (accounts have no hourly limit), so the guest requests above keep their own count
+      const robot = await d.collection('products').findOne({ category: 'robot-cat-co' });
+      const contact = ((await d.collection('sitesettings').findOne({})) || {}).contactInfo || {};
+      const enAddr = `zzsender-enrobot-${stamp}@example.com`;
+      const name = `${MARK}-enrobot`;
+      const r = await send('/san-pham/robot-cat-co/yeu-cau', { name, email: enAddr, message: 'Báo giá' }, { cookie: `lang=en; connect.sid=${customer.sid}` });
+      check('a request sent with the site in English (robot page)', r.status === 303, r.status);
+      const [staff] = await waitMails((m) => toStaff(m) && (m.subject || '').includes(name));
+      const s = staff ? staff.text + staff.html : '';
+      check('site in English → the staff email is still all Vietnamese (subject, title, labels, page name, button)',
+        !!staff && staff.subject === `[MTG] Yêu cầu mới: Sản phẩm Robot thông minh – ${name}` && staff.html.includes('lang="vi"') && s.includes('Yêu cầu tư vấn mới')
+        && staff.text.includes('Quan tâm: Sản phẩm Robot thông minh') && staff.text.includes(`Sản phẩm: ${robot.nameVi}`) && staff.text.includes(`Gửi từ trang: Sản phẩm/${robot.nameVi}`)
+        && s.includes('Xem trong trang quản trị') && !/Request|Thank you|Smart Robot|Product:|Contact MTG|Visit the|Hello/.test(s), staff && staff.text);
+      const [mine] = await waitMails((m) => addresses(m.to).includes(enAddr));
+      const c = mine ? mine.text + mine.html : '';
+      check('… and the sender\'s confirmation is all English (subject, tag, title, topic, button, footer)',
+        !!mine && mine.subject === 'MTG has received your consultation request' && mine.html.includes('lang="en"') && c.includes('Request received') && c.includes('Thank you for contacting MTG')
+        && c.includes('about "Smart Robot Products"') && c.includes('Visit the MTG website') && mine.text.endsWith('This is an automatic email from MTG, please do not reply to it.')
+        && (!(contact.phone || contact.email) || c.includes('Contact MTG')) && !/Xin chào|Cảm ơn|Đã nhận|Trân trọng|Liên hệ MTG|vui lòng|Sản phẩm/.test(c), mine && mine.text);
+
+      // A Dịch vụ page: its required questions answered, as in services.test.mjs
+      const svc = (await d.collection('services').findOne({ slug: 'tu-van-du-hoc' })) || (await d.collection('services').findOne({}));
+      const answers = Object.fromEntries((svc.questions || []).filter((q) => q.required).map((q) => [`q_${q.key}`, q.type === 'choice' ? '0' : q.type === 'number' ? '1' : 'ZZ']));
+      const svcName = `${MARK}-service`;
+      const rs = await send(`/dich-vu/${svc.slug}/yeu-cau`, { name: svcName, message: 'Tư vấn', ...answers }, { cookie: `lang=vi; connect.sid=${customer.sid}` });
+      const [fromService] = await waitMails((m) => toStaff(m) && (m.subject || '').includes(svcName));
+      check(`a request from a Dịch vụ page → "Gửi từ trang: Dịch vụ/${svc.titleVi}"`, rs.status === 303 && !!fromService && fromService.text.includes(`Gửi từ trang: Dịch vụ/${svc.titleVi}\n`), fromService ? fromService.text : rs.status);
     });
 
     await part(b, 'no staff address → no staff email', async () => {

@@ -43,6 +43,13 @@ await suite(async (b) => {
     const mail = mails ? JSON.parse(readFileSync(path.join(MAIL_DIR, files[0]), 'utf8')) : {};
     check('two errors of the same kind send one email', files.length === 1, files.length);
     check('the email goes to ALERT_EMAIL_TO and names the error and the admin page', JSON.stringify(mail.to || '').includes('alerts@example.com') && (mail.subject || '').includes(MESSAGE) && (mail.text || '').includes('/admin/nhat-ky-loi') && !(mail.text || '').includes('secret123'), { to: mail.to, subject: mail.subject });
+    const text = mail.text || '', html = mail.html || '';
+    check('… with the page, status code, first time seen and the visitor ("Khách")',
+      text.includes('Ở đâu: GET /__test/boom') && text.includes('Mã trạng thái: 500') && /Lần đầu gặp: \S+ \d\d\/\d\d\/\d{4}/.test(text) && text.includes('Tài khoản: Khách (không đăng nhập)'), text);
+    check('… also as HTML in the MTG layout: "Lỗi máy chủ" tag, title, a button to Nhật ký lỗi',
+      html.includes('>Lỗi máy chủ<') && html.includes('Website MTG vừa gặp một lỗi') && html.includes(`href="${BASE}/admin/nhat-ky-loi"`) && html.includes('Mở Nhật ký lỗi'), html.slice(0, 300));
+    check('… no stack trace and no query string in either version', !/server\.js|node_modules/.test(text + html) && !(text + html).includes('secret123'));
+    check('… no footer ("Bạn nhận email này…ALERT_EMAIL_TO", site link)', !(text + html).includes('ALERT_EMAIL_TO') && !(text + html).includes('Bạn nhận email này') && !text.includes('\n--\n'), text.slice(-200));
   });
 
   await part(b, 'admin page', async () => {

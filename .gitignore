@@ -1,5 +1,9 @@
 node_modules/
 .env
+# other private settings files (e.g. .env.mail-test for scripts/send-test-mails.js); only the example is shared
+.env.*
+.env-*
+!.env.example
 public/uploads/images/*
 public/uploads/videos/*
 public/uploads/documents/*

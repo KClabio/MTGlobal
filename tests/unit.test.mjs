@@ -301,6 +301,33 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
     !/evil|Spam/.test(mine.text + mine.subject) && mine.text.includes('"Khác"') && mine.text.includes('10:00 30/10/2026') && mine.text.includes('Điện thoại: 1900 1234') && mine.text.includes('Email: info@mtg.vn'), mine.text);
   const staff = staffMail({ ...request, name: 'An\r\nBcc: x@evil.example' }, { base: 'https://mtg.vn', user: null, changed: false });
   check("staff email: a line break typed in the name can't reach the subject line", !/[\r\n]/.test(staff.subject) && staff.subject.includes('An Bcc: x@evil.example'), staff.subject);
+  check('confirmation HTML: no name, school or message either', !/evil|Spam/.test(mine.html) && mine.html.includes('1900 1234') && mine.html.includes('href="https://mtg.vn"'));
+}
+
+// One layout for every email (lib/mail-layout.js)
+{
+  const { renderMail } = appRequire('./lib/mail-layout.js');
+  const { alertMail } = appRequire('./lib/error-log.js');
+  const m = renderMail({ title: 'T', intro: ['Một', 'Hai'], fields: [['Tên', '<img src=x onerror=alert(1)>'], ['Trống', ''], ['Không có', null], ['Số', 0]],
+    block: { label: 'Nội dung', text: 'a\n"b" & c' }, button: { label: 'Mở', url: 'https://mtg.vn/a?x=1&y="2"' }, notes: ['ghi chú', ''], footer: 'cuối', siteUrl: 'https://mtg.vn' });
+  check('layout: typed values are escaped, never HTML', !m.html.includes('<img') && m.html.includes('&lt;img src=x onerror=alert(1)&gt;') && m.html.includes('a<br>&quot;b&quot; &amp; c') && m.html.includes('href="https://mtg.vn/a?x=1&amp;y=&quot;2&quot;"'));
+  check('layout: empty details are left out, 0 is kept', !m.html.includes('Trống') && !m.html.includes('Không có') && m.text.includes('Số: 0') && !m.text.includes('Trống'));
+  check('layout: the text copy has the same parts in the same order',
+    m.text === ['Một', '', 'Hai', '', 'Tên: <img src=x onerror=alert(1)>', 'Số: 0', '', 'Nội dung:', 'a\n"b" & c', '', 'Mở: https://mtg.vn/a?x=1&y="2"', '', 'ghi chú', '', '--', 'cuối', 'https://mtg.vn'].join('\n'), m.text);
+  const twice = [renderMail({ title: 'T', notes: 'n' }), renderMail({ title: 'T', notes: 'n' })];
+  const tail = (h) => h.slice(h.lastIndexOf('</table>'));
+  check("layout: two identical emails still end differently in HTML (Gmail doesn't trim the end), same text copy",
+    tail(twice[0].html) !== tail(twice[1].html) && twice[0].text === twice[1].text && /<div style="display:none[^"]*" aria-hidden="true">[0-9a-z]{16,}<\/div>\s*<\/body>/.test(twice[0].html));
+  const bare = renderMail({ intro: 'Một', notes: 'ghi chú' });
+  check('layout: no footer given → no footer row and no "--" line', bare.text === 'Một\n\nghi chú' && !bare.html.includes('border-top:1px solid #e2e8f0;font-size:12px'), bare.text);
+  const { staffMail, pageName } = appRequire('./lib/request-mail.js');
+  const named = staffMail({ name: 'An', message: 'x', interestedIn: 'khac', sourcePage: '/san-pham/robot-cat-co', createdAt: new Date() }, { base: 'https://mtg.vn', pageName: 'Sản phẩm/Robot cắt cỏ' });
+  const unnamed = staffMail({ name: 'An', message: 'x', interestedIn: 'khac', sourcePage: '/khac', createdAt: new Date() }, { base: 'https://mtg.vn' });
+  check('staff email: "Gửi từ trang" shows the page name, else the address', named.text.includes('Gửi từ trang: Sản phẩm/Robot cắt cỏ\n') && unnamed.text.includes('Gửi từ trang: /khac\n'));
+  check('page names without the database: Liên hệ, and "(không rõ)" for none', (await pageName('/lien-he')) === 'Liên hệ' && (await pageName('')) === '(không rõ)');
+  const alert = alertMail({ name: 'Error', message: 'Boom\r\nBcc: x@evil.example <b>', where: 'GET /x', status: 500, count: 2, firstAt: new Date('2026-11-01T01:00:00Z') }, { base: 'https://mtg.vn', at: new Date('2026-11-02T01:00:00Z'), account: '' });
+  check('error alert: one-line subject, escaped HTML, no empty "Tài khoản" for a background job, first time seen in Vietnam time',
+    !/[\r\n]/.test(alert.subject) && alert.html.includes('Boom<br>Bcc: x@evil.example &lt;b&gt;') && !alert.text.includes('Tài khoản') && alert.text.includes('Lần đầu gặp: 08:00:00 1/11/2026') && alert.text.includes('Mã trạng thái: 500'), alert.text);
 }
 
 // Staff two-step login codes (lib/two-factor.js)
