@@ -1,5 +1,5 @@
-// Home page "Lĩnh vực hoạt động" slider (layout, texts, wheel, smooth slides, drag/throw, arrows, "← Về trang chủ"),
-// the hero (photo as background, the figures panel and its count-up) and the "← Quay lại" back link on detail pages.
+// Home page "Lĩnh vực hoạt động" row (layout, texts, sliding by itself and looping, stops under the mouse, ‹ › / wheel / keys,
+// drag, "← Về trang chủ" keeps its place), the hero (photo as background, the figures panel and its count-up) and the "← Quay lại" back link on detail pages.
 import { suite, part, check, db, BASE, appRequire, tempArticle } from './lib/index.mjs';
 
 const { bannerFor } = appRequire('./lib/banners.js');
@@ -11,45 +11,60 @@ await suite(async (b) => {
   const waitLoad = () => b.waitLoad();
   const shot = (name) => b.shot(name);
 
+  // "Lĩnh vực hoạt động": 3½ cards in view sliding slowly to the right by themselves and looping, like the partner row
+  // (public/js/main.js loopRow); stops under the mouse, ‹ › / the mouse wheel / ← → move one card, drag; the position
+  // comes back with "← Về trang chủ".
   await part(b, 'home slider', async () => {
     const d = await db();
     const nav = (p) => b.nav(p, 500);
-    const mouse = async (type, x, y, extra = {}) => send('Input.dispatchMouseEvent', { type, x, y, ...extra });
-    const click = async (selector) => {
-      const pt = await ev(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + Math.min(r.width / 2, 120), y: r.top + Math.min(r.height / 2, 60) }; })()`);
-      if (!pt) throw new Error('not found: ' + selector);
-      await mouse('mouseMoved', pt.x, pt.y);
-      await mouse('mousePressed', pt.x, pt.y, { button: 'left', buttons: 1, clickCount: 1 });
-      await mouse('mouseReleased', pt.x, pt.y, { button: 'left', buttons: 0, clickCount: 1 });
-    };
-    const state = () => ev(`(() => { const t = document.querySelector('[data-domain-slider]'); return { left: Math.round(t.scrollLeft), max: t.scrollWidth - t.clientWidth, y: Math.round(scrollY),
-      prev: document.querySelector('[data-domain-prev]').disabled, next: document.querySelector('[data-domain-next]').disabled }; })()`);
-    // Fraction of each card visible inside the container's content box (the track bleeds into the 20px padding)
-    const visible = () => ev(`(() => { const c = document.querySelector('.domains-section .container'); const cs = getComputedStyle(c); const cr = c.getBoundingClientRect();
-      const L = cr.left + parseFloat(cs.paddingLeft), R = cr.right - parseFloat(cs.paddingRight);
-      return [...document.querySelectorAll('.domain-item')].map((li) => { const r = li.getBoundingClientRect(); return Math.round(Math.max(0, Math.min(R, r.right) - Math.max(L, r.left)) / r.width * 100) / 100; }); })()`);
-    const trackCenter = () => ev(`(() => { const r = document.querySelector('[data-domain-slider]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
-    const wheel = async (deltaY, times = 1) => { const c = await trackCenter(); for (let i = 0; i < times; i++) { await mouse('mouseWheel', c.x, c.y, { deltaX: 0, deltaY }); await sleep(60); } await sleep(700); };
+    const { mouse } = b;
+    const ORIG = `[...document.querySelectorAll('[data-domain-slider] > .domain-item:not([data-domain-clone])')]`;
+    // The row's shift (px), the loop's length W (one list + gap) and one step (card + gap)
+    const geo = () => ev(`(() => { const s = document.querySelector('[data-domain-slider]'); const o = ${ORIG}; const m = getComputedStyle(s).transform;
+      return { x: m === 'none' ? 0 : new DOMMatrix(m).m41, W: o[0].offsetLeft - s.firstElementChild.offsetLeft, step: o[1].offsetLeft - o[0].offsetLeft, y: Math.round(scrollY) }; })()`);
+    const wrapDiff = (a, c, W) => { let x = (c - a) % W; if (x > W / 2) x -= W; if (x < -W / 2) x += W; return x; };
+    const speedOver = async (ms) => { const a = await geo(); const t0 = Date.now(); await sleep(ms); const c = await geo(); return wrapDiff(a.x, c.x, a.W) / ((Date.now() - t0) / 1000); };
+    const centre = (expr) => ev(`(() => { const r = (${expr}).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+    const ROW = `document.querySelector('[data-domain-marquee]')`;
+    const away = async () => { await mouse('mouseMoved', { x: 5, y: 5 }); };
+    const press = async (p) => { await mouse('mousePressed', p, { button: 'left', buttons: 1, clickCount: 1 }); await mouse('mouseReleased', p, { button: 'left', buttons: 0, clickCount: 1 }); };
+    const click = async (sel) => { const p = await centre(`document.querySelector('${sel}')`); await mouse('mouseMoved', p); await sleep(400); await press(p); };
     const bringIntoView = () => ev(`(() => { const s = document.getElementById('linh-vuc'); window.scrollTo(0, s.getBoundingClientRect().top + scrollY - 80); return true; })()`);
+    // The card nearest a point of the row (real or copy: they look the same), and whether the window is always filled
+    const cardAt = (frac) => ev(`(() => { const box = ${ROW}.getBoundingClientRect(); const x = box.left + box.width * ${frac};
+      const t = [...document.querySelectorAll('[data-domain-slider] > .domain-item')].map((li) => ({ li, r: li.getBoundingClientRect() })).sort((a, z) => Math.abs((a.r.left + a.r.right) / 2 - x) - Math.abs((z.r.left + z.r.right) / 2 - x))[0];
+      return t.li.querySelector('a').getAttribute('href'); })()`);
+    const filled = () => ev(`(() => { const box = ${ROW}.getBoundingClientRect(); const s = document.querySelector('[data-domain-slider]').getBoundingClientRect(); return s.left <= box.left + 1 && s.right >= box.right - 1; })()`);
+    await b.setCookie('theme', 'light');
+    await b.reducedMotion(false);
+    await b.viewport(1280);
 
-    // ---- 1. Layout at 1280px ----
-    await nav('/');
-    await bringIntoView(); await sleep(200);
-    const cards = await ev(`[...document.querySelectorAll('.domain-card')].map((a) => ({ href: a.getAttribute('href'), title: a.querySelector('h3').textContent.trim(), text: (a.querySelector('p') || {}).textContent || '', img: (a.querySelector('img') || {}).src || null }))`);
+    // ---- 1. Content: 7 cards once for screen readers and Tab; copies hidden ----
+    await nav('/'); await bringIntoView(); await away(); await sleep(300);
+    const cards = await ev(`${ORIG}.map((li) => li.querySelector('.domain-card')).map((a) => ({ href: a.getAttribute('href'), title: a.querySelector('h3').textContent.trim(), text: (a.querySelector('p') || {}).textContent || '', img: (a.querySelector('img') || {}).src || null }))`);
     check('7 area cards in menu order (one "Dịch vụ" card for all services), each linking with ?from=home', cards.length === 7 && JSON.stringify(cards.map((c) => c.href)) === JSON.stringify(['/san-pham', '/giai-phap/stem-lab', '/giai-phap/thiet-bi', '/giai-phap/workshop', '/giai-phap/dao-tao', '/giai-phap/tap-huan', '/dich-vu'].map((u) => u + '?from=home')), cards.map((c) => c.href));
     check('section title is "Lĩnh vực hoạt động"', (await ev(`document.querySelector('#linh-vuc .section-title').textContent.trim()`)) === 'Lĩnh vực hoạt động');
-    // Screen readers: a named list ("Lĩnh vực hoạt động, list, 7 items"), not a region that hides the list
-    const a11y = await ev(`(() => { const t = document.querySelector('[data-domain-slider]'); return { tag: t.tagName, role: t.getAttribute('role'), label: t.getAttribute('aria-label'), focusable: t.tabIndex === 0, items: t.querySelectorAll(':scope > li').length }; })()`);
-    check('slider read as a named list: <ul> without a role, "Lĩnh vực hoạt động" as its name, one <li> per card, keyboard-focusable',
-      a11y.tag === 'UL' && a11y.role === null && a11y.label === 'Lĩnh vực hoạt động' && a11y.items === cards.length && a11y.focusable, a11y);
+    // Screen readers: a named list ("Lĩnh vực hoạt động, list, 7 items"); the copies made for the loop are hidden from them and from Tab
+    const a11y = await ev(`(() => { const t = document.querySelector('[data-domain-slider]'); const copies = [...t.querySelectorAll(':scope > [data-domain-clone]')];
+      return { tag: t.tagName, role: t.getAttribute('role'), label: t.getAttribute('aria-label'), focusable: t.tabIndex === 0, items: t.querySelectorAll(':scope > li').length, real: ${ORIG}.length, copies: copies.length,
+        copiesHidden: copies.every((c) => c.tagName === 'LI' && c.getAttribute('aria-hidden') === 'true' && c.querySelector('a').tabIndex === -1 && [...c.querySelectorAll('img')].every((i) => i.alt === '') && !c.inert),
+        reachable: [...t.querySelectorAll('a')].filter((a) => !a.closest('[aria-hidden="true"]')).map((a) => a.getAttribute('href')),
+        rows: new Set([...t.children].map((li) => Math.round(li.getBoundingClientRect().top))).size, wide: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
+    check('slider read as a named list: <ul> without a role, "Lĩnh vực hoạt động" as its name, keyboard-focusable; one line; the 7 cards once (copies <li aria-hidden>, out of Tab); no sideways scroll',
+      a11y.tag === 'UL' && a11y.role === null && a11y.label === 'Lĩnh vực hoạt động' && a11y.focusable && a11y.real === 7 && a11y.copies >= 7 && a11y.items === a11y.real + a11y.copies && a11y.copiesHidden
+        && JSON.stringify(a11y.reachable) === JSON.stringify(cards.map((c) => c.href)) && a11y.rows === 1 && a11y.wide === 0, a11y);
     // Off-screen cards lazy-load, so check each picture over HTTP instead of waiting for the browser
     const imgs = [];
     for (const card of cards) imgs.push(card.img ? (await fetch(card.img)).headers.get('content-type')?.startsWith('image/') === true : 'art');
     check('all card photos load (Dịch vụ uses colour art until a service photo is uploaded)', JSON.stringify(imgs) === JSON.stringify([true, true, true, true, true, true, 'art']), imgs);
-    let vis = await visible();
-    check('1280px: cards 1–3 fully visible, card 4 about half, card 5 hidden', vis[0] === 1 && vis[1] === 1 && vis[2] === 1 && vis[3] >= 0.4 && vis[3] <= 0.6 && vis[4] === 0, vis);
-    let st = await state();
-    check('at the start: ◀ disabled, ▶ enabled', st.prev && !st.next, st);
+    // 3½ cards fill the window (the container's width)
+    const ratio = () => ev(`(() => { const box = ${ROW}; const pad = parseFloat(getComputedStyle(box).paddingLeft); const inner = box.clientWidth - 2 * pad;
+      const s = document.querySelector('[data-domain-slider]'); const w = ${ORIG}[0].getBoundingClientRect().width; const gap = parseFloat(getComputedStyle(s).columnGap);
+      const c = document.querySelector('.domains-section .container'); const cs = getComputedStyle(c);
+      return { perView: Math.round((inner + gap) / (w + gap) * 100) / 100, sameAsContainer: Math.abs(inner - (c.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight))) <= 1 }; })()`);
+    let r = await ratio();
+    check(`1280px: 3½ cards in view (${r.perView}), the row as wide as the page content`, Math.abs(r.perView - 3.5) < 0.05 && r.sameAsContainer, r);
+    check('the ‹ › buttons are never disabled (a loop has no ends)', await ev(`!document.querySelector('[data-domain-prev]').disabled && !document.querySelector('[data-domain-next]').disabled`));
     await shot('slider-1280-light');
 
     // ---- 2. Text follows the banner lines / service summaries ----
@@ -59,7 +74,7 @@ await suite(async (b) => {
       .concat([bannerFor(settings, 'services', lang).subtitle]);
     check('VI card texts = banner lines (the Dịch vụ card: the services banner line)', JSON.stringify(cards.map((c) => c.text.trim())) === JSON.stringify(expectText('vi')), cards.map((c) => c.text));
     await nav('/?lang=en'); await bringIntoView();
-    const en = await ev(`({ title: document.querySelector('#linh-vuc .section-title').textContent.trim(), texts: [...document.querySelectorAll('.domain-card')].map((a) => ((a.querySelector('p') || {}).textContent || '').trim()), titles: [...document.querySelectorAll('.domain-card h3')].map((h) => h.textContent.trim()), prev: document.querySelector('[data-domain-prev]').getAttribute('aria-label') })`);
+    const en = await ev(`({ title: document.querySelector('#linh-vuc .section-title').textContent.trim(), texts: ${ORIG}.map((li) => ((li.querySelector('p') || {}).textContent || '').trim()), titles: ${ORIG}.map((li) => li.querySelector('h3').textContent.trim()), prev: document.querySelector('[data-domain-prev]').getAttribute('aria-label') })`);
     check('EN: "What We Do", English texts and titles, arrow labels', en.title === 'What We Do' && JSON.stringify(en.texts) === JSON.stringify(expectText('en')) && en.titles[6] === 'Services' && en.prev === 'Previous area', en);
     await nav('/?lang=vi');
 
@@ -75,173 +90,174 @@ await suite(async (b) => {
     // The robot card keeps its own picture (the stair-climbing machine on white), even now the robot has photos
     check('the Robotics card shows the stair-climbing machine picture', /\/assets\/home\/robot-leo-cau-thang\.jpg/.test(cards[0].img || ''), cards[0].img);
 
-    // ---- 3. Mouse wheel (the owner's PC prefers reduced motion; the eased path is tested too) ----
-    for (const motion of ['reduce', 'no-preference']) {
-      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: motion }] });
-      await nav('/'); await bringIntoView(); await sleep(200);
-      const before = await state();
-      await wheel(100, 3);
-      const after = await state();
-      check(`[${motion}] wheel down over the slider scrolls it sideways, the page stays put`, after.left > before.left + 150 && after.y === before.y && !after.prev, { before, after });
-      // One tick at a time until the slider reports its end, so no extra ticks reach the page
-      let atEnd = await state();
-      for (let i = 0; i < 40 && !atEnd.next; i++) { await wheel(100); atEnd = await state(); }
-      check(`[${motion}] wheel reaches the end exactly: ▶ disabled, page still put`, atEnd.left === atEnd.max && atEnd.next && atEnd.y === before.y, atEnd);
-      await wheel(100, 5);
-      const pastEnd = await state();
-      check(`[${motion}] at the end, 5 more wheel ticks down do nothing: page and slider stay put`, pastEnd.y === atEnd.y && pastEnd.left === atEnd.left, { atEnd, pastEnd });
-      const y0 = (await state()).y;
-      let atStart = await state();
-      for (let i = 0; i < 40 && !atStart.prev; i++) { await wheel(-100); atStart = await state(); }
-      check(`[${motion}] wheel up goes back to the start exactly (◀ disabled), page still put`, atStart.left === 0 && atStart.prev && atStart.y === y0, { y0, atStart });
-      await wheel(-100, 5);
-      const pastStart = await state();
-      check(`[${motion}] at the start, 5 more wheel ticks up do nothing: page and slider stay put`, pastStart.y === y0 && pastStart.left === 0, { y0, pastStart });
-      // The lock is only over the card row: over the title / the gap above the cards the page scrolls as usual
-      for (const [where, expr] of [['the section title', `(() => { const r = document.querySelector('#linh-vuc .section-title').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`],
-        ['the gap between title and cards', `(() => { const h = document.querySelector('#linh-vuc .section-head').getBoundingClientRect(); const t = document.querySelector('[data-domain-slider]').getBoundingClientRect(); return { x: 300, y: (h.bottom + t.top) / 2 }; })()`]]) {
-        await bringIntoView(); await sleep(150);
-        const before2 = await state();
-        const p = await ev(expr);
-        await mouse('mouseWheel', p.x, p.y, { deltaX: 0, deltaY: 120 }); await sleep(500);
-        const after2 = await state();
-        check(`[${motion}] wheel over ${where} scrolls the page (slider untouched)`, after2.y > before2.y && after2.left === before2.left, { before2, after2, p });
-      }
-    }
-    // ---- 3b. Smooth animation (sampled every animation frame inside the page) ----
-    const startSampling = () => ev(`(() => { const t = document.querySelector('[data-domain-slider]'); window.__s = []; const t0 = performance.now();
-      (function f(now) { window.__s.push([Math.round(now - t0), t.scrollLeft]); if (now - t0 < 1600) requestAnimationFrame(f); })(t0); return true; })()`);
-    const samples = async (ms = 1700) => { await sleep(ms); return ev('window.__s'); };
-    const monotonic = (xs, dir = 1) => xs.every((x, i) => i === 0 || (x - xs[i - 1]) * dir >= -0.5);
-    const analyse = (s) => { const xs = s.map((p) => p[1]); const first = xs[0], last = xs[xs.length - 1];
-      const moving = s.filter((p) => Math.abs(p[1] - first) > 0.5 && Math.abs(p[1] - last) > 0.5);
-      const startT = (s.find((p) => Math.abs(p[1] - first) > 0.5) || [0])[0]; const endT = (s.find((p) => Math.abs(p[1] - last) <= 0.5 && p[0] >= startT) || [0])[0];
-      return { first, last, distinct: new Set(moving.map((p) => Math.round(p[1]))).size, dur: endT - startT, xs }; };
-    const stepPx = async () => ev(`(() => { const t = document.querySelector('[data-domain-slider]'); return document.querySelector('.domain-item').getBoundingClientRect().width + parseFloat(getComputedStyle(t).columnGap); })()`);
-    const onEdge = async (x) => ev(`(() => { const t = document.querySelector('[data-domain-slider]'); const max = t.scrollWidth - t.clientWidth; const s = document.querySelector('.domain-item').getBoundingClientRect().width + parseFloat(getComputedStyle(t).columnGap);
-      return Math.abs(${x} - max) <= 1 || Math.abs(${x} / s - Math.round(${x} / s)) * s <= 1; })()`);
-    for (const motion of ['reduce', 'no-preference']) {
-      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: motion }] });
-      const expectDur = motion === 'reduce' ? 270 : 450;
-      await nav('/'); await bringIntoView(); await sleep(200);
-      const sp = await stepPx();
-      // One ▶ click
-      await startSampling(); await click('[data-domain-next]');
-      let a = analyse(await samples());
-      check(`[${motion}] ▶ slides smoothly: ${a.distinct} in-between frames over ${a.dur} ms, always forward, ends one card along`,
-        a.distinct >= 8 && monotonic(a.xs) && Math.abs(a.last - sp) <= 1 && a.dur >= expectDur * 0.7 && a.dur <= expectDur * 1.5, { distinct: a.distinct, dur: a.dur, last: a.last, sp });
-      // Two fast clicks: one continuous slide two cards along
-      await startSampling(); await click('[data-domain-next]'); await sleep(120); await click('[data-domain-next]');
-      a = analyse(await samples());
-      const stalls = a.xs.slice(1).filter((x, i) => Math.abs(x - a.xs[i]) < 0.3 && Math.abs(x - a.first) > 0.5 && Math.abs(x - a.last) > 0.5).length;
-      check(`[${motion}] two quick ▶ clicks blend into one slide (no reverse, no pause), ending two cards further`,
-        monotonic(a.xs) && stalls === 0 && Math.abs(a.last - 3 * sp) <= 1, { stalls, last: a.last, want: 3 * sp });
-      // Three wheel ticks: one glide, then rest on a card edge
-      await nav('/'); await bringIntoView(); await sleep(200);
-      const c0 = await trackCenter();
-      await startSampling();
-      for (let i = 0; i < 3; i++) { await mouse('mouseWheel', c0.x, c0.y, { deltaX: 0, deltaY: 100 }); await sleep(40); }
-      a = analyse(await samples());
-      check(`[${motion}] 3 wheel ticks: one smooth forward glide (${a.distinct} frames), resting on a card edge`, a.distinct >= 8 && monotonic(a.xs) && a.last > 250 && await onEdge(a.last), { distinct: a.distinct, last: a.last, sp });
-      // A single wheel notch still moves one card (settles forward, not back)
-      await nav('/'); await bringIntoView(); await sleep(200);
-      await mouse('mouseWheel', c0.x, c0.y, { deltaX: 0, deltaY: 100 }); await sleep(900);
-      check(`[${motion}] one wheel notch moves exactly one card`, Math.abs((await state()).left - sp) <= 1, await state());
-      // Mouse throw: keeps moving after release, slows down, rests on a card edge.
-      // Timing-sensitive in a headless browser: the drag is retried once if the glide was too short to measure.
-      let throwOk = false;
-      let info;
-      for (let attempt = 0; attempt < 2 && !throwOk; attempt++) {
-        await nav('/'); await bringIntoView(); await sleep(200);
-        const c1 = await trackCenter();
-        await mouse('mouseMoved', c1.x, c1.y);
-        await mouse('mousePressed', c1.x, c1.y, { button: 'left', buttons: 1, clickCount: 1 });
-        for (let i = 1; i <= 8; i++) { await mouse('mouseMoved', c1.x - i * 25, c1.y, { buttons: 1 }); await sleep(12); }
-        const atRelease = (await state()).left;
-        await startSampling();
-        await mouse('mouseReleased', c1.x - 200, c1.y, { button: 'left', buttons: 0, clickCount: 1 });
-        a = analyse(await samples());
-        info = { atRelease, last: a.last, distinct: a.distinct };
-        throwOk = a.last > atRelease + 20 && monotonic(a.xs) && await onEdge(a.last) && (await ev('location.pathname')) === '/';
-      }
-      check(`[${motion}] mouse throw glides on after release, slowing down, onto a card edge, no card opened`, throwOk, info);
-    }
-    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    // ---- 3. Slides to the right by itself, at the partner row's speed; half speed with reduced motion ----
+    await nav('/'); await bringIntoView(); await away(); await sleep(800);
+    const v = await speedOver(2000);
+    check(`slides to the right by itself at about 24 px/s (${v.toFixed(1)})`, v > 18 && v < 30, v);
+    let fills = true;
+    for (let i = 0; i < 6; i++) { fills = fills && await filled(); await sleep(250); }
+    check('while sliding the window is always filled (copies on both sides, no empty end)', fills);
+    await b.reducedMotion(true);
+    await nav('/'); await bringIntoView(); await away(); await sleep(800);
+    const vSlow = await speedOver(2000);
+    check(`reduced motion: still slides, at half speed (${vSlow.toFixed(1)} px/s)`, vSlow > 8 && vSlow < 16, vSlow);
+    await b.reducedMotion(false);
+    await nav('/'); await bringIntoView(); await away(); await sleep(800);
 
-    // ---- 4. Arrows ----
-    await nav('/'); await bringIntoView(); await sleep(200);
-    const stepW = await stepPx();
-    await click('[data-domain-next]'); await sleep(500);
-    st = await state();
-    check('▶ moves by one card', Math.abs(st.left - stepW) <= 2 && !st.prev, { st, stepW });
-    for (let i = 0; i < 8; i++) { await click('[data-domain-next]'); await sleep(250); }
-    st = await state();
-    check('▶ repeatedly: stops at the end and is disabled', st.left >= st.max - 1 && st.next, st);
-    vis = await visible();
-    check('at the end the last card is fully visible', vis[vis.length - 1] === 1, vis);
-    await click('[data-domain-prev]'); await sleep(400);
-    check('◀ moves back', (await state()).left < st.left);
+    // ---- 4. Stops under the mouse (cards and ‹ ›), carries on after ----
+    await mouse('mouseMoved', await centre(ROW)); await sleep(700);
+    const vRow = await speedOver(1000);
+    await mouse('mouseMoved', await centre(`document.querySelector('[data-domain-next]')`)); await sleep(700);
+    const vBtn = await speedOver(1000);
+    await away(); await sleep(800);
+    const vAfter = await speedOver(1000);
+    check(`stops under the mouse (cards ${vRow.toFixed(1)}, buttons ${vBtn.toFixed(1)} px/s) and carries on afterwards (${vAfter.toFixed(1)} px/s)`, Math.abs(vRow) < 0.5 && Math.abs(vBtn) < 0.5 && vAfter > 15, { vRow, vBtn, vAfter });
 
-    // ---- 5. Mouse drag ----
-    await nav('/'); await bringIntoView(); await sleep(200);
-    const c = await trackCenter();
-    await mouse('mouseMoved', c.x, c.y);
-    await mouse('mousePressed', c.x, c.y, { button: 'left', buttons: 1, clickCount: 1 });
-    for (let i = 1; i <= 10; i++) { await mouse('mouseMoved', c.x - i * 30, c.y, { buttons: 1 }); await sleep(16); }
-    await mouse('mouseReleased', c.x - 300, c.y, { button: 'left', buttons: 0, clickCount: 1 });
-    await sleep(500);
-    const afterDrag = await ev(`({ left: Math.round(document.querySelector('[data-domain-slider]').scrollLeft), url: location.pathname })`);
-    check('dragging with the mouse scrolls the slider and does not open a card', afterDrag.left >= 280 && afterDrag.url === '/', afterDrag);
+    // ---- 5. ‹ one card right, › one card left; quick clicks add up; 7 × › comes round to the same card ----
+    await mouse('mouseMoved', await centre(`document.querySelector('[data-domain-prev]')`)); await sleep(800); // stopped first
+    let g0 = await geo();
+    await click('[data-domain-prev]'); await sleep(700);
+    let g1 = await geo();
+    await click('[data-domain-next]'); await press(await centre(`document.querySelector('[data-domain-next]')`)); await sleep(800);
+    const g2 = await geo();
+    check(`‹ moves the row one card right (${wrapDiff(g0.x, g1.x, g0.W).toFixed(1)} px), two quick › two cards left (${wrapDiff(g1.x, g2.x, g0.W).toFixed(1)} px; a card is ${g0.step} px)`,
+      Math.abs(wrapDiff(g0.x, g1.x, g0.W) - g0.step) < 1.5 && Math.abs(wrapDiff(g1.x, g2.x, g0.W) + 2 * g0.step) < 1.5, { g0, g1, g2 });
+    g0 = await geo(); const first = await cardAt(0.15);
+    fills = true;
+    for (let i = 0; i < 7; i++) { await click('[data-domain-next]'); fills = fills && await filled(); }
+    await sleep(900);
+    g1 = await geo(); const again = await cardAt(0.15);
+    check(`7 × › (one whole round): back to the same card (${first}) at the same place, the window filled all the way`,
+      first && again === first && Math.abs(wrapDiff(g0.x, g1.x, g0.W)) < 1.5 && g1.x <= 0 && g1.x >= -g1.W && fills && await filled(), { first, again, g0, g1, fills });
 
-    // ---- 6. Card → page with "← Về trang chủ" → back to the slider at the same spot ----
-    await nav('/'); await bringIntoView(); await sleep(200);
-    for (let i = 0; i < 3; i++) { await click('[data-domain-next]'); await sleep(300); }
-    const savedLeft = (await state()).left;
-    vis = await visible();
-    check('after 3 × ▶, card 6 (Tập huấn) is in view', vis[5] === 1, vis);
-    let l = waitLoad(); await click('.domain-item:nth-child(6) .domain-card'); await l; await sleep(400);
+    // ---- 6. Mouse wheel over the cards: one card per notch, the page stays put; over the title the page scrolls ----
+    await mouse('mouseMoved', await centre(ROW)); await sleep(900);
+    g0 = await geo();
+    const c0 = await centre(ROW);
+    await mouse('mouseWheel', c0, { deltaX: 0, deltaY: 100 }); await sleep(800);
+    g1 = await geo();
+    check(`one wheel notch down: the row moves one card left (${wrapDiff(g0.x, g1.x, g0.W).toFixed(1)} px), the page stays put`, Math.abs(wrapDiff(g0.x, g1.x, g0.W) + g0.step) < 1.5 && g1.y === g0.y, { g0, g1 });
+    for (let i = 0; i < 5; i++) { await mouse('mouseWheel', c0, { deltaX: 0, deltaY: 100 }); await sleep(60); }
+    await sleep(900);
+    const g5 = await geo();
+    check(`5 quick notches: five cards (${(g5.x - g1.x).toFixed(1)} px, wrapped round the loop; 5 cards = ${-5 * g0.step}), the page still put`, Math.abs(wrapDiff(g1.x - 5 * g0.step, g5.x, g0.W)) < 1.5 && g5.y === g0.y, { g1, g5 });
+    await mouse('mouseWheel', c0, { deltaX: 0, deltaY: -100 }); await sleep(800);
+    const gUp = await geo();
+    check('one notch up: one card back to the right', Math.abs(wrapDiff(g5.x, gUp.x, g0.W) - g0.step) < 1.5 && gUp.y === g0.y, { g5, gUp });
+    await mouse('mouseWheel', c0, { deltaX: 0, deltaY: 6 }); await sleep(600);
+    check('a tiny trackpad step alone does not jump a card', Math.abs(wrapDiff(gUp.x, (await geo()).x, g0.W)) < 1.5);
+    const tp = await centre(`document.querySelector('#linh-vuc .section-title')`);
+    await mouse('mouseMoved', tp); await sleep(200);
+    const yT = (await geo()).y;
+    await mouse('mouseWheel', tp, { deltaX: 0, deltaY: 120 }); await sleep(500);
+    check('wheel over the section title scrolls the page as usual', (await geo()).y > yT);
+
+    // ---- 7. Keyboard: the list (Tab from ›) stops the row; ← / → move one card; Tab goes through the 7 real cards once, each shown whole ----
+    await away(); await bringIntoView(); await sleep(400);
+    await ev(`document.querySelector('[data-domain-next]').focus()`);
+    const tab = async () => { await b.key('Tab', 'Tab', 9); await sleep(300); };
+    await tab();
+    const onList = await ev(`document.activeElement === document.querySelector('[data-domain-slider]')`);
+    await sleep(700);
+    const vList = await speedOver(800);
+    const k0 = await geo();
+    await b.key('ArrowRight', 'ArrowRight', 39); await sleep(700);
+    const k1 = await geo();
+    await b.key('ArrowLeft', 'ArrowLeft', 37); await sleep(700);
+    const k2 = await geo();
+    check(`the list reached with Tab stops the row (${vList.toFixed(1)} px/s) and shows a focus ring; → one card left, ← one card right; the page stays put`,
+      onList && Math.abs(vList) < 0.5 && Math.abs(wrapDiff(k0.x, k1.x, k0.W) + k0.step) < 1.5 && Math.abs(wrapDiff(k1.x, k2.x, k0.W) - k0.step) < 1.5 && k2.y === k0.y
+        && await ev(`getComputedStyle(${ROW}).outlineStyle !== 'none'`), { onList, vList, k0, k1, k2 });
+    const inView = (i) => ev(`(() => { const box = ${ROW}; const pad = parseFloat(getComputedStyle(box).paddingLeft); const bx = box.getBoundingClientRect();
+      const q = ${ORIG}[${i}].getBoundingClientRect(); return { inside: q.left >= bx.left + pad - 1 && q.right <= bx.right - pad + 1, scroll: box.scrollLeft, focused: document.activeElement === ${ORIG}[${i}].querySelector('a') }; })()`);
+    const seen = [];
+    for (let i = 0; i < 7; i++) { await tab(); seen.push(await inView(i)); }
+    check('Tab then goes through the 7 real cards in order (copies skipped), each shown whole', seen.every((s) => s.focused && s.inside && s.scroll === 0), seen);
+    const gF = await geo();
+    await ev(`document.activeElement.blur()`); await sleep(100);
+    const gB = await geo();
+    await sleep(1200);
+    const vBlur = await speedOver(1000);
+    check('focus leaves: the row carries on from the same place (no jump)', Math.abs(wrapDiff(gF.x, gB.x, gF.W)) < 1.5 && vBlur > 15, { gF, gB, vBlur });
+
+    // ---- 8. Drag: the row follows the mouse; a drag doesn't open a card; a plain click on any card (copies too) does ----
+    const MIDDLE = `(() => { const box = ${ROW}.getBoundingClientRect(); const mid = (box.left + box.right) / 2;
+      return [...document.querySelectorAll('[data-domain-slider] > .domain-item')].map((li) => ({ li, r: li.getBoundingClientRect() }))
+        .sort((a, z) => Math.abs((a.r.left + a.r.right) / 2 - mid) - Math.abs((z.r.left + z.r.right) / 2 - mid))[0].li; })()`;
+    await mouse('mouseMoved', await centre(MIDDLE)); await sleep(800);
+    const p = await centre(MIDDLE);
+    await mouse('mouseMoved', p); await sleep(100);
+    const d0 = await geo();
+    await mouse('mousePressed', p, { button: 'left', buttons: 1, clickCount: 1 });
+    for (let i = 1; i <= 10; i++) { await mouse('mouseMoved', { x: p.x - i * 20, y: p.y }, { buttons: 1 }); await sleep(16); }
+    await mouse('mouseReleased', { x: p.x - 200, y: p.y }, { button: 'left', buttons: 0, clickCount: 1 }); await sleep(300);
+    const d1 = await geo();
+    check(`drag: the row follows the mouse (${wrapDiff(d0.x, d1.x, d0.W).toFixed(1)} px for -200) and no card opened`, Math.abs(wrapDiff(d0.x, d1.x, d0.W) + 200) < 4 && await ev('location.pathname') === '/', { d0, d1 });
+    // A copy on screen opens its page like the real card
+    const copy = await ev(`(() => { const box = ${ROW}.getBoundingClientRect(); const c = [...document.querySelectorAll('[data-domain-slider] > [data-domain-clone]')].map((li) => ({ li, r: li.getBoundingClientRect() }))
+      .find((o) => o.r.left >= box.left + 20 && o.r.right <= box.right - 20); if (!c) return null; return { x: c.r.left + c.r.width / 2, y: c.r.top + 60, href: c.li.querySelector('a').getAttribute('href') }; })()`);
+    if (copy) {
+      await mouse('mouseMoved', copy); await sleep(300);
+      let l = waitLoad(); await press(copy); await l; await sleep(300);
+      check(`a click on a copy opens its page (${copy.href})`, await ev('location.pathname + location.search') === copy.href);
+    } else check('a copy is on screen to click', false, 'no copy fully in view');
+
+    // ---- 9. Card → page with "← Về trang chủ" → back to the row at the same spot ----
+    await nav('/'); await bringIntoView(); await away(); await sleep(300);
+    // The Tập huấn card fully in view (real or copy: they look the same, and the real one is mostly off-screen, as on the partner row)
+    const tapHuan = `(() => { const bx = ${ROW}.getBoundingClientRect(); return [...document.querySelectorAll('[data-domain-slider] > .domain-item')].find((li) => { const q = li.getBoundingClientRect(); return li.querySelector('a').getAttribute('href') === '/giai-phap/tap-huan?from=home' && q.left >= bx.left + 30 && q.right <= bx.right - 30; }); })()`;
+    // Bring a Tập huấn card fully into view with ›, under the mouse (the row stands still)
+    await mouse('mouseMoved', await centre(`document.querySelector('[data-domain-next]')`)); await sleep(800);
+    for (let i = 0; i < 12 && !(await ev(`!!${tapHuan}`)); i++) { await click('[data-domain-next]'); await sleep(500); }
+    const pt = await centre(tapHuan);
+    await mouse('mouseMoved', pt); await sleep(400);
+    const savedX = (await geo()).x;
+    let l = waitLoad(); await press(pt); await l; await sleep(400);
     let page = await ev(`({ url: location.pathname + location.search, back: (document.querySelector('[data-back-home]') || {}).textContent, href: (document.querySelector('[data-back-home]') || { getAttribute: () => null }).getAttribute('href'), oldBack: !!document.querySelector('[data-back]') })`);
     check('card opens /giai-phap/tap-huan?from=home with "← Về trang chủ" → /#linh-vuc', page.url === '/giai-phap/tap-huan?from=home' && /Về trang chủ/.test(page.back) && page.href === '/#linh-vuc' && !page.oldBack, page);
     await shot('back-link-tap-huan');
     // Language switch keeps it
-    l = waitLoad(); await click('.lang-switch a[hreflang="en"], .lang-switch a:last-child'); await l; await sleep(400);
+    l = waitLoad(); await b.clickAt('.lang-switch a[hreflang="en"], .lang-switch a:last-child'); await l; await sleep(400);
     page = await ev(`({ url: location.pathname + location.search, back: (document.querySelector('[data-back-home]') || {}).textContent })`);
     check('after VI → EN the link stays: "← Back to home"', /from=home/.test(page.url) && /Back to home/.test(page.back), page);
     l = waitLoad(); await send('Page.reload'); await l; await sleep(300);
     check('after a reload the link stays', !!(await ev(`!!document.querySelector('[data-back-home]')`)));
-    l = waitLoad(); await click('.lang-switch a[hreflang="vi"], .lang-switch a:first-child'); await l; await sleep(300);
-    // Back to the home page section
-    l = waitLoad(); await click('[data-back-home]'); await l; await sleep(700);
-    const home = await ev(`(() => { const s = document.getElementById('linh-vuc').getBoundingClientRect(); return { url: location.pathname + location.hash, sectionTop: Math.round(s.top), left: Math.round(document.querySelector('[data-domain-slider]').scrollLeft) }; })()`);
-    vis = await visible();
-    check('"Về trang chủ" lands on the home slider section with the same slider position (card 6 still in view)', home.url === '/#linh-vuc' && home.sectionTop >= -10 && home.sectionTop < 200 && Math.abs(home.left - savedLeft) <= 2 && vis[5] === 1, { home, savedLeft, vis });
+    l = waitLoad(); await b.clickAt('.lang-switch a[hreflang="vi"], .lang-switch a:first-child'); await l; await sleep(300);
+    // Back to the home page section: the row starts where it was (it then carries on sliding)
+    l = waitLoad(); await ev(`document.querySelector('[data-back-home]').click()`); await l;
+    const home = await ev(`(() => { const s = document.getElementById('linh-vuc').getBoundingClientRect(); const m = getComputedStyle(document.querySelector('[data-domain-slider]')).transform; return { url: location.pathname + location.hash, sectionTop: Math.round(s.top), x: m === 'none' ? 0 : new DOMMatrix(m).m41 }; })()`);
+    const W0 = (await geo()).W;
+    check(`"Về trang chủ" lands on the section with the row where it was (${wrapDiff(savedX, home.x, W0).toFixed(1)} px apart)`, home.url === '/#linh-vuc' && home.sectionTop >= -10 && home.sectionTop < 200 && Math.abs(wrapDiff(savedX, home.x, W0)) < 30, { home, savedX });
+    await away(); await sleep(1000);
+    check('… and carries on sliding', (await speedOver(1000)) > 15);
 
-    // ---- 7. No back link when the page is reached any other way ----
-    for (const p of ['/giai-phap/tap-huan', '/san-pham', '/giai-phap/thiet-bi', '/dich-vu/tu-van-du-hoc']) {
-      await nav(p);
-      check(`${p} opened directly: no "Về trang chủ" link`, !(await ev(`!!document.querySelector('[data-back-home]')`)));
+    // ---- 10. No back link when the page is reached any other way ----
+    for (const pg of ['/giai-phap/tap-huan', '/san-pham', '/giai-phap/thiet-bi', '/dich-vu/tu-van-du-hoc']) {
+      await nav(pg);
+      check(`${pg} opened directly: no "Về trang chủ" link`, !(await ev(`!!document.querySelector('[data-back-home]')`)));
     }
-    // through the menu
     await nav('/');
     l = waitLoad(); await ev(`document.querySelector('.nav-dropdown-menu a[href="/giai-phap/workshop"]').click()`); await l; await sleep(300);
     check('workshop opened from the menu: no "Về trang chủ" link', !(await ev(`!!document.querySelector('[data-back-home]')`)));
-    // detail pages keep their normal back link
     const pid = (await d.collection('projects').findOne({}))._id;
     await nav(`/giai-phap/du-an/${pid}`);
     check('project detail still has the usual "← Quay lại" and no home link', await ev(`!!document.querySelector('[data-back]') && !document.querySelector('[data-back-home]')`));
 
-    // ---- 8. Responsive + dark ----
+    // ---- 11. Responsive + dark ----
     await viewport(1100); await nav('/'); await bringIntoView(); await sleep(300);
-    vis = await visible();
-    check('1100px: 2 cards fully visible + about half of the 3rd', vis[0] === 1 && vis[1] === 1 && vis[2] >= 0.4 && vis[2] <= 0.6, vis);
-    await viewport(390, 844); await nav('/'); await bringIntoView(); await sleep(300);
-    vis = await visible();
-    check('390px: 1 card + about a quarter of the next', vis[0] === 1 && vis[1] >= 0.15 && vis[1] <= 0.35, vis);
+    r = await ratio();
+    check(`1100px: 2½ cards in view (${r.perView})`, Math.abs(r.perView - 2.5) < 0.05 && r.sameAsContainer, r);
+    await viewport(390, 844); await nav('/'); await bringIntoView(); await away(); await sleep(300);
+    r = await ratio();
+    const wide = await ev(`document.documentElement.scrollWidth - document.documentElement.clientWidth`);
+    check(`390px: 1¼ cards in view (${r.perView}), no sideways page scroll, still sliding`, Math.abs(r.perView - 1.25) < 0.05 && wide === 0 && (await speedOver(1000)) > 15, { r, wide });
     await shot('slider-390');
     await viewport(1280);
     await b.setCookie('theme', 'dark');
     await nav('/'); await bringIntoView(); await sleep(300);
     await shot('slider-1280-dark');
+    await b.setCookie('theme', 'light');
+    await b.reducedMotion(true);
   });
 
   // Trang chủ hero: the photo fills the section behind the text; a glass panel on it shows live counts of projects,

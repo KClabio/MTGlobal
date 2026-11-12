@@ -517,9 +517,9 @@ await suite(async (b) => {
     await shot('dich-vu-1280', true);
     await b.setCookie('theme', 'dark'); await nav('/dich-vu', 200); await shot('dich-vu-dark'); await b.setCookie('theme', 'light');
     await nav('/', 300);
-    const dom = await ev(`[...document.querySelectorAll('.domain-card')].map((a) => a.getAttribute('href'))`);
+    const dom = await ev(`[...document.querySelectorAll('.domain-item:not([data-domain-clone]) .domain-card')].map((a) => a.getAttribute('href'))`);
     check('home "Lĩnh vực hoạt động": 7 cards, one "Dịch vụ" card for both services', dom.length === 7 && dom.includes('/dich-vu?from=home') && !dom.some((h) => h.startsWith('/dich-vu/')), dom);
-    const svcCard = await ev(`(() => { const a = document.querySelector('.domain-card[href="/dich-vu?from=home"]'); return { title: a.querySelector('h3').textContent, text: (a.querySelector('p') || {}).textContent, art: !!a.querySelector('.domain-media.is-art') }; })()`);
+    const svcCard = await ev(`(() => { const a = document.querySelector('.domain-item:not([data-domain-clone]) .domain-card[href="/dich-vu?from=home"]'); return { title: a.querySelector('h3').textContent, text: (a.querySelector('p') || {}).textContent, art: !!a.querySelector('.domain-media.is-art') }; })()`);
     check('the "Dịch vụ" card has its title, line and art', svcCard.title === 'Dịch vụ' && svcCard.text && svcCard.text.length > 10 && svcCard.art, svcCard);
     await nav('/dich-vu?from=home', 200);
     check('opened from the home card, /dich-vu offers the way back to the slider', await ev(`!!document.querySelector('a[href="/#linh-vuc"]')`));

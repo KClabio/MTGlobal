@@ -91,16 +91,32 @@
 .domain-body h3 { font-size: 1.08rem; line-height: 1.35; margin: 0 0 8px; color: var(--mtg-heading); }
 .domain-body p { font-size: .9rem; line-height: 1.55; margin: 0 0 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .domain-link { margin-top: auto; font-weight: 700; font-size: .9rem; color: var(--mtg-blue); }
+/* With JavaScript the cards slide by themselves and loop like the partner row (public/js/main.js loopRow): the window
+   clips the moving list (its own edges fade like the partners' row), and each card is 1/3.5 of the window (100cqw) */
+.js .domain-marquee { margin: 0 -20px; padding: 6px 20px 22px; overflow: hidden; touch-action: pan-y; cursor: grab; container-type: inline-size;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 56px, #000 calc(100% - 56px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 56px, #000 calc(100% - 56px), transparent 100%); }
+.js .domain-marquee.has-focus, .js .domain-marquee:has(.domain-track:focus-visible) { -webkit-mask-image: none; mask-image: none; }
+.js .domain-marquee:has(.domain-track:focus-visible) { outline: 3px solid var(--mtg-blue); outline-offset: -3px; border-radius: var(--mtg-radius); }
+.js .domain-marquee.is-dragging { cursor: grabbing; user-select: none; }
+.js .domain-marquee.is-dragging .domain-card { pointer-events: none; }
+.js .domain-track { display: flex; width: max-content; margin: 0; padding: 0; overflow: visible; scroll-snap-type: none; cursor: inherit; will-change: transform; }
+.js .domain-track:focus-visible { outline: none; }
+.js .domain-item { flex: 0 0 calc((100cqw - 3 * var(--domain-gap)) / 3.5); scroll-snap-align: none; }
 @media (max-width: 1100px) {
   .domain-track { grid-auto-columns: calc((100% - 2 * var(--domain-gap)) / 2.5); }
+  .js .domain-item { flex-basis: calc((100cqw - 2 * var(--domain-gap)) / 2.5); }
 }
 @media (max-width: 640px) {
   .domain-track { --domain-gap: 16px; grid-auto-columns: calc((100% - var(--domain-gap)) / 1.25); }
+  .js .domain-item { flex-basis: calc((100cqw - var(--domain-gap)) / 1.25); }
+  .js .domain-marquee { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%); }
   .domains-head { text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .domain-arrows { position: static; }
   .domains-head .section-title { text-align: left; font-size: 1.4rem; }
 }
-/* Touch screens swipe natively: let cards snap into place */
+/* Touch screens without JavaScript swipe natively: let cards snap into place */
 @media (pointer: coarse) {
   .domain-track { scroll-snap-type: x mandatory; cursor: auto; }
   .domain-item { scroll-snap-align: start; }
@@ -179,5 +195,7 @@
   .partner-strip.is-marquee { flex-wrap: wrap; justify-content: center; width: auto; transform: none !important; }
   .partner-strip.is-marquee [data-partner-clone], [data-partner-arrows] { display: none; }
   .domain-arrows { display: none; }
-  .domain-track { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); grid-auto-columns: auto; overflow: visible; margin: 0; padding: 0; }
+  .js .domain-marquee, .domain-marquee { overflow: visible; margin: 0; padding: 0; -webkit-mask-image: none; mask-image: none; }
+  .domain-track, .js .domain-track { display: grid; width: auto; grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); grid-auto-columns: auto; overflow: visible; margin: 0; padding: 0; transform: none !important; }
+  .domain-track [data-domain-clone] { display: none; }
 }

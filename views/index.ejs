@@ -43,14 +43,15 @@
   </div>
 </section>
 
-<%# Business areas (lib/home-domains.js): a horizontal slider — 3½ cards in view, the mouse wheel scrolls it sideways (public/js/main.js).
+<%# Business areas (lib/home-domains.js): 3½ cards in view, sliding slowly to the right by themselves and looping, like the partner
+    row below (public/js/main.js loopRow: stops under the mouse, ‹ › and the mouse wheel move one card). Without JavaScript: a row to scroll sideways.
     Card links carry ?from=home so the opened page shows "← Về trang chủ" (views/partials/page-banner.ejs). %>
 <section class="section domains-section" id="linh-vuc">
   <div class="container">
     <div class="section-head domains-head">
       <h2 class="section-title"><%= t('home.pillarsTitle') %></h2>
-      <div class="domain-arrows">
-        <button type="button" class="domain-arrow" data-domain-prev aria-label="<%= t('home.domainsPrev') %>" title="<%= t('home.domainsPrev') %>" disabled>
+      <div class="domain-arrows" data-domain-arrows>
+        <button type="button" class="domain-arrow" data-domain-prev aria-label="<%= t('home.domainsPrev') %>" title="<%= t('home.domainsPrev') %>">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <button type="button" class="domain-arrow" data-domain-next aria-label="<%= t('home.domainsNext') %>" title="<%= t('home.domainsNext') %>">
@@ -58,7 +59,9 @@
         </button>
       </div>
     </div>
-    <%# A named list (no role): screen readers say "Lĩnh vực hoạt động, list, 8 items"; tabindex lets the keyboard scroll it %>
+    <%# A named list (no role): screen readers say "Lĩnh vực hoạt động, list, 7 items" (the copies made for the loop are hidden from them);
+        tabindex: with the list focused, ← / → move one card %>
+    <div class="domain-marquee" data-domain-marquee>
     <ul class="domain-track" data-domain-slider tabindex="0" aria-label="<%= t('home.pillarsTitle') %>">
       <% domains.forEach(function (d) { %>
         <li class="domain-item">
@@ -80,6 +83,7 @@
         </li>
       <% }) %>
     </ul>
+    </div>
   </div>
 </section>
 

@@ -15,6 +15,9 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 - **The company's address, phone numbers and email moved in the footer:** they now sit under the logo, the company name and the short description, instead of in the "Thông tin liên hệ" column. That column keeps the Zalo / Messenger links, "Liên hệ với chúng tôi" and "Hỗ trợ".
 
   ![The footer: address, phones and email under the company name](docs/screenshots/1.7.0/footer-contacts.jpg)
+- **"Lĩnh vực hoạt động" on Trang chủ now slides by itself, like "Đối tác đồng hành":** the cards move slowly to the right and go round in a loop (after "Dịch vụ" comes "Robotics thông minh" again). They stop while the mouse is over them or over the ‹ › buttons, and start again when it leaves. ‹ › still move one card, and so does each turn of the mouse wheel over the cards (the page doesn't scroll there). The cards can be dragged with the mouse or a finger. Coming back with "← Về trang chủ" shows the row where it was. With "reduced motion" turned on in the computer's settings, the row moves at half speed. Both rows now run on the same code.
+
+  ![Lĩnh vực hoạt động sliding: the next card comes in at the left edge](docs/screenshots/1.7.0/domains-sliding.jpg)
 
 ## [1.6.0] - 2026-11-12
 
