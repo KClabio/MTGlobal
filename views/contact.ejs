@@ -17,11 +17,11 @@
       </div>
     <% } %>
     <%- include('partials/quote-form', { sent, error, errors, values, prefillInterestedIn }) %>
-    <%# Below the form: "Nhắn qua Zalo" / "Nhắn qua Messenger" with each brand's logo (partials/chat-logo.ejs; the logo is
+    <%# Below the form: "Nhắn qua Zalo" / "Trang Facebook" with each brand's logo (partials/chat-logo.ejs; the logo is
         hidden from screen readers, the link says the name). Only the ones filled in, in Admin → Thông tin công ty. %>
     <% if (ctChat.length) { %>
       <p class="contact-chat" data-contact-chat>
-        <% ctChat.forEach(function (l) { %><a class="btn btn-ghost btn-sm" href="<%= l.url %>" target="_blank" rel="noopener" data-contact-chat-link="<%= l.kind %>"><%- include('partials/chat-logo', { kind: l.kind, size: 20, id: 'contact-chat-messenger' }) %><span><%= t('chat.' + l.kind) %></span><span class="sr-only"> <%= t('chat.newTab') %></span></a><% }) %>
+        <% ctChat.forEach(function (l) { %><a class="btn btn-ghost btn-sm" href="<%= l.url %>" target="_blank" rel="noopener" data-contact-chat-link="<%= l.kind %>"><%- include('partials/chat-logo', { kind: l.kind, size: 20 }) %><span><%= t('chat.' + l.kind) %></span><span class="sr-only"> <%= t('chat.newTab') %></span></a><% }) %>
       </p>
     <% } %>
     <%# The map (Admin → Thông tin công ty → Bản đồ): a Google Maps embed only (lib/map-embed.js), loaded when scrolled

@@ -1,6 +1,6 @@
 <%
-  // The round chat button at the bottom right of every public page (included by partials/footer.ejs): Zalo and
-  // Messenger from Admin → Thông tin công ty (lib/chat-links.js). One link: the button opens it. Two: it opens a
+  // The round chat button at the bottom right of every public page (included by partials/footer.ejs): Zalo and the
+  // Facebook page from Admin → Thông tin công ty (lib/chat-links.js). One link: the button opens it. Two: it opens a
   // small menu (public/js/main.js: Esc and a click outside close it). None filled in: no button.
   const cbLinks = chatLinks(settings && settings.contactInfo);
   const cbIcon = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>';
@@ -13,7 +13,7 @@
     <ul class="chat-menu" id="chat-menu" data-chat-menu hidden>
       <% cbLinks.forEach(function (l) { %>
         <li><a class="chat-link chat-link--<%= l.kind %>" href="<%= l.url %>" target="_blank" rel="noopener">
-          <%- include('chat-logo', { kind: l.kind, size: 28, id: 'chat-menu-messenger' }) %>
+          <%- include('chat-logo', { kind: l.kind, size: 28 }) %>
           <span><%= t('chat.' + l.kind) %><span class="sr-only"> <%= t('chat.newTab') %></span></span>
         </a></li>
       <% }) %>

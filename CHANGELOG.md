@@ -6,6 +6,16 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **The chat button's second choice is now the company's Facebook page instead of a Messenger chat.** "Nhắn qua Messenger" became "Trang Facebook" (in English "Facebook page"), with the Facebook logo: it opens the page on facebook.com in a new tab. The same change is in the footer, on Liên hệ and in the company card for Google. In Admin → Thông tin công ty the box is now called "Trang Facebook": paste the page's name or its address as copied from the browser (the "?locale=…" part at the end is dropped). The real Zalo number (0333601279) and Facebook page (MTGlobal.vn) replace the sample ones.
+
+  ![The chat button's menu: Nhắn qua Zalo and Trang Facebook](docs/screenshots/1.8.0/chat-menu-facebook.jpg)
+  ![Liên hệ on a phone: the Zalo and Facebook buttons under the form](docs/screenshots/1.8.0/contact-facebook.jpg)
+
+---
+
 ## [1.7.0] - 2026-11-12
 
 ### Changed

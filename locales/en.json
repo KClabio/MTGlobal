@@ -690,8 +690,8 @@
       "registrationHint": "For example: issued by the Hanoi Department of Planning and Investment on 01/01/2020. Optional; shown right after the number.",
       "zalo": "Zalo number",
       "zaloHint": "The company's phone number on Zalo. When set, the chat button at the bottom right of the website opens Zalo.",
-      "messenger": "Facebook page (Messenger)",
-      "messengerHint": "The name or link of the company's Facebook page, e.g. facebook.com/mtg.vn. An empty box leaves that choice out of the chat button.",
+      "messenger": "Facebook page",
+      "messengerHint": "The name or link of the company's Facebook page, e.g. facebook.com/MTGlobal.vn. The chat button, the footer and the Contact page link to it. An empty box leaves that choice out.",
       "save": "Save settings",
       "subtitle": "Company profile (About page), Privacy Policy and contact details (Contact page, footer).",
       "brandMoved": "The logo, home page hero and page banners are in",
@@ -1040,7 +1040,7 @@
   "chat": {
     "open": "Message MTG",
     "zalo": "Message on Zalo",
-    "messenger": "Message on Messenger",
+    "facebook": "Facebook page",
     "newTab": "(opens in a new tab)"
   },
   "reset": {

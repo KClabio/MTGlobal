@@ -1727,7 +1727,7 @@ document.addEventListener('contextmenu', function (e) {
   else window.addEventListener('load', function () { requestAnimationFrame(restore); });
 })();
 
-// Chat button with two choices (partials/chat-button.ejs): opens a small menu of Zalo and Messenger; Esc, a click
+// Chat button with two choices (partials/chat-button.ejs): opens a small menu of Zalo and the Facebook page; Esc, a click
 // outside or opening a link closes it (Esc gives the focus back to the button)
 (function () {
   var wrap = document.querySelector('[data-chat]');

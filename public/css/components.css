@@ -433,10 +433,11 @@ a.chat-fab { position: fixed; z-index: 50; right: max(18px, env(safe-area-inset-
 /* One link only: the button in that brand's colour, its logo in white */
 .chat-fab--zalo { background: #0068ff; }
 .chat-fab--zalo:hover { background: #0052cc; }
-.chat-fab--messenger, .chat-fab--messenger:hover { background: linear-gradient(45deg, #00b2ff, #a033ff 60%, #ff5c87); }
+.chat-fab--facebook { background: #0866ff; }
+.chat-fab--facebook:hover { background: #0552cc; }
 @keyframes chat-menu-in { from { opacity: 0; transform: translateY(8px) scale(.96); } }
 body.nav-open .chat-fab-wrap, body.nav-open a.chat-fab { display: none; } /* the phone menu drawer covers the page */
-/* Liên hệ: the Zalo / Messenger buttons under the request form, each with its brand logo before the text */
+/* Liên hệ: the Zalo / Facebook page buttons under the request form, each with its brand logo before the text */
 .contact-chat { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 0; }
 .contact-chat .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; }
 /* Liên hệ: the Google Maps map under the buttons */

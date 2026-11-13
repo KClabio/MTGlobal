@@ -1,4 +1,4 @@
-// Zalo / Messenger chat button (partials/chat-button.ejs, lib/chat-links.js): set in Admin → Thông tin công ty, shown
+// Zalo / Facebook page chat button (partials/chat-button.ejs, lib/chat-links.js): set in Admin → Thông tin công ty, shown
 // at the bottom right of public pages (one link: a plain link; two: a small menu), also in the footer and on Liên hệ.
 // Keyboard, phone width, the phone menu drawer, dark mode, print and reduced motion.
 import { suite, part, check, db, BASE, createUser, restoreLater, sleep } from './lib/index.mjs';
@@ -16,22 +16,28 @@ await suite(async (b) => {
   const html = async (path, lang = 'vi') => (await fetch(BASE + path, { headers: { cookie: `lang=${lang}` } })).text();
 
   try {
-    await part(b, 'Thông tin công ty → Zalo and Messenger', async () => {
+    await part(b, 'Thông tin công ty → Zalo and the Facebook page', async () => {
       let r = await saveContact('', '');
       check('both empty → no chat button, nothing in the footer', r.status === 302 && !(await html('/')).includes('data-chat-fab') && !(await html('/')).includes('data-footer-chat'));
-      check('… and no Zalo / Messenger buttons on Liên hệ', !(await html('/lien-he')).includes('data-contact-chat'));
-      r = await saveContact('0912 345 678', 'https://www.facebook.com/mtg.vn/');
+      check('… and no Zalo / Facebook buttons on Liên hệ', !(await html('/lien-he')).includes('data-contact-chat'));
+      // The page's address as copied from the browser, with Facebook's ?locale=… at the end
+      r = await saveContact('0912 345 678', 'https://www.facebook.com/mtg.vn/?locale=vi_VN');
       const saved = (await d.collection('sitesettings').findOne({})).contactInfo;
-      check('saved cleaned: Zalo "0912345678", Messenger "mtg.vn"', saved.zalo === '0912345678' && saved.messenger === 'mtg.vn', saved);
+      check('saved cleaned: Zalo "0912345678", Facebook page "mtg.vn" (no ?locale)', saved.zalo === '0912345678' && saved.messenger === 'mtg.vn', saved);
       const form = await (await fetch(BASE + '/admin/thong-tin-cong-ty', { headers: { cookie: `connect.sid=${admin.sid}; adminLang=vi` } })).text();
       check('the admin form shows them with their labels', form.includes('<label for="zalo">Số Zalo</label>') && form.includes('value="0912345678"') && form.includes('value="mtg.vn"'));
       // A save without these boxes (an older form, or another test's restore) keeps them
       await fetch(BASE + '/admin/thong-tin-cong-ty', { method: 'POST', redirect: 'manual', headers: { cookie: `connect.sid=${admin.sid}` }, body: new URLSearchParams({ companyProfile: settingsBackup.companyProfile || '', address: ci.address || '', phone: ci.phone || '', email: ci.email || '' }) });
       check('a save without the chat boxes keeps them', (await d.collection('sitesettings').findOne({})).contactInfo.zalo === '0912345678');
       const page = await html('/lien-he');
-      check('footer and Liên hệ: "Nhắn qua Zalo" / "Nhắn qua Messenger", opening in a new tab',
-        page.includes('href="https://zalo.me/0912345678" target="_blank" rel="noopener" data-footer-chat="zalo">Nhắn qua Zalo</a>') && page.includes('data-footer-chat="messenger">Nhắn qua Messenger</a>')
-        && /data-contact-chat>[\s\S]*?href="https:\/\/m\.me\/mtg\.vn"/.test(page));
+      check('footer and Liên hệ: "Nhắn qua Zalo" / "Trang Facebook", opening in a new tab',
+        page.includes('href="https://zalo.me/0912345678" target="_blank" rel="noopener" data-footer-chat="zalo">Nhắn qua Zalo</a>')
+        && page.includes('href="https://www.facebook.com/mtg.vn" target="_blank" rel="noopener" data-footer-chat="facebook">Trang Facebook</a>')
+        && /data-contact-chat>[\s\S]*?href="https:\/\/www\.facebook\.com\/mtg\.vn"/.test(page));
+      const enPage = await html('/lien-he', 'en'), homeVi = await html('/');
+      check('no Messenger left: no "Messenger" and no m.me link on Trang chủ and Liên hệ (VI + EN)',
+        [page, enPage, homeVi, await html('/', 'en')].every((h) => !/Messenger|m\.me\//.test(h)) && enPage.includes('data-footer-chat="facebook">Facebook page</a>'));
+      check('Google company card: the Facebook page among its links', JSON.parse(homeVi.match(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/)[1]).sameAs.includes('https://www.facebook.com/mtg.vn'));
       check('admin pages have no chat button', !form.includes('data-chat-fab'));
     });
 
@@ -46,13 +52,13 @@ await suite(async (b) => {
       await b.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
       await sleep(250);
       const open = await ev(`(() => { const m = document.querySelector('[data-chat-menu]'); return { hidden: m.hidden, expanded: document.querySelector('[data-chat-fab]').getAttribute('aria-expanded'), focus: document.activeElement.getAttribute('href'), links: [...m.querySelectorAll('a')].map((a) => [a.textContent.replace(/\\s+/g, ' ').trim(), a.getAttribute('href'), a.target]) }; })()`);
-      check('Enter opens it: Zalo then Messenger, focus on the first', !open.hidden && open.expanded === 'true' && open.focus === 'https://zalo.me/0912345678'
-        && JSON.stringify(open.links) === JSON.stringify([['Nhắn qua Zalo (mở trong thẻ mới)', 'https://zalo.me/0912345678', '_blank'], ['Nhắn qua Messenger (mở trong thẻ mới)', 'https://m.me/mtg.vn', '_blank']]), open);
+      check('Enter opens it: Zalo then the Facebook page, focus on the first', !open.hidden && open.expanded === 'true' && open.focus === 'https://zalo.me/0912345678'
+        && JSON.stringify(open.links) === JSON.stringify([['Nhắn qua Zalo (mở trong thẻ mới)', 'https://zalo.me/0912345678', '_blank'], ['Trang Facebook (mở trong thẻ mới)', 'https://www.facebook.com/mtg.vn', '_blank']]), open);
       const logos = await ev(`(() => { const ls = [...document.querySelectorAll('[data-chat-menu] a')].map((a) => [...a.querySelectorAll('svg')]);
-        const grad = document.querySelector('[data-chat-menu] .chat-logo--messenger linearGradient');
         return { each: ls.map((s) => s.length === 1 && s[0].matches('.chat-logo[aria-hidden="true"]') && s[0].getBoundingClientRect().width === 28), zalo: ls[0][0].querySelector('rect') && ls[0][0].querySelector('rect').getAttribute('fill'),
-          messenger: ls[1][0].querySelector('path').getAttribute('fill'), gradId: grad && grad.id, gradCount: grad ? document.querySelectorAll('[id="' + grad.id + '"]').length : 0 }; })()`);
-      check('each link shows its real logo (hidden from screen readers): Zalo on its blue tile, Messenger gradient', logos.each.every(Boolean) && logos.zalo === '#0068ff' && logos.messenger === `url(#${logos.gradId})` && logos.gradCount === 1, logos);
+          facebook: ls[1][0].matches('.chat-logo--facebook') && ls[1][0].querySelector('path').getAttribute('fill'), disc: !!ls[1][0].querySelector('circle[fill="#fff"]'),
+          gradients: document.querySelectorAll('[data-chat-menu] linearGradient').length }; })()`);
+      check('each link shows its real logo (hidden from screen readers): Zalo on its blue tile, the blue Facebook mark with a white "f"', logos.each.every(Boolean) && logos.zalo === '#0068ff' && logos.facebook === '#0866ff' && logos.disc && logos.gradients === 0, logos);
       await b.shot('chat-menu');
       await b.key('Escape', 'Escape', 27);
       await sleep(150);
@@ -101,14 +107,14 @@ await suite(async (b) => {
         const chat = document.querySelector('[data-contact-chat]'), form = document.querySelector('[data-quote-form]');
         const after = !!(chat && form && (form.compareDocumentPosition(chat) & Node.DOCUMENT_POSITION_FOLLOWING));
         const btn = (k) => { const a = document.querySelector('[data-contact-chat-link="' + k + '"]'); if (!a) return null; const s = a.querySelector('svg.chat-logo--' + k + '[aria-hidden="true"]'); const r = s && s.getBoundingClientRect(), ar = a.getBoundingClientRect();
-          return { logo: !!s, w: r && Math.round(r.width), text: a.textContent.replace(/\\s+/g, ' ').trim(), h: Math.round(ar.height), logoFirst: a.firstElementChild === s, gradient: k === 'messenger' ? !!a.querySelector('linearGradient#contact-chat-messenger') : true }; };
-        return { after, zalo: btn('zalo'), messenger: btn('messenger') };
+          return { logo: !!s, w: r && Math.round(r.width), text: a.textContent.replace(/\\s+/g, ' ').trim(), h: Math.round(ar.height), logoFirst: a.firstElementChild === s, brand: k === 'facebook' ? !!(s && s.querySelector('path[fill="#0866ff"]')) : true }; };
+        return { after, zalo: btn('zalo'), facebook: btn('facebook') };
       })()`);
-      check('the Zalo / Messenger buttons come after the request form', lay.after, lay);
-      check('"Nhắn qua Zalo" starts with the Zalo logo (20 px), "Nhắn qua Messenger" with the Messenger logo (its own gradient)',
-        lay.zalo && lay.zalo.logo && lay.zalo.logoFirst && lay.zalo.w === 20 && lay.messenger && lay.messenger.logo && lay.messenger.logoFirst && lay.messenger.w === 20 && lay.messenger.gradient, lay);
+      check('the Zalo / Facebook buttons come after the request form', lay.after, lay);
+      check('"Nhắn qua Zalo" starts with the Zalo logo (20 px), "Trang Facebook" with the blue Facebook logo',
+        lay.zalo && lay.zalo.logo && lay.zalo.logoFirst && lay.zalo.w === 20 && lay.facebook && lay.facebook.logo && lay.facebook.logoFirst && lay.facebook.w === 20 && lay.facebook.brand, lay);
       check('… the spoken names stay "Nhắn qua Zalo (mở trong thẻ mới)" (the logo is hidden from screen readers), and each button is at least 24 px high',
-        lay.zalo.text === 'Nhắn qua Zalo (mở trong thẻ mới)' && lay.messenger.text === 'Nhắn qua Messenger (mở trong thẻ mới)' && lay.zalo.h >= 24 && lay.messenger.h >= 24, lay);
+        lay.zalo.text === 'Nhắn qua Zalo (mở trong thẻ mới)' && lay.facebook.text === 'Trang Facebook (mở trong thẻ mới)' && lay.zalo.h >= 24 && lay.facebook.h >= 24, lay);
       check('… the phone and email lines stay above the form (only the chat buttons moved)', await ev(`(() => { const form = document.querySelector('[data-quote-form]'); const chat = document.querySelector('[data-contact-chat]'); return !chat.contains(form) && !document.querySelector('.container > div [data-contact-chat]'); })()`));
       for (const theme of ['light', 'dark']) {
         await b.setCookie('theme', theme);
@@ -126,15 +132,15 @@ await suite(async (b) => {
     await part(b, 'one link: the button opens it', async () => {
       await saveContact('', 'mtg.vn');
       const contactOne = await html('/lien-he');
-      check('Liên hệ with only Messenger set: one button, with the Messenger logo', !contactOne.includes('data-contact-chat-link="zalo"') && /data-contact-chat-link="messenger"><svg class="chat-logo chat-logo--messenger/.test(contactOne));
+      check('Liên hệ with only the Facebook page set: one button, with the Facebook logo', !contactOne.includes('data-contact-chat-link="zalo"') && /data-contact-chat-link="facebook"><svg class="chat-logo chat-logo--facebook/.test(contactOne));
       await b.nav('/', 300);
       const one = await ev(`(() => { const f = document.querySelector('[data-chat-fab]'); return { tag: f.tagName, href: f.getAttribute('href'), target: f.target, name: f.getAttribute('aria-label'), menu: !!document.querySelector('[data-chat-menu]'),
-        logo: !!f.querySelector('svg.chat-logo--messenger[aria-hidden="true"] path[fill="#fff"]'), bg: getComputedStyle(f).backgroundImage }; })()`);
-      check('only Messenger set → the button is a plain link to it, named "Nhắn qua Messenger (mở trong thẻ mới)"', one.tag === 'A' && one.href === 'https://m.me/mtg.vn' && one.target === '_blank' && one.name === 'Nhắn qua Messenger (mở trong thẻ mới)' && !one.menu, one);
-      check('… showing the white Messenger logo on the Messenger gradient', one.logo && one.bg.startsWith('linear-gradient'), one);
+        logo: !!f.querySelector('svg.chat-logo--facebook[aria-hidden="true"] path[fill="#fff"]'), bg: getComputedStyle(f).backgroundColor }; })()`);
+      check('only the Facebook page set → the button is a plain link to it, named "Trang Facebook (mở trong thẻ mới)"', one.tag === 'A' && one.href === 'https://www.facebook.com/mtg.vn' && one.target === '_blank' && one.name === 'Trang Facebook (mở trong thẻ mới)' && !one.menu, one);
+      check('… showing the white Facebook logo on Facebook blue', one.logo && one.bg === 'rgb(8, 102, 255)', one);
       await b.shot('chat-one-link');
       const en = await html('/', 'en');
-      check('in English: "Message on Messenger (opens in a new tab)"', en.includes('aria-label="Message on Messenger (opens in a new tab)"'));
+      check('in English: "Facebook page (opens in a new tab)"', en.includes('aria-label="Facebook page (opens in a new tab)"'));
     });
 
     // The company phone box with two numbers: shown side by side as "0988460556 - 0333601279", each its own call link

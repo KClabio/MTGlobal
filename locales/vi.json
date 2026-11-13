@@ -690,8 +690,8 @@
       "registrationHint": "Ví dụ: do Sở Kế hoạch và Đầu tư TP. Hà Nội cấp lần đầu ngày 01/01/2020. Không bắt buộc; hiện ngay sau mã số.",
       "zalo": "Số Zalo",
       "zaloHint": "Số điện thoại có Zalo của công ty. Khi có, nút nhắn tin ở góc dưới bên phải website sẽ mở Zalo.",
-      "messenger": "Trang Facebook (Messenger)",
-      "messengerHint": "Tên hoặc link trang Facebook của công ty, ví dụ facebook.com/mtg.vn. Để trống ô nào thì nút nhắn tin không có mục đó.",
+      "messenger": "Trang Facebook",
+      "messengerHint": "Tên hoặc link trang Facebook của công ty, ví dụ facebook.com/MTGlobal.vn. Nút nhắn tin, chân trang và trang Liên hệ sẽ có link tới trang này. Để trống ô nào thì không có mục đó.",
       "save": "Lưu cài đặt",
       "subtitle": "Giới thiệu công ty (trang Về MTG), Chính sách bảo mật và thông tin liên hệ (trang Liên hệ, chân trang).",
       "brandMoved": "Logo, ảnh trang chủ và banner các trang nằm trong",
@@ -1040,7 +1040,7 @@
   "chat": {
     "open": "Nhắn tin cho MTG",
     "zalo": "Nhắn qua Zalo",
-    "messenger": "Nhắn qua Messenger",
+    "facebook": "Trang Facebook",
     "newTab": "(mở trong thẻ mới)"
   },
   "reset": {

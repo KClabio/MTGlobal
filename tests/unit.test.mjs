@@ -281,15 +281,16 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
   check("the day is Vietnam's: 17:30 UTC on 30 Oct is already 31 Oct", dayOf(new Date('2026-10-30T17:30:00Z')) === '2026-10-31' && dayOf(new Date('2026-10-30T16:30:00Z')) === '2026-10-30');
 }
 
-// Chat button links (lib/chat-links.js): Zalo as digits, Messenger as the Facebook page name
+// Chat button links (lib/chat-links.js): Zalo as digits, the Facebook page as its name (stored in contactInfo.messenger)
 {
-  const { cleanZalo, cleanMessenger, chatLinks } = appRequire('./lib/chat-links.js');
+  const { cleanZalo, cleanFacebook, chatLinks } = appRequire('./lib/chat-links.js');
   check('Zalo: spaces, dots and + are dropped; too short or not a number → empty', cleanZalo('0912 345.678') === '0912345678' && cleanZalo('+84 912 345 678') === '84912345678' && cleanZalo('123') === '' && cleanZalo('abc') === '');
-  check('Messenger: a page name, an m.me or facebook.com link all give the name; anything else → empty',
-    cleanMessenger('mtg.vn') === 'mtg.vn' && cleanMessenger('https://m.me/mtg.vn') === 'mtg.vn' && cleanMessenger('https://www.facebook.com/mtg.vn/?ref=x') === 'mtg.vn'
-    && cleanMessenger('javascript:alert(1)') === '' && cleanMessenger('https://evil.example/x/y') === '' && cleanMessenger('') === '');
-  check('chat links: only the filled ones, Zalo first', JSON.stringify(chatLinks({ zalo: '0912345678', messenger: 'mtg.vn' })) === JSON.stringify([{ kind: 'zalo', url: 'https://zalo.me/0912345678' }, { kind: 'messenger', url: 'https://m.me/mtg.vn' }])
-    && JSON.stringify(chatLinks({ messenger: 'mtg.vn' })) === JSON.stringify([{ kind: 'messenger', url: 'https://m.me/mtg.vn' }]) && chatLinks({}).length === 0 && chatLinks(undefined).length === 0);
+  check('Facebook page: a page name, an m.me or facebook.com link (with ?locale=…) all give the name; anything else → empty',
+    cleanFacebook('mtg.vn') === 'mtg.vn' && cleanFacebook('https://m.me/mtg.vn') === 'mtg.vn' && cleanFacebook('https://www.facebook.com/mtg.vn/?ref=x') === 'mtg.vn'
+    && cleanFacebook('https://www.facebook.com/MTGlobal.vn?locale=vi_VN') === 'MTGlobal.vn'
+    && cleanFacebook('javascript:alert(1)') === '' && cleanFacebook('https://evil.example/x/y') === '' && cleanFacebook('') === '');
+  check('chat links: only the filled ones, Zalo first, the Facebook page as a facebook.com link', JSON.stringify(chatLinks({ zalo: '0912345678', messenger: 'mtg.vn' })) === JSON.stringify([{ kind: 'zalo', url: 'https://zalo.me/0912345678' }, { kind: 'facebook', url: 'https://www.facebook.com/mtg.vn' }])
+    && JSON.stringify(chatLinks({ messenger: 'mtg.vn' })) === JSON.stringify([{ kind: 'facebook', url: 'https://www.facebook.com/mtg.vn' }]) && chatLinks({}).length === 0 && chatLinks(undefined).length === 0);
 }
 
 // The sender's confirmation never carries what was typed into the form (lib/request-mail.js)

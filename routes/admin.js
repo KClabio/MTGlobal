@@ -42,7 +42,7 @@ const { HELP_GROUPS, HELP_GROUP_KEYS, getHelpItems, groupHelpItems } = require('
 const errorLog = require('../lib/error-log');
 const ErrorLog = require('../models/ErrorLog');
 const mailer = require('../lib/mailer');
-const { cleanZalo, cleanMessenger } = require('../lib/chat-links');
+const { cleanZalo, cleanFacebook } = require('../lib/chat-links');
 
 router.use(requireAdmin);
 router.use(loadAdminLanguage);
@@ -990,7 +990,7 @@ router.post('/thong-tin-cong-ty', async (req, res) => {
     mapEmbedUrl: mapRefused ? saved.mapEmbedUrl || '' : map,
     // The chat button's links (lib/chat-links.js): stored cleaned, '' when not usable
     zalo: typeof zalo === 'string' ? cleanZalo(zalo) : saved.zalo || '',
-    messenger: typeof messenger === 'string' ? cleanMessenger(messenger) : saved.messenger || '',
+    messenger: typeof messenger === 'string' ? cleanFacebook(messenger) : saved.messenger || '',
     taxCode: typeof taxCode === 'string' ? line(taxCode, 40) : saved.taxCode || '',
     registration: typeof registration === 'string' ? line(registration, 300) : saved.registration || '',
   };
