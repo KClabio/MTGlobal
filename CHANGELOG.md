@@ -6,7 +6,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.8.0] - 2026-11-13
 
 ### Changed
 - **The chat button's second choice is now the company's Facebook page instead of a Messenger chat.** "Nhắn qua Messenger" became "Trang Facebook" (in English "Facebook page"), with the Facebook logo: it opens the page on facebook.com in a new tab. The same change is in the footer, on Liên hệ and in the company card for Google. In Admin → Thông tin công ty the box is now called "Trang Facebook": paste the page's name or its address as copied from the browser (the "?locale=…" part at the end is dropped). The real Zalo number (0333601279) and Facebook page (MTGlobal.vn) replace the sample ones.
@@ -16,7 +16,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [1.7.0] - 2026-11-12
+## [1.7.0] - 2026-11-12 · `d9b4efc`
 
 ### Changed
 - **Equipment pages under Giải pháp → Thiết bị no longer have a request form beside them.** Opening one item (for example VEX IQ) now shows only its photos, description and specifications, in one wider column in the middle of the page. Visitors can still ask for advice through "Yêu cầu tư vấn" at the bottom of the Thiết bị page, the Liên hệ page and the footer.
