@@ -13,12 +13,15 @@ const FIELDS = {
   product: ['nameVi', 'nameEn', 'category', 'section', 'subcategory', 'subcategoryEn', 'descriptionVi', 'descriptionEn', 'featured', 'comingSoon', 'specs', 'specKey', 'specKeyEn', 'specValue', 'specValueEn', 'images', 'videos', 'imageOrder', 'removeImages', 'removeVideos'],
   partner: ['name', 'url', 'slug', 'descriptionVi', 'descriptionEn', 'contacts', 'logo'],
   article: ['titleVi', 'titleEn', 'bodyVi', 'bodyEn', 'published', 'coverImage', 'uploadedBy'],
+  service: ['titleVi', 'titleEn', 'summaryVi', 'bodyVi', 'heroImage', 'heroImageEn', 'cardImage', 'remove_heroImage', 'remove_cardImage', 'galleryOrder', 'removeGallery',
+    'cardsPosted', 'cardsTitleVi', 'stepsTitleEn', 'cardTitleVi', 'cardItemsVi', 'cardIcon', 'stepTitleVi', 'packageNameVi', 'packageHighlighted', 'faqQuestionVi', 'questionLabelVi', 'questionType', 'questionOptionsVi'],
 };
 const REQUIRED = {
   project: { titleVi: MARK },
   product: { nameVi: MARK, category: 'robot-cat-co' },
   partner: { name: MARK },
   article: { titleVi: MARK },
+  service: { titleVi: MARK },
 };
 
 /** Every way of sending one field that no browser form sends */
@@ -42,18 +45,22 @@ await suite(async (b) => {
   removeLater('products', { nameVi: named });
   removeLater('partners', { name: named });
   removeLater('articles', { titleVi: named });
+  removeLater('services', { titleVi: named });
 
   const now = new Date();
   const project = (await d.collection('projects').insertOne({ titleVi: `${MARK} project`, images: ['/assets/a.jpg'], order: 0, createdAt: now, updatedAt: now })).insertedId;
   const product = (await d.collection('products').insertOne({ nameVi: `${MARK} product`, category: 'robot-cat-co', images: ['/assets/a.jpg'], videos: [], specs: [{ key: 'k', value: 'v' }], order: 0, createdAt: now, updatedAt: now })).insertedId;
   const partner = (await d.collection('partners').insertOne({ name: `${MARK} partner`, slug: `${MARK}-partner`.toLowerCase(), order: 0, createdAt: now, updatedAt: now })).insertedId;
   const article = (await d.collection('articles').insertOne({ titleVi: `${MARK} article`, slug: `${MARK}-article`.toLowerCase(), published: false, createdAt: now, updatedAt: now })).insertedId;
+  const service = (await d.collection('services').insertOne({ titleVi: `${MARK} service`, slug: `${MARK}-service`.toLowerCase(), heroImage: '/assets/a.jpg', cardImage: '/assets/b.jpg', gallery: ['/assets/c.jpg'],
+    cards: [{ titleVi: 'k', titleEn: '', itemsVi: ['v'], itemsEn: [], icon: 'cpu' }], steps: [], packages: [], faqs: [], testimonials: [], questions: [], order: 99, createdAt: now, updatedAt: now })).insertedId;
 
   const ROUTES = [
     ['project', '/admin/du-an/moi'], ['project', `/admin/du-an/${project}/sua`],
     ['product', '/admin/san-pham/moi'], ['product', `/admin/san-pham/${product}/sua`],
     ['partner', '/admin/doi-tac/moi'], ['partner', `/admin/doi-tac/${partner}/sua`],
     ['article', '/admin/tin-tuc/moi'], ['article', `/admin/tin-tuc/${article}/sua`],
+    ['service', `/admin/dich-vu/${service}/sua`],
   ];
 
   for (const [kind, url] of ROUTES) {

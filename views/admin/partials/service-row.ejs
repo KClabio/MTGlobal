@@ -1,9 +1,10 @@
 <%
-  // One repeatable item in the service editor. kind: step | package | faq | testimonial | question; item: its saved values ({} for a new row)
+  // One repeatable item in the service editor. kind: card | step | package | faq | testimonial | question; item: its saved values ({} for a new row)
   const it = item || {};
   const L = (key) => t('admin.services.' + key);
   const textOptions = (lang) => (it['optionsText' + lang] !== undefined ? it['optionsText' + lang] : (it.options || []).map((o) => o[lang.toLowerCase()]).filter(Boolean).join('\n'));
-  const rowTitle = { step: 'rowStep', package: 'rowPackage', faq: 'rowFaq', testimonial: 'rowTestimonial', question: 'rowQuestion' }[kind];
+  const rowTitle = { card: 'rowCard', step: 'rowStep', package: 'rowPackage', faq: 'rowFaq', testimonial: 'rowTestimonial', question: 'rowQuestion' }[kind];
+  const CARD_ICONS = typeof cardIcons !== 'undefined' ? cardIcons : []; // models/Service.js CARD_ICONS, from renderServiceForm
 %>
 <div class="row-card" data-row>
   <div class="row-card-head">
@@ -17,7 +18,26 @@
     <button type="button" class="btn btn-danger-ghost btn-sm" data-remove-row><%= t('admin.common.remove') %></button>
   </div>
 
-  <% if (kind === 'step') { %>
+  <% if (kind === 'card') { %>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('cardTitleVi') %></label><input class="form-control" name="cardTitleVi" value="<%= it.titleVi || '' %>"></div>
+      <div class="form-group"><label><%= L('cardTitleEn') %></label><input class="form-control" name="cardTitleEn" value="<%= it.titleEn || '' %>"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label><%= L('cardItemsVi') %></label><textarea class="form-control" name="cardItemsVi" rows="4"><%= (it.itemsVi || []).join('\n') %></textarea></div>
+      <div class="form-group"><label><%= L('cardItemsEn') %></label><textarea class="form-control" name="cardItemsEn" rows="4"><%= (it.itemsEn || []).join('\n') %></textarea></div>
+    </div>
+    <p class="form-hint" style="margin-top:-10px;"><%= L('cardItemsHint') %></p>
+    <div class="form-group">
+      <label><%= L('cardIcon') %></label>
+      <select class="form-control" name="cardIcon">
+        <% CARD_ICONS.forEach(function (icon) { %>
+          <option value="<%= icon %>" <%= (it.icon || 'check-circle') === icon ? 'selected' : '' %>><%= L('icon_' + icon) %></option>
+        <% }) %>
+      </select>
+    </div>
+
+  <% } else if (kind === 'step') { %>
     <div class="form-row">
       <div class="form-group"><label><%= L('stepTitleVi') %></label><input class="form-control" name="stepTitleVi" value="<%= it.titleVi || '' %>"></div>
       <div class="form-group"><label><%= L('stepTitleEn') %></label><input class="form-control" name="stepTitleEn" value="<%= it.titleEn || '' %>"></div>

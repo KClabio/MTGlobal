@@ -1,4 +1,8 @@
-<%- include('partials/header', { title: pick(service, 'title') + ' - MTG', description: pick(service, 'summary') || pick(service, 'body'), image: service.heroImage, bannerKey: 'services' }) %>
+<%
+  // The main picture in the page's language (an English poster on the English page), else the Vietnamese one
+  const heroPicture = (lang === 'en' && service.heroImageEn) || service.heroImage || null;
+%>
+<%- include('partials/header', { title: pick(service, 'title') + ' - MTG', description: pick(service, 'summary') || pick(service, 'body'), image: heroPicture, bannerKey: 'services' }) %>
 
 <%- include('partials/page-banner', {
   pill: t('nav.services'),
@@ -14,22 +18,51 @@
   const faqs = service.faqs || [];
   const gallery = service.gallery || [];
   const testimonials = service.testimonials || [];
+  const cards = service.cards || [];
   const features = (p) => (lang === 'en' && p.featuresEn && p.featuresEn.length ? p.featuresEn : p.featuresVi) || [];
+  const cardItems = (c) => (lang === 'en' && c.itemsEn && c.itemsEn.length ? c.itemsEn : c.itemsVi) || [];
+  const TONES = ['blue', 'green', 'orange', 'violet', 'teal'];
 %>
 
 <section class="section">
   <div class="container admin-form-grid service-layout">
     <div>
-      <% if (service.heroImage) { %>
-        <div class="card-media" style="border-radius:var(--mtg-radius); margin-bottom:16px; aspect-ratio:16/9;">
-          <%- picture(service.heroImage, pick(service, 'title'), { sizes: '(max-width: 900px) 100vw, 640px', eager: true }) %>
-        </div>
+      <% if (heroPicture) { %>
+        <%# Shown whole (often a poster with text), with a link to the full-size file. Its content is also the page's text,
+            so the picture itself is a mouse shortcut only: the "Xem ảnh lớn" link is the one keyboards and screen readers get. %>
+        <figure class="service-hero">
+          <a class="service-hero-media" href="<%= heroPicture %>" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+            <%- picture(heroPicture, '', { sizes: '(max-width: 900px) 100vw, 680px', eager: true, width: 1200 }) %>
+          </a>
+          <figcaption><a class="service-hero-zoom" href="<%= heroPicture %>" target="_blank" rel="noopener"><%= t('services.viewFull') %> <%- include('admin/partials/icon', { name: 'external-link', size: 14 }) %></a></figcaption>
+        </figure>
       <% } %>
       <div class="prose-text prose-text-start"><%- formatText(pick(service, 'body')) %></div>
 
+      <% if (cards.length) { %>
+        <div class="service-section">
+          <h2><%= pick(service, 'cardsTitle') || t('services.cardsTitle') %></h2>
+          <div class="profile-cards">
+            <% cards.forEach(function (c, i) { %>
+              <div class="profile-card tone-<%= TONES[i % TONES.length] %>">
+                <div class="profile-card-head">
+                  <span class="profile-card-icon" aria-hidden="true"><%- include('admin/partials/icon', { name: c.icon || 'check-circle', size: 22 }) %></span>
+                  <h3><%= pick(c, 'title') %></h3>
+                </div>
+                <% if (cardItems(c).length) { %>
+                  <ul class="profile-card-list">
+                    <% cardItems(c).forEach(function (item) { %><li><%= item %></li><% }) %>
+                  </ul>
+                <% } %>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
       <% if (steps.length) { %>
         <div class="service-section">
-          <h2><%= t('services.stepsTitle') %></h2>
+          <h2><%= pick(service, 'stepsTitle') || t('services.stepsTitle') %></h2>
           <div class="timeline">
             <% steps.forEach(function (s, i) { %>
               <div class="timeline-item">

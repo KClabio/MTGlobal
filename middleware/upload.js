@@ -27,6 +27,8 @@ const FIELD_CONFIG = {
   logo: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
   coverImage: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
   heroImage: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
+  heroImageEn: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
+  cardImage: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
   gallery: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
   heroHome: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
   heroProducts: { subfolder: 'images', resourceType: 'image', extensions: IMAGE_EXTENSIONS },
@@ -112,6 +114,8 @@ const uploadMedia = upload.fields([
 // Service form: one hero image + a photo gallery.
 const uploadServiceMedia = upload.fields([
   { name: 'heroImage', maxCount: 1 },
+  { name: 'heroImageEn', maxCount: 1 },
+  { name: 'cardImage', maxCount: 1 },
   { name: 'gallery', maxCount: 12 },
 ]);
 

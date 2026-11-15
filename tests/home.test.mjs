@@ -3,7 +3,7 @@
 import { suite, part, check, db, BASE, appRequire, tempArticle } from './lib/index.mjs';
 
 const { bannerFor } = appRequire('./lib/banners.js');
-const { buildHomeDomains } = appRequire('./lib/home-domains.js');
+const { buildHomeDomains, buildServiceCards } = appRequire('./lib/home-domains.js');
 
 await suite(async (b) => {
   const { send, ev, sleep } = b;
@@ -56,7 +56,9 @@ await suite(async (b) => {
     // Off-screen cards lazy-load, so check each picture over HTTP instead of waiting for the browser
     const imgs = [];
     for (const card of cards) imgs.push(card.img ? (await fetch(card.img)).headers.get('content-type')?.startsWith('image/') === true : 'art');
-    check('all card photos load (Dịch vụ uses colour art until a service photo is uploaded)', JSON.stringify(imgs) === JSON.stringify([true, true, true, true, true, true, 'art']), imgs);
+    // Dịch vụ shows a service's card picture or main picture once one has it, else colour art
+    const anyServicePicture = (await d.collection('services').countDocuments({ $or: [{ cardImage: { $nin: [null, ''] } }, { heroImage: { $nin: [null, ''] } }] })) > 0;
+    check('all card photos load (Dịch vụ: a service picture, else colour art)', JSON.stringify(imgs) === JSON.stringify([true, true, true, true, true, true, anyServicePicture ? true : 'art']), { anyServicePicture, imgs });
     // 3½ cards fill the window (the container's width)
     const ratio = () => ev(`(() => { const box = ${ROW}; const pad = parseFloat(getComputedStyle(box).paddingLeft); const inner = box.clientWidth - 2 * pad;
       const s = document.querySelector('[data-domain-slider]'); const w = ${ORIG}[0].getBoundingClientRect().width; const gap = parseFloat(getComputedStyle(s).columnGap);
@@ -83,10 +85,18 @@ await suite(async (b) => {
     const fake = { banners: { workshop: { subtitleVi: 'ZZ dòng mới' } } };
     const built = buildHomeDomains({ settings: fake, lang: 'vi', t, services });
     check('a workshop banner override in Cài đặt chung becomes the workshop card text', built.find((x) => x.key === 'workshop').text === 'ZZ dòng mới');
-    const withPhoto = buildHomeDomains({ settings: {}, lang: 'vi', t, services: [{ ...services[0], heroImage: '/uploads/images/svc.jpg' }] });
+    const withPhoto = buildHomeDomains({ settings: {}, lang: 'vi', t, services: [{ ...services[0], heroImage: '/uploads/images/svc.jpg', cardImage: null }] });
     const noServices = buildHomeDomains({ settings: {}, lang: 'vi', t, services: [] });
     check('an uploaded service hero image replaces the default picture; no services = no Dịch vụ card',
       withPhoto.find((x) => x.key === 'dich-vu').image === '/uploads/images/svc.jpg' && withPhoto.length === 7 && noServices.length === 6, withPhoto.map((x) => [x.key, x.image]));
+    // A service's card picture (a photo without text) beats its main picture (which may be a poster), on both card kinds
+    const both = { ...services[0], slug: 'tu-van-du-hoc', heroImage: '/uploads/images/poster.jpg', cardImage: '/uploads/images/card.jpg' };
+    const cardOnly = { ...services[0], slug: 'tu-van-du-hoc', heroImage: null, cardImage: '/uploads/images/card.jpg' };
+    check('a service card picture beats its main picture (Trang chủ "Dịch vụ" card and Dịch vụ landing card)',
+      buildHomeDomains({ settings: {}, lang: 'vi', t, services: [both] }).find((x) => x.key === 'dich-vu').image === '/uploads/images/card.jpg'
+      && buildServiceCards({ lang: 'vi', services: [both] })[0].image === '/uploads/images/card.jpg'
+      && buildServiceCards({ lang: 'vi', services: [cardOnly] })[0].image === '/uploads/images/card.jpg'
+      && buildServiceCards({ lang: 'vi', services: [{ ...both, cardImage: null }] })[0].image === '/uploads/images/poster.jpg');
     // The robot card keeps its own picture (the stair-climbing machine on white), even now the robot has photos
     check('the Robotics card shows the stair-climbing machine picture', /\/assets\/home\/robot-leo-cau-thang\.jpg/.test(cards[0].img || ''), cards[0].img);
 

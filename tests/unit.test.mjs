@@ -639,4 +639,30 @@ check('login limit: keys are case-insensitive', lt.keyFor('email', ' An@Truong.V
     && [null, {}, { heroImages: {} }, { heroImages: { home: null } }, { heroImages: { home: '' } }].every((s) => homeHeroImage(s) === DEFAULT_HOME_HERO));
 }
 
+// Service editor "Thẻ nội dung" and block headings (lib/service-content.js parseServiceSections)
+{
+  const { parseServiceSections, LIMITS, DU_HOC_CONTENT } = appRequire('./lib/service-content.js');
+  const { CARD_ICONS } = appRequire('./models/Service.js');
+  const t = (key, vars) => key + (vars ? ' ' + JSON.stringify(vars) : '');
+  const parse = (body) => parseServiceSections(body, t);
+  const none = parse({});
+  check('service cards: a form without the cards panel leaves cards and headings out (the saved ones stay)',
+    !('cards' in none.data) && !['cardsTitleVi', 'cardsTitleEn', 'stepsTitleVi', 'stepsTitleEn'].some((k) => k in none.data) && none.errors.length === 0, Object.keys(none.data));
+  const ok = parse({ cardsPosted: '1', cardTitleVi: ['A', 'B', ''], cardTitleEn: ['', 'Bee', ''], cardItemsVi: ['- một\r\n✓ hai\n\n• ba', '', ''], cardItemsEn: ['', 'x', ''], cardIcon: ['trophy', 'bad', 'cpu'] });
+  check('service cards: rows read in order, "- " / "✓ " / "• " dropped, empty lines and rows skipped, unknown icon → tick',
+    JSON.stringify(ok.data.cards) === JSON.stringify([{ titleVi: 'A', titleEn: '', itemsVi: ['một', 'hai', 'ba'], itemsEn: [], icon: 'trophy' }, { titleVi: 'B', titleEn: 'Bee', itemsVi: [], itemsEn: ['x'], icon: 'check-circle' }]) && ok.errors.length === 0, ok);
+  check('service cards: a panel with no rows means "no cards" (all removed)', JSON.stringify(parse({ cardsPosted: '1' }).data.cards) === '[]');
+  const noTitle = parse({ cardsPosted: '1', cardTitleVi: '', cardItemsVi: 'x' });
+  check('service cards: a card with a list but no title is refused, on the cards tab', noTitle.errors.length === 1 && noTitle.errors[0].tab === 'cards' && noTitle.errors[0].text.startsWith('admin.services.errCardTitle'), noTitle.errors);
+  const many = parse({ cardsPosted: '1', cardTitleVi: Array(LIMITS.cards + 1).fill('t'), cardItemsVi: ['l\n'.repeat(LIMITS.cardItems + 1)] });
+  check(`service cards: at most ${LIMITS.cards} cards and ${LIMITS.cardItems} lines a list`, many.errors.some((e) => e.text.startsWith('admin.services.errTooManyCards')) && many.errors.some((e) => e.text.startsWith('admin.services.errTooManyCardItems')), many.errors);
+  const odd = parse({ cardsPosted: '1', cardTitleVi: { x: 'y' }, cardsTitleVi: ['  Đầu  ', 'hai'], stepsTitleEn: { a: 'b' }, stepsTitleVi: 'x'.repeat(LIMITS.heading + 1) });
+  check('service headings: trimmed, a repeated field keeps its first value, an object becomes empty, too long is refused',
+    odd.data.cardsTitleVi === 'Đầu' && odd.data.stepsTitleEn === '' && JSON.stringify(odd.data.cards) === '[]' && odd.errors.some((e) => e.tab === 'steps' && e.text.startsWith('admin.services.errHeadingTooLong')), odd);
+  check('Tư vấn du học content: 5 cards with known icons and both languages, 5 steps, the three pictures in /assets',
+    DU_HOC_CONTENT.cards.length === 5 && DU_HOC_CONTENT.cards.every((c) => CARD_ICONS.includes(c.icon) && c.titleVi && c.titleEn && c.itemsVi.length === c.itemsEn.length && c.itemsVi.length <= LIMITS.cardItems)
+    && DU_HOC_CONTENT.steps.length === 5 && DU_HOC_CONTENT.steps.every((s) => s.titleVi && s.titleEn && s.textVi && s.textEn)
+    && ['heroImage', 'heroImageEn', 'cardImage'].every((k) => DU_HOC_CONTENT[k].startsWith('/assets/dich-vu/du-hoc/')));
+}
+
 process.exit(result() ? 1 : 0);

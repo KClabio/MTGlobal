@@ -112,6 +112,11 @@ const PROJECT_FORM = { text: ['titleVi', 'titleEn', 'schoolName', 'location', 'l
 const PRODUCT_FORM = { text: ['nameVi', 'nameEn', 'category', 'section', 'subcategory', 'subcategoryEn', 'descriptionVi', 'descriptionEn', 'featured', 'comingSoon'], stored: ['images', 'videos', 'specs'] };
 const PARTNER_FORM = { text: ['name', 'url', 'slug', 'descriptionVi', 'descriptionEn', 'contacts'], stored: ['logo'] };
 const ARTICLE_FORM = { text: ['titleVi', 'titleEn', 'bodyVi', 'bodyEn', 'published', 'uploadedBy'], stored: ['coverImage'] };
+// Service editor: the rows of its tabs (cards, steps, …) are lists on purpose and are read by parseServiceSections
+const SERVICE_FORM = {
+  text: ['titleVi', 'titleEn', 'summaryVi', 'summaryEn', 'bodyVi', 'bodyEn', 'remove_heroImage', 'remove_heroImageEn', 'remove_cardImage'],
+  stored: ['heroImage', 'heroImageEn', 'cardImage', 'gallery'],
+};
 
 const notFound = (req, res, listPath) => { flash(req, 'error', res.locals.t('admin.flash.notFound')); res.redirect(listPath); };
 
@@ -337,8 +342,10 @@ router.get('/dich-vu', async (req, res) => {
   res.render('admin/services', { services });
 });
 
+const SERVICE_PICTURES = ['heroImage', 'heroImageEn', 'cardImage'];
+
 function renderServiceForm(res, { status = 200, service, errors = [] }) {
-  res.status(status).render('admin/service-form', { service, errors, error: errors.length ? errors[0].text : null });
+  res.status(status).render('admin/service-form', { service, errors, error: errors.length ? errors[0].text : null, cardIcons: Service.CARD_ICONS });
 }
 
 router.get('/dich-vu/:id/sua', async (req, res) => {
@@ -352,6 +359,7 @@ router.post('/dich-vu/:id/sua', wrapUpload(uploadServiceMedia, async (req, res) 
   const service = await Service.findById(req.params.id).catch(() => null);
   if (!service) return notFound(req, res, '/admin/dich-vu');
   const files = req.files || {};
+  cleanForm(req.body, SERVICE_FORM);
 
   const { titleVi, titleEn, summaryVi, summaryEn, bodyVi, bodyEn } = req.body;
   const { data: sections, errors } = parseServiceSections(req.body, t);
@@ -359,7 +367,7 @@ router.post('/dich-vu/:id/sua', wrapUpload(uploadServiceMedia, async (req, res) 
   if (req.uploadError) errors.unshift({ tab: 'content', text: uploadErrorText(req, t) });
   if (errors.length) {
     // Nothing is saved, so drop the files that came with this submit
-    [...(files.heroImage || []), ...(files.gallery || [])].forEach((file) => removeLocalUpload(fileUrl(file)));
+    [...SERVICE_PICTURES.flatMap((name) => files[name] || []), ...(files.gallery || [])].forEach((file) => removeLocalUpload(fileUrl(file)));
     return renderServiceForm(res, {
       status: 400,
       service: { ...service.toObject(), titleVi, titleEn, summaryVi, summaryEn, bodyVi, bodyEn, ...sections },
@@ -373,7 +381,14 @@ router.post('/dich-vu/:id/sua', wrapUpload(uploadServiceMedia, async (req, res) 
   service.summaryEn = summaryEn || '';
   service.bodyVi = toPlainText(bodyVi);
   service.bodyEn = toPlainText(bodyEn);
-  if (files.heroImage) service.heroImage = fileUrl(files.heroImage[0]);
+  // Main picture, English main picture, card picture: a new upload replaces the old one, "Xóa ảnh" empties the box
+  // (an old upload is deleted; built-in pictures in /assets stay)
+  SERVICE_PICTURES.forEach((name) => {
+    const next = files[name] ? fileUrl(files[name][0]) : req.body['remove_' + name] === '1' ? null : undefined;
+    if (next === undefined) return;
+    if (service[name] && service[name] !== next) removeLocalUpload(service[name]);
+    service[name] = next;
+  });
 
   const removeGallery = [].concat(req.body.removeGallery || []);
   removeGallery.filter((url) => service.gallery.includes(url)).forEach(removeLocalUpload);
@@ -384,6 +399,8 @@ router.post('/dich-vu/:id/sua', wrapUpload(uploadServiceMedia, async (req, res) 
   service.faqs = sections.faqs;
   service.testimonials = sections.testimonials;
   service.questions = sections.questions.map(({ optionsTextVi, optionsTextEn, ...q }) => q);
+  // Cards and block headings come back only when their fields were posted (else the saved ones stay)
+  ['cards', 'cardsTitleVi', 'cardsTitleEn', 'stepsTitleVi', 'stepsTitleEn'].forEach((k) => { if (k in sections) service[k] = sections[k]; });
   await service.save();
   done(req, res, 'admin.flash.updated', { name: service.titleVi }, '/admin/dich-vu');
 }));

@@ -15,7 +15,7 @@ const { upsertRobotStem } = require('./add-robot-stem');
 const { addStairRobotMedia } = require('./add-stair-robot-media');
 const { resetSolutionPage, SLUGS: SOLUTION_SLUGS } = require('../lib/solution-pages');
 const { migrateBanners } = require('./migrate-banners');
-const { STARTER_QUESTIONS } = require('../lib/service-content');
+const { STARTER_QUESTIONS, DU_HOC_CONTENT } = require('../lib/service-content');
 
 const SOURCE_DIR = path.join(__dirname, '..', 'source-assets');
 const PPTX_PATH = path.join(SOURCE_DIR, 'pptx', 'MTG - giải pháp LAB STEM (1).pptx');
@@ -229,10 +229,8 @@ const SERVICES = [
   {
     slug: 'tu-van-du-hoc',
     titleVi: 'Tư vấn du học', titleEn: 'Study Abroad Consulting',
-    summaryVi: 'Tư vấn lộ trình du học phù hợp với năng lực và mục tiêu của học sinh, sinh viên.',
-    summaryEn: 'Study-abroad pathway consulting tailored to each student\'s ability and goals.',
-    bodyVi: '<p>MTG cung cấp dịch vụ tư vấn du học, đồng hành cùng học sinh và phụ huynh trong việc lựa chọn quốc gia, trường học và lộ trình học tập phù hợp. Nội dung chi tiết về chương trình tư vấn du học đang được cập nhật — vui lòng để lại yêu cầu, đội ngũ MTG sẽ liên hệ tư vấn trực tiếp.</p>',
-    bodyEn: '<p>MTG offers study-abroad consulting, helping students and parents choose the right country, school, and study pathway. Detailed program information is being updated — please leave a request and our team will contact you directly.</p>',
+    // Text, pictures, cards and steps of the STEM study-abroad program (lib/service-content.js)
+    ...DU_HOC_CONTENT,
     order: 0,
   },
   {

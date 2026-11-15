@@ -1,6 +1,6 @@
 // Admin editors: sidebar mirrors the website menu; Giải pháp page editor (round-trip, uploads, validation, reset, display
 // options); Cài đặt chung (banners, home hero, logo) + Thông tin công ty; content forms save plain text.
-import { existsSync, unlinkSync } from 'node:fs';
+import { existsSync, unlinkSync, readFileSync, readdirSync } from 'node:fs';
 import { suite, part, check, db, BASE, ROOT, appRequire, createUser, removeLater, restoreLater, stamp } from './lib/index.mjs';
 
 const { BANNERS } = appRequire('./lib/banners.js');
@@ -880,6 +880,107 @@ await suite(async (b) => {
     } finally {
       await d.collection('services').replaceOne({ _id: service._id }, service);
       for (const [c, f] of [['products', 'nameVi'], ['projects', 'titleVi'], ['articles', 'titleVi']]) await d.collection(c).deleteMany({ [f]: { $regex: '^' + MARK } });
+    }
+  });
+
+  await part(b, 'service editor: content cards, block headings, English and card pictures', async () => {
+    const cookie = `connect.sid=${admin.sid}`;
+    const { DU_HOC_CONTENT } = appRequire('./lib/service-content.js');
+    const A = '/assets/dich-vu/du-hoc/';
+    const PHOTO = `${PUB}/assets/giai-phap/workshop/hoc-sinh-lap-trinh.jpg`;
+    const UPLOADS = `${PUB}/uploads/images`;
+    const service = await d.collection('services').findOne({ slug: 'tu-van-du-hoc' });
+    const id = service._id;
+    const get = () => d.collection('services').findOne({ _id: id });
+    const post = (fields, files = {}) => {
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(fields)) [].concat(v).forEach((x) => fd.append(k, x));
+      for (const [k, p] of Object.entries(files)) fd.append(k, new Blob([readFileSync(p)], { type: 'image/jpeg' }), `zz-${k}.jpg`);
+      return fetch(`${BASE}/admin/dich-vu/${id}/sua`, { method: 'POST', body: fd, redirect: 'manual', headers: { cookie } });
+    };
+    const base = { titleVi: service.titleVi, titleEn: service.titleEn, summaryVi: service.summaryVi, summaryEn: service.summaryEn, bodyVi: 'ZZ nội dung', bodyEn: 'ZZ body' };
+    const heroOf = (html) => { const f = (html.match(/<figure class="service-hero">[\s\S]*?<\/figure>/) || [''])[0];
+      return { media: (f.match(/class="service-hero-media" href="([^"]+)" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"/) || [])[1] || null,
+        img: ((f.match(/<img src="([^"?]+)/) || [])[1]) || null, zoom: (f.match(/class="service-hero-zoom" href="([^"]+)"/) || [])[1] || null }; };
+    const cardsOf = (html) => [...html.matchAll(/<div class="profile-card tone-(\w+)">[\s\S]*?<h3>([^<]*)<\/h3>([\s\S]*?)<\/ul>/g)].map((m) => ({ tone: m[1], title: decode(m[2]), items: [...m[3].matchAll(/<li>([^<]*)<\/li>/g)].map((x) => decode(x[1])) }));
+    const h2s = (html) => [...html.matchAll(/<div class="service-section">\s*<h2>([^<]*)<\/h2>/g)].map((m) => decode(m[1]));
+    // The card inside the Dịch vụ landing grid (the header menu links to the page too, so start at the grid)
+    const cardPic = async (lang = 'vi') => { const g = await pub('/dich-vu', lang); const h = g.slice(g.indexOf('service-cards')); const a = h.slice(h.indexOf('href="/dich-vu/tu-van-du-hoc"')); return ((a.slice(0, a.indexOf('</a>')).match(/<img src="([^"?]+)/) || [])[1]) || null; };
+    const homePic = async () => { const h = await pub('/'); const a = h.slice(h.indexOf('href="/dich-vu?from=home"')); return ((a.slice(0, a.indexOf('</a>')).match(/<img src="([^"?]+)/) || [])[1]) || null; };
+    const uploadCount = () => (existsSync(UPLOADS) ? readdirSync(UPLOADS).length : 0);
+    const made = new Set();
+    try {
+      // Start from the program's own content (the page as the fill script leaves it)
+      await d.collection('services').updateOne({ _id: id }, { $set: { ...DU_HOC_CONTENT } });
+      const form = await (await adminGet(`/admin/dich-vu/${id}/sua`)).text();
+      check('editor: "Thẻ nội dung" tab with a count of 5, and 5 card rows (+ the empty template)',
+        form.includes('id="tab-cards"') && /data-tab-count="cards">5</.test(form) && (form.match(/name="cardTitleVi"/g) || []).length === 6);
+      check('editor: main, English and card picture boxes, each with "Xóa ảnh"', ['heroImage', 'heroImageEn', 'cardImage'].every((n) => form.includes(`name="${n}"`) && form.includes(`name="remove_${n}"`)));
+      check('editor: a heading box for the cards and for the steps', ['cardsTitleVi', 'cardsTitleEn', 'stepsTitleVi', 'stepsTitleEn'].every((n) => form.includes(`name="${n}"`)));
+
+      // Public page, VI and EN: the poster of the page's language, whole, with "Xem ảnh lớn"; cards; step heading
+      let vi = await pub('/dich-vu/tu-van-du-hoc', 'vi'); let en = await pub('/dich-vu/tu-van-du-hoc', 'en');
+      const hv = heroOf(vi); const he = heroOf(en);
+      check('VI page: the Vietnamese poster, a hidden mouse-only link and a "Xem ảnh lớn" link to the full file', hv.img === A + 'poster-vi.jpg' && hv.media === A + 'poster-vi.jpg' && hv.zoom === A + 'poster-vi.jpg' && vi.includes('Xem ảnh lớn'), hv);
+      check('EN page: the English poster, and "View full size"', he.img === A + 'poster-en.jpg' && he.zoom === A + 'poster-en.jpg' && en.includes('View full size'), he);
+      check('the poster is not in the old 16:9 crop', !/card-media[^>]*aspect-ratio:16\/9/.test(vi));
+      check('EN link preview (og:image) is the English poster', /<meta property="og:image" content="[^"]*poster-en\.jpg/.test(en));
+      const cv = cardsOf(vi); const ce = cardsOf(en);
+      check('VI: 5 cards in the poster colours, with their ticked lists', cv.length === 5 && cv.map((c) => c.tone).join() === 'blue,green,orange,violet,teal'
+        && cv[0].title === 'Hồ sơ học thuật' && cv[0].items.length === 4 && cv[4].items.includes('Thư giới thiệu (LOR)'), cv.map((c) => [c.tone, c.title, c.items.length]));
+      check('EN: the same cards in English', ce.length === 5 && ce[0].title === 'Academic profile' && ce[2].items[0] === 'VEX Robotics Competition results', ce.map((c) => c.title));
+      check('headings: cards block, then the journey (VI and EN)', JSON.stringify(h2s(vi)) === JSON.stringify(['Hồ sơ du học STEM gồm những gì?', 'Lộ trình xây dựng hồ sơ du học STEM'])
+        && JSON.stringify(h2s(en)) === JSON.stringify(['What goes into a STEM study-abroad profile?', 'Your STEM journey']), [h2s(vi), h2s(en)]);
+      check('Dịch vụ card and Trang chủ "Dịch vụ" card: the student photo, not the poster', (await cardPic()) === A + 'hoc-sinh-vex.jpg' && (await homePic()) === A + 'hoc-sinh-vex.jpg', [await cardPic(), await homePic()]);
+
+      // Saving from the editor: "- " / "✓ " dropped, an unknown icon becomes a tick, an empty heading falls back
+      let r = await post({ ...base, cardsPosted: '1', cardsTitleVi: 'ZZ Khối thẻ', cardsTitleEn: '', stepsTitleVi: '', stepsTitleEn: '',
+        cardTitleVi: ['ZZ Thẻ một', 'ZZ Thẻ hai'], cardTitleEn: ['ZZ Card one', ''], cardItemsVi: ['- Ý một\n✓ Ý hai', 'Ý ba'], cardItemsEn: ['Point one\nPoint two', ''], cardIcon: ['trophy', 'not-an-icon'],
+        stepTitleVi: 'ZZ bước', stepTitleEn: '', stepTextVi: '', stepTextEn: '' });
+      let s = await get();
+      check('save → back to the list, cards saved clean', r.status === 302 && JSON.stringify(s.cards) === JSON.stringify([
+        { titleVi: 'ZZ Thẻ một', titleEn: 'ZZ Card one', itemsVi: ['Ý một', 'Ý hai'], itemsEn: ['Point one', 'Point two'], icon: 'trophy' },
+        { titleVi: 'ZZ Thẻ hai', titleEn: '', itemsVi: ['Ý ba'], itemsEn: [], icon: 'check-circle' }]) && s.cardsTitleVi === 'ZZ Khối thẻ' && s.stepsTitleVi === '', s.cards);
+      vi = await pub('/dich-vu/tu-van-du-hoc', 'vi'); en = await pub('/dich-vu/tu-van-du-hoc', 'en');
+      check('VI: own block heading, default "Quy trình làm việc" for the steps', JSON.stringify(h2s(vi)) === JSON.stringify(['ZZ Khối thẻ', 'Quy trình làm việc']), h2s(vi));
+      check('EN: an empty English heading, title or list falls back to Vietnamese / the default', JSON.stringify(h2s(en)) === JSON.stringify(['ZZ Khối thẻ', 'How we work'])
+        && JSON.stringify(cardsOf(en).map((c) => [c.title, c.items])) === JSON.stringify([['ZZ Card one', ['Point one', 'Point two']], ['ZZ Thẻ hai', ['Ý ba']]]), cardsOf(en));
+
+      // A save from a form without the new fields (an older page) keeps the cards and headings
+      r = await post({ ...base });
+      s = await get();
+      check('a save without the cards panel keeps the cards and headings', r.status === 302 && s.cards.length === 2 && s.cardsTitleVi === 'ZZ Khối thẻ', { status: r.status, n: s.cards.length });
+
+      // A card without a title: nothing saved, the picture sent with it isn't kept
+      const before = uploadCount();
+      r = await post({ ...base, cardsPosted: '1', cardTitleVi: '', cardTitleEn: '', cardItemsVi: 'Ý không tiêu đề', cardItemsEn: '', cardIcon: 'cpu' }, { heroImageEn: PHOTO });
+      const errHtml = await r.text();
+      s = await get();
+      await sleep(300);
+      check('a card without a title → 400 with the reason, nothing saved, the upload removed', r.status === 400 && errHtml.includes('thẻ 1: cần có tiêu đề') && s.cards.length === 2 && s.heroImageEn === DU_HOC_CONTENT.heroImageEn && uploadCount() === before, { status: r.status, n: s.cards.length, en: s.heroImageEn });
+
+      // Uploading the English and card pictures, then replacing and removing them
+      r = await post({ ...base }, { heroImageEn: PHOTO, cardImage: PHOTO });
+      s = await get(); [s.heroImageEn, s.cardImage].forEach((u) => u && made.add(u));
+      check('upload: English and card pictures saved as new files', r.status === 302 && /^\/uploads\/images\//.test(s.heroImageEn) && /^\/uploads\/images\//.test(s.cardImage) && existsSync(PUB + s.heroImageEn) && existsSync(PUB + s.cardImage), [s.heroImageEn, s.cardImage]);
+      check('… the English page shows its picture, the Vietnamese one keeps the poster, the Dịch vụ card the card picture',
+        heroOf(await pub('/dich-vu/tu-van-du-hoc', 'en')).img === s.heroImageEn && heroOf(await pub('/dich-vu/tu-van-du-hoc', 'vi')).img === A + 'poster-vi.jpg' && (await cardPic()) === s.cardImage);
+      const firstEn = s.heroImageEn;
+      r = await post({ ...base }, { heroImageEn: PHOTO });
+      s = await get(); made.add(s.heroImageEn);
+      await sleep(300);
+      check('a new English picture replaces the old upload (old file deleted)', s.heroImageEn !== firstEn && existsSync(PUB + s.heroImageEn) && !existsSync(PUB + firstEn), [firstEn, s.heroImageEn]);
+      const [enFile, cardFile] = [s.heroImageEn, s.cardImage];
+      r = await post({ ...base, remove_heroImageEn: '1', remove_cardImage: '1' });
+      s = await get();
+      await sleep(300);
+      check('"Xóa ảnh": both boxes empty, their files deleted', r.status === 302 && s.heroImageEn === null && s.cardImage === null && !existsSync(PUB + enFile) && !existsSync(PUB + cardFile), [s.heroImageEn, s.cardImage]);
+      check('… English page and Dịch vụ card fall back to the main picture', heroOf(await pub('/dich-vu/tu-van-du-hoc', 'en')).img === A + 'poster-vi.jpg' && (await cardPic()) === A + 'poster-vi.jpg');
+      r = await post({ ...base, remove_heroImage: '1' });
+      check('"Xóa ảnh" on a built-in main picture empties the box but keeps the file in /assets', (await get()).heroImage === null && existsSync(PUB + A + 'poster-vi.jpg') && !(await pub('/dich-vu/tu-van-du-hoc')).includes('service-hero'));
+    } finally {
+      await d.collection('services').replaceOne({ _id: id }, service);
+      for (const u of made) { try { if (u && u.startsWith('/uploads/') && existsSync(PUB + u)) unlinkSync(PUB + u); } catch { /* already gone */ } }
     }
   });
 

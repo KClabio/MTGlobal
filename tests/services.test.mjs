@@ -513,14 +513,18 @@ await suite(async (b) => {
     const { nav, shot } = b;
     await nav('/dich-vu', 200);
     const svc = await ev(`({ cards: [...document.querySelectorAll('.service-cards .card')].map((c) => ({ href: c.getAttribute('href'), art: !!c.querySelector('.card-media.is-art svg'), img: !!c.querySelector('.card-media img'), title: c.querySelector('h3').textContent })), band: !!document.querySelector('.cta-band .cta-band-btn[href="/lien-he"]'), banner: (document.querySelector('.page-banner p, .page-hero p') || {}).textContent })`);
-    check('/dich-vu: a card per service (study abroad with colour art) and the consultation band', svc.cards.length === 2 && svc.cards.some((c) => c.href === '/dich-vu/tu-van-du-hoc' && c.art) && svc.cards.some((c) => c.href === '/dich-vu/phan-phoi-san-pham' && c.img) && svc.band, svc);
+    // Study abroad shows its card picture (or main picture) once it has one, else colour art; distribution its built-in picture
+    const studyAbroad = await (await db()).collection('services').findOne({ slug: 'tu-van-du-hoc' });
+    const hasPicture = !!(studyAbroad && (studyAbroad.cardImage || studyAbroad.heroImage));
+    check('/dich-vu: a card per service (study abroad: picture or colour art, as saved) and the consultation band', svc.cards.length === 2
+      && svc.cards.some((c) => c.href === '/dich-vu/tu-van-du-hoc' && (hasPicture ? c.img && !c.art : c.art)) && svc.cards.some((c) => c.href === '/dich-vu/phan-phoi-san-pham' && c.img) && svc.band, { hasPicture, svc });
     await shot('dich-vu-1280', true);
     await b.setCookie('theme', 'dark'); await nav('/dich-vu', 200); await shot('dich-vu-dark'); await b.setCookie('theme', 'light');
     await nav('/', 300);
     const dom = await ev(`[...document.querySelectorAll('.domain-item:not([data-domain-clone]) .domain-card')].map((a) => a.getAttribute('href'))`);
     check('home "Lĩnh vực hoạt động": 7 cards, one "Dịch vụ" card for both services', dom.length === 7 && dom.includes('/dich-vu?from=home') && !dom.some((h) => h.startsWith('/dich-vu/')), dom);
-    const svcCard = await ev(`(() => { const a = document.querySelector('.domain-item:not([data-domain-clone]) .domain-card[href="/dich-vu?from=home"]'); return { title: a.querySelector('h3').textContent, text: (a.querySelector('p') || {}).textContent, art: !!a.querySelector('.domain-media.is-art') }; })()`);
-    check('the "Dịch vụ" card has its title, line and art', svcCard.title === 'Dịch vụ' && svcCard.text && svcCard.text.length > 10 && svcCard.art, svcCard);
+    const svcCard = await ev(`(() => { const a = document.querySelector('.domain-item:not([data-domain-clone]) .domain-card[href="/dich-vu?from=home"]'); return { title: a.querySelector('h3').textContent, text: (a.querySelector('p') || {}).textContent, art: !!a.querySelector('.domain-media.is-art'), img: !!a.querySelector('.domain-media img') }; })()`);
+    check('the "Dịch vụ" card has its title, line and a service picture (else art)', svcCard.title === 'Dịch vụ' && svcCard.text && svcCard.text.length > 10 && (hasPicture ? svcCard.img && !svcCard.art : svcCard.art), { hasPicture, svcCard });
     await nav('/dich-vu?from=home', 200);
     check('opened from the home card, /dich-vu offers the way back to the slider', await ev(`!!document.querySelector('a[href="/#linh-vuc"]')`));
   });

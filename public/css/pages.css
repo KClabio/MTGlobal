@@ -294,6 +294,30 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 .testimonial-card blockquote p { margin: 0 0 .6em; }
 .testimonial-card figcaption { display: flex; flex-direction: column; font-size: .88rem; }
 .testimonial-card figcaption span { color: var(--mtg-muted); }
+/* The main picture, whole (often a poster with text): a 3:2 frame keeps its place while it loads, the picture fits
+   inside uncropped; "Xem ảnh lớn" opens the full-size file */
+.service-hero { margin: 0 0 24px; }
+.service-hero-media { display: block; aspect-ratio: 3 / 2; border-radius: var(--mtg-radius); overflow: hidden; background: var(--mtg-bg-alt); box-shadow: var(--mtg-shadow); }
+.service-hero-media img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.service-hero figcaption { margin-top: 8px; text-align: right; font-size: .9rem; }
+.service-hero-zoom { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.service-hero-zoom:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; border-radius: 4px; }
+/* "Thẻ nội dung": coloured cards, each a title with a ticked list; colours follow the order (blue, green, orange, violet, teal) */
+.profile-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.profile-card { --tone-tint: var(--mtg-info-tint); --tone-ink: var(--mtg-info-ink);
+  display: flex; flex-direction: column; gap: 12px; padding: 18px 20px 20px; background: var(--mtg-surface);
+  border: 1px solid var(--mtg-border); border-top: 4px solid var(--tone-ink); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow); }
+.profile-card:last-child:nth-child(odd) { grid-column: 1 / -1; } /* a lone last card takes the whole row */
+.profile-card.tone-green { --tone-tint: var(--mtg-green-tint); --tone-ink: var(--mtg-green-ink); }
+.profile-card.tone-orange { --tone-tint: var(--mtg-orange-tint); --tone-ink: var(--mtg-orange-ink); }
+.profile-card.tone-violet { --tone-tint: var(--mtg-violet-tint); --tone-ink: var(--mtg-violet-ink); }
+.profile-card.tone-teal { --tone-tint: var(--mtg-teal-tint); --tone-ink: var(--mtg-teal-ink); }
+.profile-card-head { display: flex; align-items: center; gap: 12px; }
+.profile-card-head h3 { margin: 0; font-size: 1.08rem; line-height: 1.3; }
+.profile-card-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%; background: var(--tone-tint); color: var(--tone-ink); }
+.profile-card-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.profile-card-list li { position: relative; padding-left: 26px; font-size: .94rem; color: var(--mtg-ink); }
+.profile-card-list li::before { content: '✓'; position: absolute; left: 0; top: .15em; width: 18px; height: 18px; border-radius: 50%; background: var(--tone-tint); color: var(--tone-ink); font-size: .72rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 
 /* ---- Hỗ trợ (/ho-tro): topic tiles, groups of questions (the .faq-item folds above), "Vẫn cần hỗ trợ?" band ---- */
 .help-page .container { max-width: 960px; }
@@ -353,6 +377,9 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
   .help-topic:last-child:nth-child(odd) { grid-column: 1 / -1; } /* a lone last tile takes the whole row */
   .help-topic-icon { width: 36px; height: 36px; }
   .help-group-title { font-size: 1.1rem; }
+  /* Service cards: one column */
+  .profile-cards { grid-template-columns: 1fr; gap: 12px; }
+  .profile-card { padding: 16px; }
 }
 
 /* ---- Printing: the whole page, nothing to click. Every photo tab and equipment part is shown (main.js opens the folds
@@ -365,4 +392,7 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
   .media-tabpanel .media-frame { max-height: none; }
   .equip-panel[hidden] { display: block !important; }
   .js .process-trail .trail-node, .js .process-trail .trail-body, .js .process-trail .trail-step .trail-body::before { opacity: 1 !important; transform: none !important; }
+  .service-hero figcaption { display: none; }
+  .service-hero-media { box-shadow: none; }
+  .profile-card { break-inside: avoid; box-shadow: none; }
 }

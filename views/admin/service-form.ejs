@@ -5,6 +5,7 @@
   const errorTabs = errorList.map((e) => e.tab);
   const TABS = [
     { key: 'content', label: L('tabContent') },
+    { key: 'cards', label: L('tabCards'), count: (service.cards || []).length },
     { key: 'steps', label: L('tabSteps'), count: (service.steps || []).length },
     { key: 'packages', label: L('tabPackages'), count: (service.packages || []).length },
     { key: 'faqs', label: L('tabFaqs'), count: (service.faqs || []).length },
@@ -70,21 +71,52 @@
           <textarea class="form-control" name="bodyEn" rows="10"><%= service.bodyEn || '' %></textarea>
           <%- include('partials/plain-text-hint') %>
         </div>
-        <div class="form-group">
-          <label><%= L('heroImage') %></label>
-          <% if (service.heroImage) { %><div class="media-thumb" style="margin-bottom:10px;"><img src="<%= service.heroImage %>" alt=""></div><% } %>
-          <input class="form-control" type="file" name="heroImage" accept="image/*">
+        <%# Three pictures: the page's main picture, its English version, and the picture on the Dịch vụ / Trang chủ cards %>
+        <% ['heroImage', 'heroImageEn', 'cardImage'].forEach(function (name) { %>
+          <div class="form-group" data-service-picture="<%= name %>">
+            <label for="pic-<%= name %>"><%= L(name) %></label>
+            <p class="form-hint"><%= L(name + 'Hint') %></p>
+            <% if (service[name]) { %>
+              <div class="media-thumb" style="margin-bottom:10px;">
+                <img src="<%= service[name] %>" alt="">
+                <label><input type="checkbox" name="remove_<%= name %>" value="1"> <%= L('removePicture') %></label>
+              </div>
+            <% } %>
+            <input class="form-control" type="file" id="pic-<%= name %>" name="<%= name %>" accept="image/*">
+          </div>
+        <% }) %>
+      </section>
+
+      <%# ---- "Thẻ nội dung": a heading and coloured cards, each a title with a ticked list ---- %>
+      <section class="admin-tab-panel" role="tabpanel" id="panel-cards" data-panel="cards" aria-labelledby="tab-cards">
+        <p class="admin-hint"><%- include('partials/icon', { name: 'bell', size: 16 }) %><span><%= L('hintCards') %></span></p>
+        <input type="hidden" name="cardsPosted" value="1">
+        <div class="form-row">
+          <div class="form-group"><label for="cardsTitleVi"><%= L('blockTitleVi') %></label><input class="form-control" id="cardsTitleVi" name="cardsTitleVi" value="<%= service.cardsTitleVi || '' %>" placeholder="<%= t('services.cardsTitle') %>"></div>
+          <div class="form-group"><label for="cardsTitleEn"><%= L('blockTitleEn') %></label><input class="form-control" id="cardsTitleEn" name="cardsTitleEn" value="<%= service.cardsTitleEn || '' %>"></div>
         </div>
+        <div class="row-list" id="cardRows" data-row-list="cards">
+          <% (service.cards || []).forEach(function (item) { %><%- include('partials/service-row', { kind: 'card', item: item }) %><% }) %>
+        </div>
+        <template id="tpl-card"><%- include('partials/service-row', { kind: 'card', item: {} }) %></template>
+        <button type="button" class="btn btn-ghost btn-sm" data-add-row="tpl-card" data-target="cardRows">+ <%= L('addCard') %></button>
       </section>
 
       <%# ---- Repeatable sections ---- %>
       <% [
-        { tab: 'steps', hint: 'hintSteps', list: rowList('step', service.steps, 'stepRows'), add: 'addStep' },
+        { tab: 'steps', hint: 'hintSteps', list: rowList('step', service.steps, 'stepRows'), add: 'addStep', heading: 'stepsTitle', headingDefault: t('services.stepsTitle') },
         { tab: 'packages', hint: 'hintPackages', list: rowList('package', service.packages, 'packageRows'), add: 'addPackage' },
         { tab: 'faqs', hint: 'hintFaqs', list: rowList('faq', service.faqs, 'faqRows'), add: 'addFaq' },
       ].forEach(function (panel) { %>
         <section class="admin-tab-panel" role="tabpanel" id="panel-<%= panel.tab %>" data-panel="<%= panel.tab %>" aria-labelledby="tab-<%= panel.tab %>">
           <p class="admin-hint"><%- include('partials/icon', { name: 'bell', size: 16 }) %><span><%= L(panel.hint) %></span></p>
+          <% if (panel.heading) { %>
+            <div class="form-row">
+              <div class="form-group"><label for="<%= panel.heading %>Vi"><%= L('blockTitleVi') %></label><input class="form-control" id="<%= panel.heading %>Vi" name="<%= panel.heading %>Vi" value="<%= service[panel.heading + 'Vi'] || '' %>" placeholder="<%= panel.headingDefault %>"></div>
+              <div class="form-group"><label for="<%= panel.heading %>En"><%= L('blockTitleEn') %></label><input class="form-control" id="<%= panel.heading %>En" name="<%= panel.heading %>En" value="<%= service[panel.heading + 'En'] || '' %>"></div>
+            </div>
+            <p class="form-hint" style="margin-top:-10px;"><%= L('blockTitleHint', { name: panel.headingDefault }) %></p>
+          <% } %>
           <div class="row-list" id="<%= panel.list.id %>" data-row-list="<%= panel.tab %>">
             <% panel.list.items.forEach(function (item) { %><%- include('partials/service-row', { kind: panel.list.kind, item: item }) %><% }) %>
           </div>

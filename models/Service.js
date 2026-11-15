@@ -25,6 +25,16 @@ const faqSchema = new mongoose.Schema({
   answerEn: { type: String, default: '' },
 }, { _id: false });
 
+// "Thẻ nội dung": a block of coloured cards, each a title with a ticked list (e.g. the parts of a study-abroad profile)
+const CARD_ICONS = ['graduation-cap', 'cpu', 'trophy', 'users', 'file-text', 'globe', 'wrench', 'bot', 'check-circle'];
+const cardSchema = new mongoose.Schema({
+  titleVi: { type: String, default: '', trim: true },
+  titleEn: { type: String, default: '', trim: true },
+  itemsVi: [{ type: String }], // one item per line in the editor
+  itemsEn: [{ type: String }],
+  icon: { type: String, enum: CARD_ICONS, default: 'check-circle' },
+}, { _id: false });
+
 const testimonialSchema = new mongoose.Schema({
   quoteVi: { type: String, default: '' },
   quoteEn: { type: String, default: '' },
@@ -52,6 +62,13 @@ const serviceSchema = new mongoose.Schema({
   bodyVi: { type: String, default: '' },
   bodyEn: { type: String, default: '' },
   heroImage: { type: String, default: null },
+  heroImageEn: { type: String, default: null }, // the English page's main picture (a poster with English text); else heroImage
+  cardImage: { type: String, default: null }, // the picture on the Dịch vụ and Trang chủ cards; else heroImage
+  cardsTitleVi: { type: String, default: '', trim: true },
+  cardsTitleEn: { type: String, default: '', trim: true },
+  cards: [cardSchema],
+  stepsTitleVi: { type: String, default: '', trim: true }, // replaces "Quy trình làm việc" when filled in
+  stepsTitleEn: { type: String, default: '', trim: true },
   steps: [stepSchema],
   packages: [packageSchema],
   faqs: [faqSchema],
@@ -65,3 +82,4 @@ const serviceSchema = new mongoose.Schema({
 
 module.exports = mongoose.model('Service', serviceSchema);
 module.exports.QUESTION_TYPES = QUESTION_TYPES;
+module.exports.CARD_ICONS = CARD_ICONS;

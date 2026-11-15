@@ -6,6 +6,21 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
+## [Unreleased]
+
+### Added
+- **The Tư vấn du học page now presents the STEM study-abroad program run with KC Education.** At the top is the program's poster, Vietnamese on the Vietnamese page and English on the English page, shown whole; "Xem ảnh lớn" opens it full size. Below it: an introduction with "Vì sao nên chọn chương trình này?", five coloured cards under "Hồ sơ du học STEM gồm những gì?" (Hồ sơ học thuật, Năng lực STEM, Thành tích nổi bật, Hoạt động ngoại khóa, Hồ sơ ứng tuyển), and the five steps of "Lộ trình xây dựng hồ sơ du học STEM". The page's text says everything the poster says, so it reads well on a phone and can be found by Google. The service's card on Dịch vụ and the "Dịch vụ" card on Trang chủ now show a photo of students building a VEX robot instead of the coloured placeholder.
+
+  ![Tư vấn du học: the poster, the introduction and the five profile cards](docs/screenshots/1.9.0/du-hoc-page.jpg)
+  ![The English page on a phone, dark theme: the English poster and "View full size"](docs/screenshots/1.9.0/du-hoc-phone-en-dark.jpg)
+  ![Dịch vụ: the study-abroad card with its new photo](docs/screenshots/1.9.0/dich-vu-cards.jpg)
+- **Admin → Dịch vụ: a "Thẻ nội dung" tab, and two more pictures.** Each service can have coloured cards, each a title, a list (one point per line) and an icon, under a heading of its own; they show under the main text. Next to "Ảnh đại diện" there are now "Ảnh đại diện cho trang tiếng Anh" (for a picture with English text) and "Ảnh thẻ" (the picture on the Dịch vụ and Trang chủ cards), and each picture has "Xóa ảnh". The Quy trình tab has a box for its heading ("Quy trình làm việc" when empty).
+
+### Changed
+- **A service's main picture is shown whole** in a 3:2 frame instead of being cut to 16:9, so posters keep their text.
+
+---
+
 ## [1.8.0] - 2026-11-13
 
 ### Changed
