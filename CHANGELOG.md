@@ -6,7 +6,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.9.0] - 2026-11-15
 
 ### Added
 - **The Tư vấn du học page now presents the STEM study-abroad program run with KC Education.** At the top is the program's poster, Vietnamese on the Vietnamese page and English on the English page, shown whole; "Xem ảnh lớn" opens it full size. Below it: an introduction with "Vì sao nên chọn chương trình này?", five coloured cards under "Hồ sơ du học STEM gồm những gì?" (Hồ sơ học thuật, Năng lực STEM, Thành tích nổi bật, Hoạt động ngoại khóa, Hồ sơ ứng tuyển), and the five steps of "Lộ trình xây dựng hồ sơ du học STEM". The page's text says everything the poster says, so it reads well on a phone and can be found by Google. The service's card on Dịch vụ and the "Dịch vụ" card on Trang chủ now show a photo of students building a VEX robot instead of the coloured placeholder.
@@ -21,7 +21,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [1.8.0] - 2026-11-13
+## [1.8.0] - 2026-11-13 · `fd1682d`
 
 ### Changed
 - **The chat button's second choice is now the company's Facebook page instead of a Messenger chat.** "Nhắn qua Messenger" became "Trang Facebook" (in English "Facebook page"), with the Facebook logo: it opens the page on facebook.com in a new tab. The same change is in the footer, on Liên hệ and in the company card for Google. In Admin → Thông tin công ty the box is now called "Trang Facebook": paste the page's name or its address as copied from the browser (the "?locale=…" part at the end is dropped). The real Zalo number (0333601279) and Facebook page (MTGlobal.vn) replace the sample ones.
