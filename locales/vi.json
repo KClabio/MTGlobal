@@ -459,7 +459,7 @@
       "bodyVi": "Nội dung chi tiết (Tiếng Việt)",
       "bodyEn": "Nội dung chi tiết (Tiếng Anh)",
       "heroImage": "Ảnh đại diện",
-      "heroImageHint": "Ảnh lớn ở đầu trang, hiện nguyên vẹn (không bị cắt), bấm vào để xem khổ lớn. Ảnh khổ ngang 3:2 vừa khung nhất.",
+      "heroImageHint": "Ảnh lớn ở đầu trang, hiện nguyên vẹn (không bị cắt). Ảnh khổ ngang 3:2 vừa khung nhất.",
       "heroImageEn": "Ảnh đại diện cho trang tiếng Anh",
       "heroImageEnHint": "Dùng khi ảnh có chữ (vd: áp phích tiếng Anh). Để trống: trang tiếng Anh dùng ảnh đại diện ở trên.",
       "cardImage": "Ảnh thẻ (trang Dịch vụ và Trang chủ)",
@@ -1012,8 +1012,7 @@
     "galleryTitle": "Hình ảnh",
     "testimonialsTitle": "Khách hàng nói gì",
     "packageField": "Gói quan tâm",
-    "cardsTitle": "Điểm nổi bật",
-    "viewFull": "Xem ảnh lớn"
+    "cardsTitle": "Điểm nổi bật"
   },
   "projectLevels": {
     "thcs": "THCS",

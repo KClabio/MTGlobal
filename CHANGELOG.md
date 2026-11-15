@@ -6,6 +6,17 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **The steps on the Dịch vụ pages now run down a trail, like the steps on the Giải pháp pages.** On Tư vấn du học, "Lộ trình xây dựng hồ sơ du học STEM" shows its five steps as numbered round stops on one coloured line going down the page, with arrows between them. When the steps scroll into view, the line fills from the first stop to the last, and each step lights up as the line reaches it. The pointer highlights a step. On phones it looks the same, and when printed every step shows.
+
+  ![Tư vấn du học: the five steps on a trail going down](docs/screenshots/1.10.0/du-hoc-trail.jpg)
+  ![The same trail on a phone, in English, dark theme](docs/screenshots/1.10.0/du-hoc-trail-phone-dark.jpg)
+- **The Tư vấn du học poster no longer opens larger.** "Xem ảnh lớn" (in English "View full size") is gone and clicking the picture does nothing: the poster is shown whole and big enough to read on the page.
+
+---
+
 ## [1.9.0] - 2026-11-15
 
 ### Added

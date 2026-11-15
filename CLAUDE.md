@@ -28,9 +28,9 @@ The company website of Công ty TNHH Công nghệ Mễ Trì Global, in Vietnames
 | `theme.css` | colour and size tokens (light + dark) |
 | `base.css` | reset, `.container`, buttons, `.sr-only`, the `--anim` speed token |
 | `layout.css` | header and menus, page banner, sections, footer, theme switch, phone menu drawer |
-| `components.css` | card grids, partner tiles + partner page, timeline, forms + password eye, galleries, prose text, profile, tables/tags, key-fact tiles, coming soon |
+| `components.css` | card grids, partner tiles + partner page, forms + password eye, galleries, prose text, profile, tables/tags, key-fact tiles, coming soon |
 | `home.css` | home hero, pillar cards, "Lĩnh vực hoạt động" slider |
-| `pages.css` | Giải pháp pages (jump menu, folds, tabs, process trail, "Khám phá thêm", CTA band), Dịch vụ, STEM equipment, projects/news search, Hỗ trợ page |
+| `pages.css` | Giải pháp pages (jump menu, folds, tabs, process trail (`.is-vertical`: always running down, Dịch vụ steps), "Khám phá thêm", CTA band), Dịch vụ (poster, "Thẻ nội dung" cards), STEM equipment, projects/news search, Hỗ trợ page |
 | `admin.css` | the whole admin area, dashboard charts included (loaded by `views/admin/partials/head.ejs` only) |
 
 Each file ends with its own `@media` rules. Grep for a selector first, then read only that part of the file.

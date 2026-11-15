@@ -10,14 +10,14 @@
 .solution-block.is-sub { margin-top: 40px; }
 .solution-subtitle { margin: 0 0 8px; font-size: 1.15rem; color: var(--mtg-heading); }
 .solution-subtext { margin: 0 0 16px; color: var(--mtg-muted); }
-.solution-block.is-sub .solution-subtitle + .media-grid, .solution-block.is-sub .solution-subtitle + .card-grid, .solution-block.is-sub .solution-subtitle + .timeline { margin-top: 16px; }
+.solution-block.is-sub .solution-subtitle + .media-grid, .solution-block.is-sub .solution-subtitle + .card-grid { margin-top: 16px; }
 .section-text { line-height: 1.75; color: var(--mtg-ink); }
 .section-text p { margin: 0 0 1em; }
 .section-text ul, .card-text ul { margin: 0 0 1em; padding-left: 1.3em; }
 .section-text li, .card-text li { margin-bottom: .4em; }
 .section-text li::marker, .card-text li::marker { color: var(--mtg-blue); }
 .section-text > :last-child, .card-text > :last-child { margin-bottom: 0; }
-.section-text + .card-grid, .section-text + .timeline, .section-text + .media-grid { margin-top: 24px; }
+.section-text + .card-grid, .section-text + .media-grid { margin-top: 24px; }
 .card-text p { margin: 0 0 .6em; }
 
 /* ---- Closing section of the Giải pháp pages: "Khám phá thêm" link cards + consultation band (partials/next-steps.ejs) ---- */
@@ -260,13 +260,26 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
   .trail-node { margin: 0; font-size: 1.05rem; }
   .trail-body { padding-top: 10px; }
 }
+/* A trail that always runs down (Dịch vụ pages: steps in the page's narrow left column): the phone layout above at
+   every width, with the larger stops of wide screens */
+.process-trail.is-vertical { --gap: 26px; grid-template-columns: 1fr; gap: var(--gap) 0; }
+.process-trail.is-vertical .trail-step { display: grid; grid-template-columns: var(--node) minmax(0, 1fr); gap: 16px; align-items: start; text-align: left; }
+.process-trail.is-vertical .trail-step:not(:last-child)::before, .process-trail.is-vertical .trail-step:not(:last-child)::after {
+  top: calc(var(--node) / 2); left: calc(var(--node) / 2 - var(--line) / 2); width: var(--line); height: calc(100% + var(--gap));
+}
+.process-trail.is-vertical .trail-step:not(:last-child)::after { background: linear-gradient(180deg, var(--mtg-blue), var(--mtg-green)); transform-origin: 50% 0; }
+.process-trail.is-vertical .trail-step:nth-child(n + 3):not(:last-child)::after { background: linear-gradient(180deg, var(--mtg-green), var(--mtg-orange)); }
+.process-trail.is-vertical .trail-step:not(:last-child) .trail-body::before { top: calc(50% + (var(--gap) + var(--node)) / 2 - 5px); left: calc(var(--node) / 2 - 4px); transform: rotate(135deg); }
+.js .process-trail.is-vertical .trail-step:not(:last-child)::after { transform: scaleY(0); }
+.js .process-trail.is-vertical.is-drawn .trail-step:not(:last-child)::after { transform: none; }
+.process-trail.is-vertical .trail-node { margin: 0; }
+.process-trail.is-vertical .trail-body { padding-top: 12px; }
+.process-trail.is-vertical .trail-body .card-text p { margin: 0; }
 
 /* ---- Service pages: extra sections (each shown only once it has content) ---- */
 .service-aside { position: sticky; top: 100px; }
 .service-section { margin-top: 48px; }
 .service-section > h2 { font-size: 1.4rem; margin: 0 0 18px; }
-.service-section .timeline-item h3 { margin: 6px 0 4px; }
-.service-section .timeline-item .prose-text { margin-bottom: 0; }
 .package-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 .package-card { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 24px 22px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); box-shadow: var(--mtg-shadow); }
 .package-card.is-highlighted { border: 2px solid var(--mtg-blue); box-shadow: var(--mtg-shadow-lg); }
@@ -295,13 +308,10 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
 .testimonial-card figcaption { display: flex; flex-direction: column; font-size: .88rem; }
 .testimonial-card figcaption span { color: var(--mtg-muted); }
 /* The main picture, whole (often a poster with text): a 3:2 frame keeps its place while it loads, the picture fits
-   inside uncropped; "Xem ảnh lớn" opens the full-size file */
+   inside uncropped */
 .service-hero { margin: 0 0 24px; }
 .service-hero-media { display: block; aspect-ratio: 3 / 2; border-radius: var(--mtg-radius); overflow: hidden; background: var(--mtg-bg-alt); box-shadow: var(--mtg-shadow); }
 .service-hero-media img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.service-hero figcaption { margin-top: 8px; text-align: right; font-size: .9rem; }
-.service-hero-zoom { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
-.service-hero-zoom:focus-visible { outline: 2px solid var(--mtg-blue); outline-offset: 2px; border-radius: 4px; }
 /* "Thẻ nội dung": coloured cards, each a title with a ticked list; colours follow the order (blue, green, orange, violet, teal) */
 .profile-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .profile-card { --tone-tint: var(--mtg-info-tint); --tone-ink: var(--mtg-info-ink);
@@ -392,7 +402,6 @@ html:not(.js) button.media-tabpanel-full { display: none; } /* without JS its <n
   .media-tabpanel .media-frame { max-height: none; }
   .equip-panel[hidden] { display: block !important; }
   .js .process-trail .trail-node, .js .process-trail .trail-body, .js .process-trail .trail-step .trail-body::before { opacity: 1 !important; transform: none !important; }
-  .service-hero figcaption { display: none; }
   .service-hero-media { box-shadow: none; }
   .profile-card { break-inside: avoid; box-shadow: none; }
 }

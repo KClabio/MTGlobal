@@ -1636,7 +1636,7 @@ document.addEventListener('contextmenu', function (e) {
 // Both languages have the same blocks in the same order; if the count differs, fall back to the same scroll fraction.
 (function () {
   var KEY = 'mtgLangScroll';
-  var SELECTOR = 'section, h1, h2, h3, p, li, .card, figure, .stat-card, .trail-step, .timeline-item';
+  var SELECTOR = 'section, h1, h2, h3, p, li, .card, figure, .stat-card, .trail-step';
   function blocks() {
     var main = document.querySelector('main');
     // Not the jump menu (it is fixed to the top of the window, so it says nothing about the reading position)

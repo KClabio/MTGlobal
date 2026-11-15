@@ -57,5 +57,21 @@ await suite(async (b) => {
     await ev(`window.dispatchEvent(new Event('afterprint'))`);
     await b.printMedia(false);
     check('… after printing, the folds close again', await ev(`document.querySelectorAll('details.solution-fold:not([open])').length`) === closed);
+
+    // A Dịch vụ page: the steps' trail (running down) prints in full without scrolling to it, with the poster
+    const svc = await d.collection('services').findOne({ 'steps.1': { $exists: true }, heroImage: { $nin: [null, ''] } });
+    check('a Dịch vụ page with steps and a poster exists (Tư vấn du học)', !!svc);
+    if (svc) {
+      await nav(`/dich-vu/${svc.slug}`, 300);
+      await b.printMedia(true);
+      const s = await ev(`({
+        trail: document.querySelectorAll('.process-trail.is-vertical .trail-body').length,
+        faint: [...document.querySelectorAll('.process-trail .trail-node, .process-trail .trail-body')].filter((e) => getComputedStyle(e).opacity !== '1').length,
+        poster: ${seen('.service-hero img')}, zoom: ${seen('.service-hero a, .service-hero figcaption')},
+      })`);
+      check(`/dich-vu/${svc.slug}: every step of the trail prints, with the poster and no enlarge link`, s.trail === svc.steps.length && s.faint === 0 && s.poster && !s.zoom, s);
+      await shot('print-dich-vu', true);
+      await b.printMedia(false);
+    }
   });
 });

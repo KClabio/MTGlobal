@@ -28,13 +28,11 @@
   <div class="container admin-form-grid service-layout">
     <div>
       <% if (heroPicture) { %>
-        <%# Shown whole (often a poster with text), with a link to the full-size file. Its content is also the page's text,
-            so the picture itself is a mouse shortcut only: the "Xem ảnh lớn" link is the one keyboards and screen readers get. %>
+        <%# Shown whole (often a poster with text), large enough to read, so it doesn't open larger %>
         <figure class="service-hero">
-          <a class="service-hero-media" href="<%= heroPicture %>" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
-            <%- picture(heroPicture, '', { sizes: '(max-width: 900px) 100vw, 680px', eager: true, width: 1200 }) %>
-          </a>
-          <figcaption><a class="service-hero-zoom" href="<%= heroPicture %>" target="_blank" rel="noopener"><%= t('services.viewFull') %> <%- include('admin/partials/icon', { name: 'external-link', size: 14 }) %></a></figcaption>
+          <div class="service-hero-media">
+            <%- picture(heroPicture, pick(service, 'title'), { sizes: '(max-width: 900px) 100vw, 680px', eager: true, width: 1200 }) %>
+          </div>
         </figure>
       <% } %>
       <div class="prose-text prose-text-start"><%- formatText(pick(service, 'body')) %></div>
@@ -63,17 +61,19 @@
       <% if (steps.length) { %>
         <div class="service-section">
           <h2><%= pick(service, 'stepsTitle') || t('services.stepsTitle') %></h2>
-          <div class="timeline">
+          <%# The Giải pháp process trail, always running down: numbered stops on one line with arrows; main.js fills the
+              line from stop to stop when it scrolls into view %>
+          <ol class="process-trail is-vertical" style="--steps:<%= steps.length %>;">
             <% steps.forEach(function (s, i) { %>
-              <div class="timeline-item">
-                <div class="timeline-num"><%= i + 1 %></div>
-                <div>
+              <li class="trail-step" style="--i:<%= i %>;">
+                <span class="trail-node" aria-hidden="true"><%= i + 1 %></span>
+                <div class="trail-body">
                   <h3><%= pick(s, 'title') %></h3>
-                  <% if (pick(s, 'text')) { %><div class="prose-text prose-text-start"><%- formatText(pick(s, 'text')) %></div><% } %>
+                  <% if (pick(s, 'text')) { %><div class="card-text"><%- formatText(pick(s, 'text')) %></div><% } %>
                 </div>
-              </div>
+              </li>
             <% }) %>
-          </div>
+          </ol>
         </div>
       <% } %>
 

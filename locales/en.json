@@ -459,7 +459,7 @@
       "bodyVi": "Full content (Vietnamese)",
       "bodyEn": "Full content (English)",
       "heroImage": "Cover image",
-      "heroImageHint": "The large picture at the top of the page, shown whole (never cropped); clicking it opens the full size. A 3:2 landscape picture fits the frame best.",
+      "heroImageHint": "The large picture at the top of the page, shown whole (never cropped). A 3:2 landscape picture fits the frame best.",
       "heroImageEn": "Cover image for the English page",
       "heroImageEnHint": "For a picture with text (e.g. an English poster). Empty: the English page uses the cover image above.",
       "cardImage": "Card picture (Services page and Home)",
@@ -1012,8 +1012,7 @@
     "galleryTitle": "Photos",
     "testimonialsTitle": "What our clients say",
     "packageField": "Package of interest",
-    "cardsTitle": "Highlights",
-    "viewFull": "View full size"
+    "cardsTitle": "Highlights"
   },
   "projectLevels": {
     "thcs": "Lower secondary",

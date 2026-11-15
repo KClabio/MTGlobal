@@ -600,15 +600,19 @@ await suite(async (b) => {
     check('VEX section: hovering a number card lifts it, outlines it in blue and enlarges the number', cardLit.t !== cardCalm.t && cardLit.border === 'rgb(21, 101, 192)' && /^matrix\(1\.0[5-9]/.test(cardLit.num), { cardCalm, cardLit });
     await shot('vex-hover');
     await b.mouse('mouseMoved', { x: 5, y: 5 }); await sleep(250);
-    // Dịch vụ pages: numbered steps light up on hover too
-    const svc = await d.collection('services').findOne({ 'steps.0': { $exists: true } });
+    // Dịch vụ pages: the steps are the same trail (running down), and light up on hover too, once it has been drawn
+    const svc = await d.collection('services').findOne({ 'steps.1': { $exists: true } });
+    check('a Dịch vụ page with steps exists (Tư vấn du học has 5)', !!svc);
     if (svc) {
       await nav(`/dich-vu/${svc.slug}`, 300);
-      await ev(`document.querySelector('.timeline-item').scrollIntoView({ block: 'center' })`);
-      const border = () => ev(`getComputedStyle(document.querySelector('.timeline-item')).borderColor`);
-      const before = await border();
-      await b.hover('.timeline-item'); await sleep(300);
-      check('Dịch vụ: hovering a step highlights it (blue border)', (await border()) !== before);
+      await ev(`document.querySelector('.process-trail.is-vertical').scrollIntoView({ block: 'center' })`);
+      await ev(`new Promise((r) => { const t = document.querySelector('.process-trail.is-vertical'); const go = () => (t.classList.contains('is-settled') ? r(true) : setTimeout(go, 100)); go(); setTimeout(() => r(false), 5000); })`);
+      const sel = '.process-trail.is-vertical .trail-step:nth-child(2)';
+      const bg = () => ev(`getComputedStyle(document.querySelector('${sel} .trail-body')).backgroundColor`);
+      const before = await bg();
+      await b.hover(`${sel} .trail-body h3`); await sleep(300);
+      check('Dịch vụ: hovering a step on its trail highlights it', (await bg()) !== before, { before, after: await bg() });
+      await b.mouse('mouseMoved', { x: 5, y: 5 }); await sleep(250);
     }
     await b.reducedMotion(false);
   });

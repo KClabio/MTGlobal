@@ -1,4 +1,4 @@
-/* Shared pieces used on many pages: card grids, partner tiles + partner page, timeline, forms (+ password eye),
+/* Shared pieces used on many pages: card grids, partner tiles + partner page, forms (+ password eye),
    photo/video galleries, plain-text content, profile page, tables and status tags, key-fact tiles, coming soon. */
 
 /* ---- Grids / cards ---- */
@@ -57,19 +57,6 @@
 }
 .empty-note { text-align: center; color: var(--mtg-muted); font-style: italic; }
 
-/* ---- Process / timeline ---- */
-.timeline { display: grid; gap: 20px; }
-.timeline-item { display: flex; gap: 18px; background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); padding: 20px 24px; }
-.timeline-num { flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--mtg-gradient-brand); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; }
-/* Hover: the step under the pointer lights up */
-.timeline-item { transition: border-color calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease, transform calc(180ms * var(--anim)) ease; }
-.timeline-num { transition: transform calc(180ms * var(--anim)) ease, box-shadow calc(180ms * var(--anim)) ease; }
-.timeline-item h3 { transition: color calc(180ms * var(--anim)) ease; }
-@media (hover: hover) {
-  .timeline-item:hover { border-color: var(--mtg-blue); box-shadow: var(--mtg-shadow); transform: translateY(-2px); }
-  .timeline-item:hover .timeline-num { transform: scale(1.1); box-shadow: 0 0 0 5px var(--mtg-blue-tint); }
-  .timeline-item:hover h3 { color: var(--mtg-blue); }
-}
 
 /* ---- Forms ---- */
 .form-card { background: var(--mtg-surface); border: 1px solid var(--mtg-border); border-radius: var(--mtg-radius); padding: 32px; box-shadow: var(--mtg-shadow); max-width: 640px; margin: 0 auto; }

@@ -900,8 +900,10 @@ await suite(async (b) => {
     };
     const base = { titleVi: service.titleVi, titleEn: service.titleEn, summaryVi: service.summaryVi, summaryEn: service.summaryEn, bodyVi: 'ZZ nội dung', bodyEn: 'ZZ body' };
     const heroOf = (html) => { const f = (html.match(/<figure class="service-hero">[\s\S]*?<\/figure>/) || [''])[0];
-      return { media: (f.match(/class="service-hero-media" href="([^"]+)" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"/) || [])[1] || null,
-        img: ((f.match(/<img src="([^"?]+)/) || [])[1]) || null, zoom: (f.match(/class="service-hero-zoom" href="([^"]+)"/) || [])[1] || null }; };
+      return { img: ((f.match(/<img src="([^"?]+)/) || [])[1]) || null, alt: decode((f.match(/ alt="([^"]*)"/) || [])[1] || ''), link: /<a[\s>]/.test(f), caption: f.includes('<figcaption') }; };
+    // The steps: a vertical process trail (numbered stops, title and text)
+    const trailOf = (html) => { const o = (html.match(/<ol class="process-trail is-vertical" style="--steps:(\d+);">([\s\S]*?)<\/ol>/) || []);
+      return { steps: +(o[1] || 0), items: [...(o[2] || '').matchAll(/<li class="trail-step" style="--i:(\d+);">\s*<span class="trail-node" aria-hidden="true">(\d+)<\/span>\s*<div class="trail-body">\s*<h3>([^<]*)<\/h3>/g)].map((m) => [+m[1], +m[2], decode(m[3])]) }; };
     const cardsOf = (html) => [...html.matchAll(/<div class="profile-card tone-(\w+)">[\s\S]*?<h3>([^<]*)<\/h3>([\s\S]*?)<\/ul>/g)].map((m) => ({ tone: m[1], title: decode(m[2]), items: [...m[3].matchAll(/<li>([^<]*)<\/li>/g)].map((x) => decode(x[1])) }));
     const h2s = (html) => [...html.matchAll(/<div class="service-section">\s*<h2>([^<]*)<\/h2>/g)].map((m) => decode(m[1]));
     // The card inside the Dịch vụ landing grid (the header menu links to the page too, so start at the grid)
@@ -918,11 +920,15 @@ await suite(async (b) => {
       check('editor: main, English and card picture boxes, each with "Xóa ảnh"', ['heroImage', 'heroImageEn', 'cardImage'].every((n) => form.includes(`name="${n}"`) && form.includes(`name="remove_${n}"`)));
       check('editor: a heading box for the cards and for the steps', ['cardsTitleVi', 'cardsTitleEn', 'stepsTitleVi', 'stepsTitleEn'].every((n) => form.includes(`name="${n}"`)));
 
-      // Public page, VI and EN: the poster of the page's language, whole, with "Xem ảnh lớn"; cards; step heading
+      // Public page, VI and EN: the poster of the page's language, whole and not opening larger; cards; steps
       let vi = await pub('/dich-vu/tu-van-du-hoc', 'vi'); let en = await pub('/dich-vu/tu-van-du-hoc', 'en');
       const hv = heroOf(vi); const he = heroOf(en);
-      check('VI page: the Vietnamese poster, a hidden mouse-only link and a "Xem ảnh lớn" link to the full file', hv.img === A + 'poster-vi.jpg' && hv.media === A + 'poster-vi.jpg' && hv.zoom === A + 'poster-vi.jpg' && vi.includes('Xem ảnh lớn'), hv);
-      check('EN page: the English poster, and "View full size"', he.img === A + 'poster-en.jpg' && he.zoom === A + 'poster-en.jpg' && en.includes('View full size'), he);
+      check('VI page: the Vietnamese poster, named by the page title, with no link or "Xem ảnh lớn"', hv.img === A + 'poster-vi.jpg' && hv.alt === 'Tư vấn du học' && !hv.link && !hv.caption && !vi.includes('Xem ảnh lớn'), hv);
+      check('EN page: the English poster, with no link or "View full size"', he.img === A + 'poster-en.jpg' && he.alt === 'Study Abroad Consulting' && !he.link && !en.includes('View full size'), he);
+      const tv = trailOf(vi); const te = trailOf(en);
+      check('steps: a vertical trail of 5 numbered stops in order (VI)', tv.steps === 5 && JSON.stringify(tv.items.map((x) => [x[0], x[1]])) === '[[0,1],[1,2],[2,3],[3,4],[4,5]]'
+        && tv.items[0][2] === 'Đánh giá năng lực' && tv.items[4][2] === 'Du học thành công' && !vi.includes('class="timeline'), tv);
+      check('steps: the same trail in English', te.steps === 5 && te.items.map((x) => x[2]).join('|') === DU_HOC_CONTENT.steps.map((s) => s.titleEn).join('|'), te);
       check('the poster is not in the old 16:9 crop', !/card-media[^>]*aspect-ratio:16\/9/.test(vi));
       check('EN link preview (og:image) is the English poster', /<meta property="og:image" content="[^"]*poster-en\.jpg/.test(en));
       const cv = cardsOf(vi); const ce = cardsOf(en);

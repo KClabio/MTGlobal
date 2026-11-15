@@ -528,4 +528,40 @@ await suite(async (b) => {
     await nav('/dich-vu?from=home', 200);
     check('opened from the home card, /dich-vu offers the way back to the slider', await ev(`!!document.querySelector('a[href="/#linh-vuc"]')`));
   });
+
+  await part(b, 'Dịch vụ steps: a vertical trail; the poster does not open larger', async () => {
+    const { nav, shot } = b;
+    // Tư vấn du học with its 5 steps (the program's own, put back afterwards)
+    const services = (await db()).collection('services');
+    const { DU_HOC_CONTENT } = appRequire('./lib/service-content.js');
+    const svc = await services.findOne({ slug: 'tu-van-du-hoc' });
+    await restoreLater('services', { _id: svc._id });
+    await services.updateOne({ _id: svc._id }, { $set: { steps: DU_HOC_CONTENT.steps, stepsTitleVi: DU_HOC_CONTENT.stepsTitleVi, stepsTitleEn: DU_HOC_CONTENT.stepsTitleEn, heroImage: DU_HOC_CONTENT.heroImage } });
+    const look = () => ev(`(() => { const t = document.querySelector('.process-trail.is-vertical'); if (!t) return null;
+      const nodes = [...t.querySelectorAll('.trail-node')].map((n) => n.getBoundingClientRect());
+      const step = t.querySelector('.trail-step'); const line = getComputedStyle(step, '::after');
+      return { n: nodes.length, xs: [...new Set(nodes.map((r) => Math.round(r.left)))], down: nodes.every((r, i) => !i || r.top > nodes[i - 1].bottom), nodeLeftOfText: nodes[0].right <= step.querySelector('.trail-body').getBoundingClientRect().left,
+        lineTall: parseFloat(line.height) > parseFloat(line.width), wide: document.documentElement.scrollWidth > innerWidth,
+        drawn: t.classList.contains('is-drawn'), settled: t.classList.contains('is-settled'), lineDone: line.transform === 'none',
+        heroLink: !!document.querySelector('.service-hero a, .service-hero figcaption'), heroImg: !!document.querySelector('.service-hero img') }; })()`);
+    const waitSettled = () => ev(`new Promise((r) => { const t = document.querySelector('.process-trail.is-vertical'); const go = () => (t.classList.contains('is-settled') ? r(true) : setTimeout(go, 100)); go(); setTimeout(() => r(false), 6000); })`);
+    for (const [w, h, motion] of [[1280, 900, false], [390, 844, false], [1280, 900, true]]) {
+      await b.reducedMotion(motion);
+      await b.viewport(w, h);
+      await nav('/dich-vu/tu-van-du-hoc?lang=vi', 300);
+      const label = `${w} px${motion ? ', reduced motion' : ''}`;
+      const before = await look();
+      check(`${label}: the 5 steps are one trail running down (stops in one column, left of their text, the line vertical)`,
+        before && before.n === 5 && before.xs.length === 1 && before.down && before.nodeLeftOfText && before.lineTall && !before.wide, before);
+      check(`${label}: the poster shows whole, with no link or caption to open it larger`, before.heroImg && !before.heroLink, before);
+      await ev(`document.querySelector('.process-trail.is-vertical').scrollIntoView({ block: 'center' })`);
+      const settled = await waitSettled();
+      const after = await look();
+      check(`${label}: scrolled into view, the line fills to the last step and settles`, settled && after.drawn && after.lineDone, after);
+      if (w === 390 && !motion) await shot('du-hoc-trail-390', true);
+      if (w === 1280 && !motion) await shot('du-hoc-trail-1280', true);
+    }
+    await b.reducedMotion(false);
+    await b.viewport(1280, 900);
+  });
 });
