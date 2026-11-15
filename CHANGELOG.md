@@ -6,7 +6,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [Unreleased]
+## [1.10.0] - 2026-11-16
 
 ### Changed
 - **The steps on the Dịch vụ pages now run down a trail, like the steps on the Giải pháp pages.** On Tư vấn du học, "Lộ trình xây dựng hồ sơ du học STEM" shows its five steps as numbered round stops on one coloured line going down the page, with arrows between them. When the steps scroll into view, the line fills from the first stop to the last, and each step lights up as the line reaches it. The pointer highlights a step. On phones it looks the same, and when printed every step shows.
@@ -17,7 +17,7 @@ Each release published on GitHub is one version: the first is **1.0.0** and ever
 
 ---
 
-## [1.9.0] - 2026-11-15
+## [1.9.0] - 2026-11-15 · `8a29c4d`
 
 ### Added
 - **The Tư vấn du học page now presents the STEM study-abroad program run with KC Education.** At the top is the program's poster, Vietnamese on the Vietnamese page and English on the English page, shown whole; "Xem ảnh lớn" opens it full size. Below it: an introduction with "Vì sao nên chọn chương trình này?", five coloured cards under "Hồ sơ du học STEM gồm những gì?" (Hồ sơ học thuật, Năng lực STEM, Thành tích nổi bật, Hoạt động ngoại khóa, Hồ sơ ứng tuyển), and the five steps of "Lộ trình xây dựng hồ sơ du học STEM". The page's text says everything the poster says, so it reads well on a phone and can be found by Google. The service's card on Dịch vụ and the "Dịch vụ" card on Trang chủ now show a photo of students building a VEX robot instead of the coloured placeholder.
